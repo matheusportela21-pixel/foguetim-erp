@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Rocket, Eye, EyeOff, AlertCircle, Loader2, Shield, Zap } from 'lucide-react'
+import { Rocket, Eye, EyeOff, AlertCircle, AlertTriangle, CheckCircle2, Loader2, Shield, Zap } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 function LoginForm() {
@@ -12,25 +12,46 @@ function LoginForm() {
   const [showPwd,  setShowPwd]  = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
+  const [success,  setSuccess]  = useState('')
 
-  const { signIn, user } = useAuth()
-  const router       = useRouter()
+  const { signIn } = useAuth()
   const searchParams = useSearchParams()
 
+  // Mensagem de sucesso após cadastro
   useEffect(() => {
-    if (user) router.replace(searchParams.get('redirect') ?? '/dashboard')
-  }, [user, router, searchParams])
+    if (searchParams.get('success') === '1') {
+      setSuccess('Conta criada com sucesso! Faça login para continuar.')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await signIn(email, password)
-    if (error) {
-      setError('Email ou senha inválidos. Verifique os dados e tente novamente.')
+    setSuccess('')
+
+    // Timeout de 10 segundos
+    const timeoutId = setTimeout(() => {
+      setError('Tempo esgotado. Verifique sua conexão e tente novamente.')
       setLoading(false)
-    } else {
-      router.push(searchParams.get('redirect') ?? '/dashboard')
+    }, 10000)
+
+    try {
+      const { error } = await signIn(email, password)
+      clearTimeout(timeoutId)
+
+      if (error) {
+        setError('Email ou senha inválidos. Verifique os dados e tente novamente.')
+        setLoading(false)
+      } else {
+        // Hard redirect — garante que a cookie de sessão está presente no próximo request
+        const redirect = searchParams.get('redirect') ?? '/dashboard'
+        window.location.href = redirect
+      }
+    } catch {
+      clearTimeout(timeoutId)
+      setError('Erro inesperado. Tente novamente.')
+      setLoading(false)
     }
   }
 
@@ -108,6 +129,13 @@ function LoginForm() {
             </h1>
             <p className="text-sm text-slate-500">Entre com sua conta para continuar</p>
           </div>
+
+          {success && (
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-xs mb-4">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              {success}
+            </div>
+          )}
 
           <div className="bg-[#0d0f1a]/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-2xl">
             <form onSubmit={handleSubmit} className="space-y-4">

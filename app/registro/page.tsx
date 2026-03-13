@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Rocket, Eye, EyeOff, AlertCircle, Loader2, Check, ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
@@ -25,7 +24,6 @@ export default function RegistroPage() {
   const [error,    setError]    = useState('')
 
   const { signUp } = useAuth()
-  const router     = useRouter()
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,12 +37,26 @@ export default function RegistroPage() {
     if (!terms) return
     setLoading(true)
     setError('')
-    const { error } = await signUp(email, password, name, company)
-    if (error) {
-      setError(error)
+
+    const timeoutId = setTimeout(() => {
+      setError('Tempo esgotado. Verifique sua conexão e tente novamente.')
       setLoading(false)
-    } else {
-      router.push('/dashboard')
+    }, 10000)
+
+    try {
+      const { error } = await signUp(email, password, name, company)
+      clearTimeout(timeoutId)
+      if (error) {
+        setError(error)
+        setLoading(false)
+      } else {
+        // Redireciona para login com mensagem de sucesso
+        window.location.href = '/login?success=1'
+      }
+    } catch {
+      clearTimeout(timeoutId)
+      setError('Erro inesperado. Tente novamente.')
+      setLoading(false)
     }
   }
 
