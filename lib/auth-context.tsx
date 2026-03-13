@@ -53,27 +53,13 @@ const AuthContext = createContext<AuthContextType>({
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user,    setUser]    = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const configured = isConfigured()
 
-  // If Supabase not configured → use mock profile so the app works in dev
-  if (!isConfigured()) {
-    return (
-      <AuthContext.Provider value={{
-        user:    MOCK_USER,
-        profile: MOCK_PROFILE,
-        loading: false,
-        signIn:  async () => ({ error: null }),
-        signOut: async () => {},
-        signUp:  async () => ({ error: null }),
-      }}>
-        {children}
-      </AuthContext.Provider>
-    )
-  }
+  // All hooks called unconditionally (Rules of Hooks)
+  const [user,    setUser]    = useState<User | null>(configured ? null : MOCK_USER)
+  const [profile, setProfile] = useState<Profile | null>(configured ? null : MOCK_PROFILE)
+  const [loading, setLoading] = useState(configured) // only loading when real Supabase is used
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('users')
@@ -83,8 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data) setProfile(data as Profile)
   }, [])
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
+    if (!configured) return // dev mode — skip Supabase calls
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
@@ -99,20 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [fetchProfile])
+  }, [configured, fetchProfile])
 
   const signIn = async (email: string, password: string) => {
+    if (!configured) return { error: null }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
 
   const signOut = async () => {
+    if (!configured) return
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
   }
 
   const signUp = async (email: string, password: string, name: string, company: string) => {
+    if (!configured) return { error: null }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -120,7 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
     if (error) return { error: error.message }
 
-    // Insert profile (the DB trigger also does this, but we do it here to set name/company)
     if (data.user) {
       await supabase.from('users').upsert({
         id:      data.user.id,
