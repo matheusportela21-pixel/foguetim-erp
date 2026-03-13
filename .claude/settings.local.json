@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd C:/Users/mathe/foguetim && npm install 2>&1 | tail -20)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm:*)",
+      "Bash(ls /c/Users/mathe/foguetim/node_modules/.bin/next*)",
+      "Bash(ls \"C:\\\\Users\\\\mathe\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-mathe-foguetim\\\\tasks\"\" 2>/dev/null || echo \"No tasks dir \")",
+      "Bash(mkdir -p /mnt/c/Users/mathe/foguetim/app/dashboard/pedidos)",
+      "Bash(mkdir -p /mnt/c/Users/mathe/foguetim/app/dashboard/sac)",
+      "Bash(mkdir -p \"C:/Users/mathe/foguetim/app/dashboard/pedidos\")",
+      "Bash(mkdir -p \"C:/Users/mathe/foguetim/app/dashboard/sac\")",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
