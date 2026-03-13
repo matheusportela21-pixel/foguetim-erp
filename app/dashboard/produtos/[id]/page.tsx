@@ -15,7 +15,7 @@ import {
   STATUS_META, MARCA_COLOR, CATEGORIAS, TAGS_LIST, MKTS, UNIDADES, GARANTIAS,
   CONDICOES, TIPOS_EMB, healthScore, margem,
   type Produto, type Status, type MKT, type MktStatus, type Unidade,
-  type Garantia, type Condicao, type TipoEmb,
+  type Garantia, type Condicao, type TipoEmb, type MktListing,
 } from '../_data'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────

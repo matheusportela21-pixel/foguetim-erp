@@ -767,7 +767,7 @@ export const produtos: Produto[] = [
     compProd: 4, largProd: 4, altProd: 11, pesoProd: 0.11,
     compEmb: 6, largEmb: 6, altEmb: 13, pesoEmb: 0.17, tipoEmb: 'Caixa',
     imagens: ['https://placehold.co/400x400/1a1f2e/a855f7?text=LAN-002'],
-    mkt: mk(true, true, false, false, true),
+    mkt: mk({ ML: true, SP: true, MAG: true }),
     criadoEm: '2025-08-30', updatedAt: '2026-02-22',
   },
   {
@@ -803,7 +803,7 @@ export const produtos: Produto[] = [
     compProd: 7, largProd: 7, altProd: 11, pesoProd: 0.23,
     compEmb: 9, largEmb: 9, altEmb: 13, pesoEmb: 0.29, tipoEmb: 'Caixa',
     imagens: ['https://placehold.co/400x400/1a1f2e/ec4899?text=ZAL-001', 'https://placehold.co/400x400/1a1f2e/ec4899?text=ZAL-001b'],
-    mkt: mk(true, true, true, false, true),
+    mkt: mk({ ML: true, SP: true, AMZ: true, MAG: true }),
     criadoEm: '2025-09-08', updatedAt: '2026-03-06',
   },
   {

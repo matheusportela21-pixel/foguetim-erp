@@ -101,6 +101,7 @@ function CopyModal({ produto, onClose }: { produto: Produto | null; onClose: () 
 
   const MKT_NAMES: Record<MKT, string> = {
     ML: 'Mercado Livre', SP: 'Shopee', AMZ: 'Amazon', AME: 'Americanas', MAG: 'Magalu',
+    TKT: 'TikTok', CB: 'Casas Bahia', NS: 'Nuvemshop', TRY: 'Tray', LI: 'Loja Integrada', ALI: 'AliExpress',
   }
 
   return (
