@@ -1,7 +1,8 @@
 'use client'
 
-import { Bell, Search, LogOut } from 'lucide-react'
-import Link from 'next/link'
+import { Bell, Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 
 interface HeaderProps {
   title: string
@@ -9,6 +10,15 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle }: HeaderProps) {
+  const { profile } = useAuth()
+  const router = useRouter()
+
+  const initials    = profile?.name
+    ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+    : 'MP'
+  const displayName = profile?.name ?? 'Matheus Portela'
+  const displayRole = profile?.role === 'diretor' ? 'Diretor' : (profile?.role ?? 'Diretor')
+
   return (
     <header className="dash-header sticky top-0 z-20 flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-xl">
       <div>
@@ -37,16 +47,17 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
         {/* User */}
         <div className="flex items-center gap-2 pl-3 ml-1 border-l border-white/[0.06]">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            MP
-          </div>
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {initials}
+            </div>
+          )}
           <div className="hidden md:block">
-            <p className="text-xs font-semibold text-slate-200 leading-tight">Matheus Portela</p>
-            <p className="text-[10px] text-slate-600">Diretor</p>
+            <p className="text-xs font-semibold text-slate-200 leading-tight">{displayName}</p>
+            <p className="text-[10px] text-slate-600 capitalize">{displayRole}</p>
           </div>
-          <Link href="/" className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/[0.04] transition-all ml-1">
-            <LogOut className="w-3.5 h-3.5" />
-          </Link>
         </div>
       </div>
     </header>

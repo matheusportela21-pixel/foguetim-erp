@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
+import { useAuth } from '@/lib/auth-context'
+import { getProducts, deleteProduct } from '@/lib/db/products'
 import {
   Plus, Upload, Download, RefreshCw, Copy, Search, SlidersHorizontal,
   ChevronDown, ChevronUp, X, TrendingDown,
@@ -11,7 +14,7 @@ import {
   AlertCircle, ImageOff, Info, CheckCircle2,
 } from 'lucide-react'
 import {
-  produtos as allProdutos, MARCAS, CATEGORIAS, MKTS, MKT_COLOR,
+  produtos as mockProdutos, MARCAS, CATEGORIAS, MKTS, MKT_COLOR,
   STATUS_META, MARCA_COLOR, calcPreco, margem, healthScore,
   type Produto, type Status, type MKT,
 } from './_data'
@@ -211,6 +214,21 @@ function CopyModal({ produto, onClose }: { produto: Produto | null; onClose: () 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProdutosPage() {
+  const { user } = useAuth()
+  const router   = useRouter()
+
+  const [allProdutos, setAllProdutos] = useState<Produto[]>(mockProdutos)
+  const [dbLoading,   setDbLoading]   = useState(false)
+
+  // Load products from Supabase (replaces mock data when configured)
+  useEffect(() => {
+    if (!user || user.id === 'dev-user') return
+    setDbLoading(true)
+    getProducts(user.id)
+      .then(data => setAllProdutos(data))
+      .finally(() => setDbLoading(false))
+  }, [user?.id])
+
   const [search,      setSearch]      = useState('')
   const [statusF,     setStatusF]     = useState<Status | 'Todos'>('Todos')
   const [marcaF,      setMarcaF]      = useState('Todas')
@@ -224,6 +242,17 @@ export default function ProdutosPage() {
   const [page,        setPage]        = useState(1)
   const [dismissed,   setDismissed]   = useState<string[]>([])
   const [copyProd,    setCopyProd]    = useState<Produto | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+
+  const handleDelete = async (id: number) => {
+    if (!user) return
+    const ok = await deleteProduct(id, user.id)
+    if (ok) {
+      setAllProdutos(prev => prev.filter(p => p.id !== id))
+      setSelected(prev => prev.filter(x => x !== id))
+    }
+    setDeleteConfirm(null)
+  }
 
   // ── Filtered + sorted list ────────────────────────────────────────────────
 
@@ -366,7 +395,7 @@ export default function ProdutosPage() {
           ] as const).map(btn => (
             <button key={btn.label}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-dark-700 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] border border-white/[0.06] transition-all"
-              onClick={btn.soon ? undefined : () => setCopyProd(allProdutos[0])}>
+              onClick={btn.soon ? undefined : () => setCopyProd(pageItems[0] ?? null)}>
               <btn.icon className="w-3.5 h-3.5" />
               {btn.label}
               {btn.soon && <span className="text-[8px] text-amber-400 font-bold bg-amber-400/10 px-1 rounded">Em breve</span>}
@@ -624,6 +653,10 @@ export default function ProdutosPage() {
                             className="p-1.5 rounded-lg text-slate-600 hover:text-blue-400 hover:bg-blue-400/10 transition-all">
                             <CopyPlus className="w-3.5 h-3.5" />
                           </button>
+                          <button onClick={() => setDeleteConfirm(p.id)} title="Excluir produto"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-all">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -660,6 +693,37 @@ export default function ProdutosPage() {
       </div>
 
       <CopyModal produto={copyProd} onClose={() => setCopyProd(null)} />
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-dark-800 border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
+              <X className="w-6 h-6 text-red-400" />
+            </div>
+            <h3 className="font-bold text-white text-sm mb-1">Excluir produto?</h3>
+            <p className="text-xs text-slate-400 mb-5">Esta ação não pode ser desfeita. O produto e todos os seus dados serão removidos permanentemente.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-300 bg-dark-700 hover:bg-white/[0.06] border border-white/[0.06] transition-all">
+                Cancelar
+              </button>
+              <button onClick={() => handleDelete(deleteConfirm)}
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-500 transition-all">
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DB loading indicator */}
+      {dbLoading && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-800 border border-white/10 text-xs text-slate-400 shadow-xl">
+          <span className="w-3 h-3 rounded-full bg-purple-500 animate-pulse" />
+          Sincronizando com banco de dados...
+        </div>
+      )}
     </div>
   )
 }

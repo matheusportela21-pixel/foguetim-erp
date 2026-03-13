@@ -2,21 +2,24 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import {
   ArrowLeft, Save, Send, AlertTriangle, X, Plus, GripVertical,
   ToggleLeft, ToggleRight, ChevronDown, Package, Ruler, FileText,
   Layers, DollarSign, RefreshCw, ExternalLink, Tag, Globe,
   ImageOff, Star, Link2, CheckCircle2, AlertCircle, Info, Copy,
-  TrendingDown, TrendingUp, LogIn, LogOut, Truck, Sparkles,
+  TrendingDown, TrendingUp, LogIn, LogOut, Truck, Sparkles, Loader2,
 } from 'lucide-react'
 import {
-  produtos, calcPreco, calcFreteAuto, MKT_RULES, MKT_COLOR, MKT_STATUS_META,
+  produtos as mockProdutos, calcPreco, calcFreteAuto, MKT_RULES, MKT_COLOR, MKT_STATUS_META,
   STATUS_META, MARCA_COLOR, CATEGORIAS, TAGS_LIST, MKTS, UNIDADES, GARANTIAS,
   CONDICOES, TIPOS_EMB, healthScore, margem,
   type Produto, type Status, type MKT, type MktStatus, type Unidade,
   type Garantia, type Condicao, type TipoEmb, type MktListing,
 } from '../_data'
+import { useAuth } from '@/lib/auth-context'
+import { getProduct, createProduct, updateProduct, saveProductMarketplaces, saveStockMovement } from '@/lib/db/products'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -578,7 +581,10 @@ function TabPrecificacao({ p, onChange }: { p: Produto; onChange: (patch: Partia
 
 interface MoveEntry { data: string; tipo: string; qtd: number; motivo: string; saldo: number; usuario: string }
 
-function TabEstoque({ p, onChange }: { p: Produto; onChange: (patch: Partial<Produto>) => void }) {
+function TabEstoque({ p, onChange, productId, userId, userName }: {
+  p: Produto; onChange: (patch: Partial<Produto>) => void
+  productId?: number; userId?: string; userName?: string
+}) {
   const [syncEnabled, setSyncEnabled] = useState(true)
   const [stockModal, setStockModal]   = useState<'entrada'|'saida'|null>(null)
   const [moves, setMoves]             = useState<MoveEntry[]>([
@@ -590,7 +596,7 @@ function TabEstoque({ p, onChange }: { p: Produto; onChange: (patch: Partial<Pro
 
   const desynced = p.estoqueReal !== p.estoqueVirtual
 
-  const handleMove = (move: any) => {
+  const handleMove = async (move: any) => {
     const delta = move.tipo === 'entrada' ? move.qtd : -move.qtd
     const newReal = Math.max(0, p.estoqueReal + delta)
     onChange({ estoqueReal: newReal, estoqueVirtual: syncEnabled ? newReal : p.estoqueVirtual })
@@ -599,6 +605,9 @@ function TabEstoque({ p, onChange }: { p: Produto; onChange: (patch: Partial<Pro
       qtd: delta, motivo: move.motivo, saldo: newReal, usuario: move.usuario,
     }, ...prev])
     setStockModal(null)
+    if (productId && userId) {
+      await saveStockMovement(productId, userId, move.tipo, move.qtd, move.motivo, userName ?? 'Sistema')
+    }
   }
 
   return (
@@ -1515,6 +1524,8 @@ function TabVariacoes() {
 export default function ProdutoEditPage({ params }: { params: { id: string } }) {
   const { id } = params
   const isNew  = id === 'novo'
+  const router = useRouter()
+  const { user, profile } = useAuth()
 
   const blankProduct: Produto = {
     id: 0, sku: '', ean: '', nome: 'Novo Produto',
@@ -1532,22 +1543,53 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
       precoManual: 0, estoqueSync: true, categoria: '', obs: '',
       titulo: '', descricao: '',
     }])) as Partial<Record<MKT, MktListing>>,
-    criadoEm: '2026-03-12', updatedAt: '2026-03-12',
+    criadoEm: new Date().toISOString().split('T')[0], updatedAt: new Date().toISOString().split('T')[0],
   }
 
-  const initial = isNew ? blankProduct : (produtos.find(p => p.id === parseInt(id)) ?? produtos[0])
+  const mockInitial = isNew ? blankProduct : (mockProdutos.find(p => p.id === parseInt(id)) ?? blankProduct)
 
-  const [produto,    setProduto]    = useState<Produto>(initial)
-  const [activeTab,  setActiveTab]  = useState<TabId>('geral')
-  const [unsaved,    setUnsaved]    = useState(false)
-  const [toast,      setToast]      = useState<{ msg: string; type: 'success'|'error' } | null>(null)
-  const [showConfirm,setShowConfirm]= useState(false)
+  const [produto,     setProduto]    = useState<Produto>(mockInitial)
+  const [activeTab,   setActiveTab]  = useState<TabId>('geral')
+  const [unsaved,     setUnsaved]    = useState(false)
+  const [toast,       setToast]      = useState<{ msg: string; type: 'success'|'error' } | null>(null)
+  const [showConfirm, setShowConfirm]= useState(false)
+  const [pageLoading, setPageLoading]= useState(!isNew)
+  const [saving,      setSaving]     = useState(false)
+
+  // Load product from DB (skip for new products and dev-user)
+  useEffect(() => {
+    if (isNew || !user || user.id === 'dev-user') { setPageLoading(false); return }
+    const numId = parseInt(id)
+    if (isNaN(numId)) { setPageLoading(false); return }
+    getProduct(numId, user.id)
+      .then(p => { if (p) setProduto(p) })
+      .finally(() => setPageLoading(false))
+  }, [id, isNew, user?.id])
 
   const patch = (p: Partial<Produto>) => { setProduto(prev => ({ ...prev, ...p })); setUnsaved(true) }
 
-  const handleSave = (publish: boolean) => {
-    setUnsaved(false)
-    setToast({ msg: publish ? 'Produto salvo e publicado com sucesso!' : 'Rascunho salvo!', type: 'success' })
+  const handleSave = async (publish: boolean) => {
+    if (!user) return
+    setSaving(true)
+    const saved = { ...produto, status: (publish ? 'ativo' : produto.status) as Produto['status'] }
+    try {
+      if (isNew) {
+        const created = await createProduct(saved, user.id)
+        if (!created) { setToast({ msg: 'Erro ao criar produto.', type: 'error' }); return }
+        await saveProductMarketplaces(created.id, saved.mkt, user.id)
+        setUnsaved(false)
+        setToast({ msg: 'Produto criado com sucesso!', type: 'success' })
+        setTimeout(() => router.replace(`/dashboard/produtos/${created.id}`), 1000)
+      } else {
+        const ok = await updateProduct(saved, user.id)
+        if (!ok) { setToast({ msg: 'Erro ao salvar produto.', type: 'error' }); return }
+        await saveProductMarketplaces(saved.id, saved.mkt, user.id)
+        setUnsaved(false)
+        setToast({ msg: publish ? 'Produto salvo e publicado!' : 'Rascunho salvo!', type: 'success' })
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -1557,6 +1599,14 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
 
   const { score: hs, checks } = healthScore(produto)
   const mc = MARCA_COLOR[produto.marca] ?? 'text-slate-400 bg-slate-400/10'
+
+  if (pageLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -1607,7 +1657,7 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
           {activeTab === 'geral'        && <TabGeral        p={produto} onChange={patch} />}
           {activeTab === 'imagens'      && <TabImagens      p={produto} onChange={patch} />}
           {activeTab === 'precificacao' && <TabPrecificacao p={produto} onChange={patch} />}
-          {activeTab === 'estoque'      && <TabEstoque      p={produto} onChange={patch} />}
+          {activeTab === 'estoque'      && <TabEstoque      p={produto} onChange={patch} productId={produto.id || undefined} userId={user?.id} userName={profile?.name} />}
           {activeTab === 'fiscal'       && <TabFiscal       p={produto} onChange={patch} />}
           {activeTab === 'dimensoes'    && <TabDimensoes    p={produto} onChange={patch} />}
           {activeTab === 'marketplaces' && <TabMarketplaces p={produto} onChange={patch} />}
@@ -1637,13 +1687,13 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => handleSave(false)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-dark-700 text-slate-300 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-all">
-                <Save className="w-3.5 h-3.5" /> Salvar Rascunho
+              <button onClick={() => handleSave(false)} disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-dark-700 text-slate-300 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-all disabled:opacity-50">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar Rascunho
               </button>
-              <button onClick={() => handleSave(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white hover:bg-purple-500 transition-all shadow-lg shadow-purple-900/20">
-                <Send className="w-3.5 h-3.5" /> Salvar e Publicar
+              <button onClick={() => handleSave(true)} disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white hover:bg-purple-500 transition-all shadow-lg shadow-purple-900/20 disabled:opacity-50">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Salvar e Publicar
               </button>
             </div>
           </div>

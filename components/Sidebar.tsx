@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare,
 } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 
 const navGroups = [
   {
@@ -32,8 +33,8 @@ const navGroups = [
   {
     label: 'Análise',
     items: [
-      { href: '/dashboard/relatorios',    icon: BarChart3,  label: 'Relatórios' },
-      { href: '/dashboard/clientes',      icon: UserCheck,  label: 'Clientes'   },
+      { href: '/dashboard/relatorios', icon: BarChart3,  label: 'Relatórios' },
+      { href: '/dashboard/clientes',   icon: UserCheck,  label: 'Clientes'   },
     ],
   },
   {
@@ -57,8 +58,38 @@ const badgeColors: Record<string, string> = {
   Novo:  'bg-green-900/40 text-green-400 ring-1 ring-green-700/40',
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  diretor:             'Diretor · Admin',
+  supervisor:          'Supervisor',
+  analista_produtos:   'Analista de Produtos',
+  analista_financeiro: 'Analista Financeiro',
+  suporte:             'Suporte',
+  operador:            'Operador',
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  explorador:  'Explorador',
+  crescimento: 'Crescimento',
+  comandante:  'Comandante',
+  enterprise:  'Enterprise',
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
+  const router   = useRouter()
+  const { profile, signOut } = useAuth()
+
+  const initials    = profile?.name
+    ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+    : 'MP'
+  const displayName = profile?.name ?? 'Matheus Portela'
+  const displayRole = profile?.role ? (ROLE_LABELS[profile.role] ?? profile.role) : 'Diretor · Admin'
+  const displayPlan = profile?.plan ? (PLAN_LABELS[profile.plan] ?? profile.plan) : 'Comandante'
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/login')
+  }
 
   return (
     <aside className="w-60 flex-shrink-0 flex flex-col h-full bg-dark-900 border-r border-white/[0.06] relative z-20">
@@ -114,7 +145,7 @@ export default function Sidebar() {
       <div className="mx-3 mb-3 p-3 rounded-xl bg-dark-700 border border-white/[0.06]">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wider">Plano Ativo</p>
-          <span className="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded-full">Comandante</span>
+          <span className="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded-full">{displayPlan}</span>
         </div>
         <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
           <div className="h-full w-[57%] rounded-full bg-gradient-to-r from-purple-600 to-cyan-500" />
@@ -125,16 +156,24 @@ export default function Sidebar() {
       {/* User */}
       <div className="px-3 pb-4 border-t border-white/[0.06] pt-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            MP
-          </div>
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-200 truncate">Matheus Portela</p>
-            <p className="text-[10px] text-slate-600 truncate">Diretor · Admin</p>
+            <p className="text-xs font-semibold text-slate-200 truncate">{displayName}</p>
+            <p className="text-[10px] text-slate-600 truncate">{displayRole}</p>
           </div>
-          <Link href="/" className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all">
+          <button
+            onClick={handleSignOut}
+            title="Sair"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all"
+          >
             <LogOut className="w-3.5 h-3.5" />
-          </Link>
+          </button>
         </div>
       </div>
     </aside>
