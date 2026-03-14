@@ -552,14 +552,6 @@ function IntegracoesContent() {
                         </div>
                       </div>
 
-                      {mlStatus?.connected && (
-                        <div className="mt-3 p-3 bg-dark-700 rounded-xl">
-                          <p className="text-[10px] text-slate-600 mb-1">Webhook URL (para configurar no Painel ML)</p>
-                          <p className="text-[10px] font-mono text-slate-400 break-all">
-                            https://foguetim.com.br/api/webhooks/mercadolivre
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )

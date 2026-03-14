@@ -47,7 +47,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeCtx.Provider value={{ theme, accent, setTheme, setAccent }}>
-      <div className={`dash-root theme-${appliedTheme} accent-${appliedAccent}`}>
+      <div className={`dash-root theme-${appliedTheme} accent-${appliedAccent} flex h-screen overflow-hidden`}>
         {children}
       </div>
     </ThemeCtx.Provider>

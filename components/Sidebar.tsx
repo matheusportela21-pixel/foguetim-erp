@@ -150,7 +150,7 @@ export default function Sidebar() {
         <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
           <div className="h-full w-[57%] rounded-full bg-gradient-to-r from-purple-600 to-cyan-500" />
         </div>
-        <p className="text-[10px] text-slate-600">2.847 / 5.000 produtos</p>
+        <p className="text-[10px] text-slate-600">Gerencie seu catálogo</p>
       </div>
 
       {/* User */}

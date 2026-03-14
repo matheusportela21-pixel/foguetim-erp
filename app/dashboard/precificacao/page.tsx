@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Header from '@/components/Header'
-import { Calculator, Info, TrendingUp, DollarSign, Package, Truck, Percent, ChevronRight } from 'lucide-react'
+import { Calculator, Info, TrendingUp, DollarSign, Package, Truck, Percent, ChevronRight, AlertTriangle, ShoppingBag, Megaphone, Star } from 'lucide-react'
 
 // ─── Platform configs ──────────────────────────────────────────────────────────
 
@@ -52,6 +52,9 @@ const REGIMES = [
 
 function calcPreco(
   custo: number,
+  embalagem: number,
+  marketing: number,     // % sobre preço
+  influenciador: number, // % sobre preço
   margemDesejada: number,
   comissao: number,
   taxaFixa: number,
@@ -59,14 +62,19 @@ function calcPreco(
   imposto: number,
   freteGratis: boolean,
 ) {
-  // Preço mínimo = custo + frete + taxa_fixa + (preço * comissao%) + (preço * imposto%) com margem
-  // Fórmula: preço = (custo + frete + taxaFixa) / (1 - comissao/100 - imposto/100 - margem/100)
   const freteReal = freteGratis ? frete : 0
-  const denominador = 1 - comissao / 100 - imposto / 100 - margemDesejada / 100
+  const custoFixo = custo + embalagem + freteReal + taxaFixa
+  // Tudo que sai como % do preço vai para o denominador
+  const denominador = 1 - comissao / 100 - imposto / 100 - marketing / 100 - influenciador / 100 - margemDesejada / 100
   if (denominador <= 0) return { preco: 0, lucro: 0, margem: 0 }
-  const preco = (custo + freteReal + taxaFixa) / denominador
-  const lucro = preco - custo - freteReal - taxaFixa - (preco * comissao / 100) - (preco * imposto / 100)
-  const margem = (lucro / preco) * 100
+  const preco = custoFixo / denominador
+  const lucro = preco
+    - custoFixo
+    - (preco * comissao / 100)
+    - (preco * imposto / 100)
+    - (preco * marketing / 100)
+    - (preco * influenciador / 100)
+  const margem = preco > 0 ? (lucro / preco) * 100 : 0
   return { preco, lucro, margem }
 }
 
@@ -110,19 +118,23 @@ function InputGroup({
 // ─── Platform result card ──────────────────────────────────────────────────────
 
 function PlatformCard({
-  platKey, config, result, custo, frete, comissao, imposto, taxaFixa,
+  platKey, config, result, custo, embalagem, marketing, influenciador, frete, comissao, imposto, taxaFixa,
 }: {
   platKey: string
   config: typeof PLATFORMS[keyof typeof PLATFORMS]
   result: { preco: number; lucro: number; margem: number }
-  custo: number; frete: number; comissao: number; imposto: number; taxaFixa: number
+  custo: number; embalagem: number; marketing: number; influenciador: number
+  frete: number; comissao: number; imposto: number; taxaFixa: number
 }) {
   const breakdown = [
     { label: 'Custo produto',   val: custo,                              color: 'text-slate-400' },
-    { label: 'Frete embutido',  val: frete,                              color: 'text-neon-orange' },
-    { label: 'Taxa fixa',       val: taxaFixa,                           color: 'text-neon-red' },
-    { label: `Comissão (${comissao}%)`, val: result.preco * comissao / 100, color: 'text-neon-red' },
-    { label: `Impostos (${imposto}%)`,  val: result.preco * imposto / 100,  color: 'text-neon-red' },
+    ...(embalagem > 0 ? [{ label: 'Embalagem', val: embalagem, color: 'text-slate-400' }] : []),
+    { label: 'Frete embutido',  val: frete,                              color: 'text-orange-400' },
+    { label: 'Taxa fixa',       val: taxaFixa,                           color: 'text-red-400' },
+    { label: `Comissão (${comissao}%)`, val: result.preco * comissao / 100,    color: 'text-red-400' },
+    { label: `Impostos (${imposto}%)`,  val: result.preco * imposto / 100,     color: 'text-red-400' },
+    ...(marketing > 0 ? [{ label: `Marketing (${marketing}%)`,     val: result.preco * marketing / 100,     color: 'text-red-400' }] : []),
+    ...(influenciador > 0 ? [{ label: `Influenciador (${influenciador}%)`, val: result.preco * influenciador / 100, color: 'text-red-400' }] : []),
     { label: 'Lucro líquido',   val: result.lucro,                       color: 'text-neon-green' },
   ]
 
@@ -150,6 +162,16 @@ function PlatformCard({
         )}
       </div>
 
+      {/* Lucro líquido destaque */}
+      {result.preco > 0 && (
+        <div className="mb-4 p-3 rounded-xl bg-neon-green/5 border border-neon-green/20 flex items-center justify-between">
+          <span className="text-xs text-slate-400">Lucro líquido / unidade</span>
+          <span className="text-base font-bold font-mono text-neon-green">
+            R$ {result.lucro.toFixed(2).replace('.', ',')}
+          </span>
+        </div>
+      )}
+
       {/* Breakdown */}
       <div className="space-y-2 border-t border-white/5 pt-3">
         {breakdown.map(b => (
@@ -163,7 +185,7 @@ function PlatformCard({
       </div>
 
       {/* ROI */}
-      {result.preco > 0 && (
+      {result.preco > 0 && custo > 0 && (
         <div className={`mt-4 p-2.5 rounded-xl ${config.bgColor} border ${config.borderColor} border-opacity-20`}>
           <div className="flex justify-between text-xs">
             <span className="text-slate-400">ROI sobre custo</span>
@@ -180,9 +202,12 @@ function PlatformCard({
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Precificacao() {
-  const [custo, setCusto] = useState(100)
+  const [custo, setCusto]           = useState(100)
+  const [embalagem, setEmbalagem]   = useState(0)
+  const [marketing, setMarketing]   = useState(0)
+  const [influenciador, setInfluenciador] = useState(0)
   const [margemDesejada, setMargemDesejada] = useState(30)
-  const [regime, setRegime] = useState(0)
+  const [regime, setRegime]         = useState(0)
   const [freteGratis, setFreteGratis] = useState(true)
 
   // Per-platform overrides
@@ -196,10 +221,10 @@ export default function Precificacao() {
 
   const results = useMemo(() => {
     return Object.entries(overrides).reduce((acc, [key, ov]) => {
-      acc[key] = calcPreco(custo, margemDesejada, ov.comissao, ov.taxaFixa, ov.frete, imposto, freteGratis)
+      acc[key] = calcPreco(custo, embalagem, marketing, influenciador, margemDesejada, ov.comissao, ov.taxaFixa, ov.frete, imposto, freteGratis)
       return acc
     }, {} as Record<string, { preco: number; lucro: number; margem: number }>)
-  }, [custo, margemDesejada, imposto, freteGratis, overrides])
+  }, [custo, embalagem, marketing, influenciador, margemDesejada, imposto, freteGratis, overrides])
 
   return (
     <div className="min-h-screen">
@@ -217,8 +242,37 @@ export default function Precificacao() {
               </h3>
               <div className="space-y-4">
                 <InputGroup label="Custo unitário" prefix="R$" value={custo} onChange={setCusto} hint="Custo de aquisição ou produção do produto" />
+                <InputGroup label="Custo de embalagem" prefix="R$" value={embalagem} onChange={setEmbalagem} hint="Caixa, plástico-bolha, lacre, etiqueta etc." />
                 <InputGroup label="Margem desejada" suffix="%" value={margemDesejada} onChange={setMargemDesejada} hint="Percentual de margem líquida desejada sobre o preço de venda" />
               </div>
+            </div>
+
+            {/* Additional costs */}
+            <div className="glass-card rounded-2xl p-5">
+              <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
+                <Megaphone className="w-4 h-4 text-neon-purple" />Custos Adicionais
+              </h3>
+              <div className="space-y-4">
+                <InputGroup
+                  label="Marketing / Ads"
+                  suffix="%"
+                  value={marketing}
+                  onChange={setMarketing}
+                  hint="% do preço de venda destinado a anúncios patrocinados no marketplace ou redes sociais"
+                />
+                <InputGroup
+                  label="Influenciador / Afiliado"
+                  suffix="%"
+                  value={influenciador}
+                  onChange={setInfluenciador}
+                  hint="% de comissão paga a influenciadores ou afiliados sobre o preço de venda"
+                />
+              </div>
+              {(marketing > 0 || influenciador > 0) && (
+                <p className="mt-3 text-[10px] text-slate-600 font-mono leading-relaxed">
+                  Total de custos variáveis adicionais: <span className="text-neon-orange">{(marketing + influenciador).toFixed(1)}%</span>
+                </p>
+              )}
             </div>
 
             {/* Tax regime */}
@@ -328,9 +382,12 @@ export default function Precificacao() {
                       <p className={`text-2xl font-bold font-mono ${cfg.textColor}`}>
                         {r.preco > 0 ? `R$ ${r.preco.toFixed(2).replace('.', ',')}` : '—'}
                       </p>
-                      <p className="text-[10px] text-slate-500 mt-1 font-mono">
-                        lucro R$ {r.lucro.toFixed(2).replace('.', ',')}
-                      </p>
+                      <div className="mt-2 pt-2 border-t border-white/5">
+                        <p className="text-[10px] text-slate-500 font-mono">lucro líquido</p>
+                        <p className="text-sm font-bold font-mono text-neon-green">
+                          R$ {r.lucro.toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
                     </div>
                   )
                 })}
@@ -346,6 +403,9 @@ export default function Precificacao() {
                   config={cfg}
                   result={results[key]}
                   custo={custo}
+                  embalagem={embalagem}
+                  marketing={marketing}
+                  influenciador={influenciador}
                   frete={freteGratis ? overrides[key as keyof typeof overrides].frete : 0}
                   comissao={overrides[key as keyof typeof overrides].comissao}
                   imposto={imposto}
@@ -373,7 +433,7 @@ export default function Precificacao() {
                   </thead>
                   <tbody>
                     {[10, 15, 20, 25, 30, 35, 40, 50].map(m => {
-                      const r = calcPreco(custo, m, overrides.ML.comissao, overrides.ML.taxaFixa, overrides.ML.frete, imposto, freteGratis)
+                      const r = calcPreco(custo, embalagem, marketing, influenciador, m, overrides.ML.comissao, overrides.ML.taxaFixa, overrides.ML.frete, imposto, freteGratis)
                       const isSelected = m === margemDesejada
                       return (
                         <tr key={m} className={isSelected ? 'bg-neon-blue/5' : ''} onClick={() => setMargemDesejada(m)} style={{ cursor: 'pointer' }}>
@@ -384,7 +444,7 @@ export default function Precificacao() {
                           </td>
                           <td className="py-2.5 px-4 text-right font-mono text-slate-300">R$ {r.preco.toFixed(2)}</td>
                           <td className="py-2.5 px-4 text-right font-mono text-neon-green">R$ {r.lucro.toFixed(2)}</td>
-                          <td className="py-2.5 px-4 text-right font-mono text-neon-purple">{((r.lucro / custo) * 100).toFixed(1)}%</td>
+                          <td className="py-2.5 px-4 text-right font-mono text-neon-purple">{custo > 0 ? ((r.lucro / custo) * 100).toFixed(1) : '—'}%</td>
                           <td className="py-2.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <div className="flex-1 max-w-16 h-1 bg-space-700 rounded-full overflow-hidden">
@@ -399,6 +459,16 @@ export default function Precificacao() {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* Disclaimer */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                <span className="font-semibold text-amber-400">Atenção:</span> Os valores calculados são estimativas com base nos dados fornecidos.
+                Comissões, alíquotas tributárias e fretes podem variar conforme categoria, estado e contrato com o marketplace.
+                Consulte sempre um contador para confirmar o regime tributário e as obrigações fiscais aplicáveis ao seu negócio.
+              </p>
             </div>
           </div>
         </div>

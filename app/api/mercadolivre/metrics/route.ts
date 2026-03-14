@@ -6,8 +6,8 @@
  *   connected        boolean
  *   nickname         string
  *   totalActive      número de anúncios ativos
- *   totalOrders30d   pedidos dos últimos 30 dias
- *   revenue30d       faturamento bruto dos últimos 30 dias
+ *   totalOrders30d   pedidos dos últimos 30 dias (excl. cancelados)
+ *   revenue30d       faturamento bruto dos últimos 30 dias (excl. cancelados)
  *   avgTicket        ticket médio
  *   pendingQuestions perguntas não respondidas
  *
@@ -16,6 +16,9 @@
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/server-auth'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
+
+const ORDERS_LIMIT = 50   // ML max por página
+const MAX_PAGES    = 10   // segurança: máximo 500 pedidos (10 × 50)
 
 export async function GET() {
   const user = await getAuthUser()
@@ -29,41 +32,66 @@ export async function GET() {
   const token = await getValidToken(user.id)
   if (!token) return NextResponse.json({ connected: false, error: 'Token inválido' })
 
-  const auth = { Authorization: `Bearer ${token}` }
-  const mlId = conn.ml_user_id
-
-  // Faz as 3 chamadas em paralelo para velocidade
+  const auth  = { Authorization: `Bearer ${token}` }
+  const mlId  = conn.ml_user_id
   const dateFrom30d = new Date(Date.now() - 30 * 86400_000).toISOString()
 
-  const [activeRes, ordersRes, questionsRes] = await Promise.allSettled([
+  // ── Anúncios ativos + Perguntas pendentes — em paralelo ──────────────────
+  const [activeRes, questionsRes] = await Promise.allSettled([
     fetch(`${ML_API_BASE}/users/${mlId}/items/search?status=active&limit=1`, { headers: auth }),
-    fetch(`${ML_API_BASE}/orders/search?seller=${mlId}&sort=date_desc&limit=50&order.date_created.from=${dateFrom30d}`, { headers: auth }),
     fetch(`${ML_API_BASE}/questions/search?seller_id=${mlId}&status=UNANSWERED&limit=1`, { headers: auth }),
   ])
 
-  // Active items count
   let totalActive = 0
   if (activeRes.status === 'fulfilled' && activeRes.value.ok) {
     const d = await activeRes.value.json()
     totalActive = d.paging?.total ?? 0
   }
 
-  // Orders 30d
-  let totalOrders30d = 0
-  let revenue30d = 0
-  if (ordersRes.status === 'fulfilled' && ordersRes.value.ok) {
-    const d = await ordersRes.value.json()
-    totalOrders30d = d.paging?.total ?? (d.results?.length ?? 0)
-    revenue30d = (d.results ?? []).reduce(
-      (sum: number, o: Record<string, unknown>) => sum + Number(o.total_amount ?? 0), 0
-    )
-  }
-
-  // Pending questions
   let pendingQuestions = 0
   if (questionsRes.status === 'fulfilled' && questionsRes.value.ok) {
     const d = await questionsRes.value.json()
-    pendingQuestions = d.paging?.total ?? (d.questions?.length ?? 0)
+    pendingQuestions = d.paging?.total ?? 0
+  }
+
+  // ── Pedidos 30d — paginar TODOS, excluir cancelados ──────────────────────
+  let totalOrders30d = 0
+  let revenue30d     = 0
+
+  try {
+    const allOrders: Record<string, unknown>[] = []
+    let offset          = 0
+    let totalFromPaging = Infinity
+    let pages           = 0
+
+    while (offset < totalFromPaging && pages < MAX_PAGES) {
+      const r = await fetch(
+        `${ML_API_BASE}/orders/search?seller=${mlId}&sort=date_desc` +
+        `&limit=${ORDERS_LIMIT}&offset=${offset}` +
+        `&order.date_created.from=${dateFrom30d}`,
+        { headers: auth }
+      )
+      if (!r.ok) break
+
+      const d = await r.json()
+      totalFromPaging = d.paging?.total ?? 0
+
+      const results: Record<string, unknown>[] = d.results ?? []
+      allOrders.push(...results)
+      offset += results.length
+      pages++
+
+      if (results.length < ORDERS_LIMIT) break   // última página
+    }
+
+    // Excluir pedidos cancelados e somar faturamento
+    const valid = allOrders.filter(o => o.status !== 'cancelled')
+    totalOrders30d = valid.length
+    revenue30d = valid.reduce(
+      (sum, o) => sum + Number(o.total_amount ?? 0), 0
+    )
+  } catch {
+    // silently ignore — retorna zeros
   }
 
   const avgTicket = totalOrders30d > 0 ? revenue30d / totalOrders30d : 0
