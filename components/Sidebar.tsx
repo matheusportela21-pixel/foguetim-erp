@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
-  Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck,
+  Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -39,6 +39,7 @@ const navGroups = [
       { href: '/dashboard/reputacao',          icon: ShieldCheck, label: 'Reputação'           },
       { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp,  label: 'Vendas por Anúncio'  },
       { href: '/dashboard/concorrentes',       icon: Users,       label: 'Concorrentes'        },
+      { href: '/dashboard/reviews',            icon: Star,        label: 'Reviews'             },
       { href: '/dashboard/clientes',           icon: UserCheck,   label: 'Clientes'            },
     ],
   },
