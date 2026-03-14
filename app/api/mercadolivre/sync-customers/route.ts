@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import { getAuthUser }  from '@/lib/server-auth'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createNotification } from '@/lib/notify'
 
 const ORDERS_LIMIT = 50
 const MAX_PAGES    = 10   // até 500 pedidos
@@ -188,6 +189,18 @@ export async function POST() {
 
   const newCount     = payload.filter(p => !existingSet.has(p.ml_buyer_id)).length
   const updatedCount = payload.length - newCount
+
+  // Notificação automática após sync bem-sucedido
+  if (newCount > 0) {
+    await createNotification({
+      userId:   user.id,
+      title:    'Clientes sincronizados',
+      message:  `${newCount} novo${newCount > 1 ? 's clientes importados' : ' cliente importado'} do Mercado Livre. ${updatedCount > 0 ? `${updatedCount} atualizado${updatedCount > 1 ? 's' : ''}.` : ''}`.trim(),
+      type:     'success',
+      category: 'integration',
+      actionUrl: '/dashboard/clientes',
+    })
+  }
 
   return NextResponse.json({
     synced:  payload.length,

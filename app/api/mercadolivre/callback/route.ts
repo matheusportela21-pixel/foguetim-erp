@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { exchangeCode, saveConnection } from '@/lib/mercadolivre'
+import { createNotification } from '@/lib/notify'
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
@@ -67,6 +68,16 @@ export async function GET(req: NextRequest) {
     // 3. Save to DB using admin client (bypasses RLS)
     await saveConnection(user.id, tokens, nickname)
     console.log('[ML callback] saveConnection OK')
+
+    // 4. Notificação de conexão bem-sucedida
+    await createNotification({
+      userId:    user.id,
+      title:     'Mercado Livre conectado!',
+      message:   `Sua conta ${nickname} foi conectada com sucesso ao Foguetim ERP.`,
+      type:      'success',
+      category:  'integration',
+      actionUrl: '/dashboard/integracoes',
+    })
 
     return redirect(`/dashboard/integracoes?connected=true&nickname=${encodeURIComponent(nickname)}`)
   } catch (err: unknown) {
