@@ -10,7 +10,7 @@ export const ML_APP_ID      = process.env.ML_APP_ID!
 export const ML_SECRET      = process.env.ML_CLIENT_SECRET!
 export const ML_REDIRECT_URI = process.env.ML_REDIRECT_URI!
 
-export const ML_AUTH_URL   = 'https://auth.mercadolibre.com.br/authorization'
+export const ML_AUTH_URL   = 'https://auth.mercadolivre.com.br/authorization'
 export const ML_TOKEN_URL  = 'https://api.mercadolibre.com/oauth/token'
 export const ML_API_BASE   = 'https://api.mercadolibre.com'
 
