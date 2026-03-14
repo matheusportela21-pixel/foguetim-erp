@@ -153,8 +153,8 @@ export async function GET(req: NextRequest) {
   try {
     // ── 1. Buscar reclamações ────────────────────────────────────────────────
     const claimsUrl =
-      `${ML_API_BASE}/post-purchase/claims/search` +
-      `?role=complainee&status=${encodeURIComponent(status)}&limit=50`
+      `${ML_API_BASE}/post-purchase/v1/claims/search` +
+      `?status=${encodeURIComponent(status)}&limit=50`
 
     const claimsRes = await fetch(claimsUrl, { headers: auth })
 
