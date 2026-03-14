@@ -6,7 +6,7 @@ import {
   TrendingUp, Package, DollarSign, ShoppingCart,
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
-  Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2,
+  Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -19,6 +19,25 @@ interface MLMetrics {
   revenue30d?:      number
   avgTicket?:       number
   pendingQuestions?: number
+}
+
+/* ── Reputation mini type ───────────────────────────────────────────────── */
+interface ReputaMini {
+  connected: boolean
+  nickname?: string
+  seller_reputation?: {
+    level_id: string | null
+    power_seller_status: string | null
+  }
+  error?: string
+}
+
+const LEVEL_CFG: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
+  green:       { label: 'Verde',    color: 'text-green-400',  bg: 'bg-green-500/10',  emoji: '🟢' },
+  light_green: { label: 'Amarelo',  color: 'text-yellow-400', bg: 'bg-yellow-500/10', emoji: '🟡' },
+  yellow:      { label: 'Laranja',  color: 'text-orange-400', bg: 'bg-orange-500/10', emoji: '🟠' },
+  orange:      { label: 'Vermelho', color: 'text-red-400',    bg: 'bg-red-500/10',    emoji: '🔴' },
+  red:         { label: 'Crítico',  color: 'text-red-500',    bg: 'bg-red-600/15',    emoji: '🚨' },
 }
 
 /* ── Notices & Changelog (informational content, not mock data) ─────────── */
@@ -82,6 +101,8 @@ export default function DashboardPage() {
   const [infoTab, setInfoTab]   = useState<'avisos' | 'updates'>('avisos')
   const [metrics, setMetrics]   = useState<MLMetrics | null>(null)
   const [mlLoading, setMlLoading] = useState(true)
+  const [reputa, setReputa]     = useState<ReputaMini | null>(null)
+  const [reputaLoading, setReputaLoading] = useState(true)
   const { user } = useAuth()
 
   const firstName = user?.user_metadata?.name?.split(' ')[0] ?? 'lá'
@@ -92,6 +113,14 @@ export default function DashboardPage() {
       .then((d: MLMetrics) => setMetrics(d))
       .catch(() => setMetrics({ connected: false }))
       .finally(() => setMlLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/mercadolivre/reputacao')
+      .then(r => r.json())
+      .then((d: ReputaMini) => setReputa(d))
+      .catch(() => setReputa({ connected: false }))
+      .finally(() => setReputaLoading(false))
   }, [])
 
   /* Derived KPI values */
@@ -170,7 +199,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Task Boxes ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 animate-slide-up">
 
           {/* Pedidos */}
           <div className="dash-card rounded-2xl overflow-hidden">
@@ -265,6 +294,61 @@ export default function DashboardPage() {
                 </Link>
               ))}
             </div>
+          </div>
+
+          {/* Reputação ML */}
+          <div className="dash-card rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+              <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
+              </div>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Reputação ML</p>
+            </div>
+            {reputaLoading ? (
+              <div className="p-4 flex items-center gap-2 text-xs text-slate-600">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
+              </div>
+            ) : !reputa?.connected ? (
+              <div className="px-4 py-3">
+                <p className="text-xs text-slate-600">ML não conectado</p>
+                <Link href="/dashboard/integracoes" className="text-xs text-yellow-400 hover:text-yellow-300 mt-1 inline-block transition-colors">
+                  Conectar ML →
+                </Link>
+              </div>
+            ) : (() => {
+              const lvlKey = reputa?.seller_reputation?.level_id ?? 'green'
+              const lvl = LEVEL_CFG[lvlKey] ?? LEVEL_CFG.green
+              return (
+                <div className="divide-y divide-white/[0.04]">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">{lvl.emoji}</span>
+                      <div>
+                        <p className="text-xs text-slate-400">Nível atual</p>
+                        <p className={`text-sm font-bold ${lvl.color}`}>{lvl.label}</p>
+                      </div>
+                    </div>
+                    <Link href="/dashboard/reputacao"
+                      className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                      Detalhes <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                  {reputa?.seller_reputation?.power_seller_status && (
+                    <div className="px-4 py-2.5">
+                      <p className="text-[10px] text-slate-600 uppercase tracking-wider">Status</p>
+                      <p className="text-xs font-semibold text-yellow-400 mt-0.5 capitalize">
+                        MercadoLíder {reputa.seller_reputation.power_seller_status}
+                      </p>
+                    </div>
+                  )}
+                  <Link href="/dashboard/reputacao"
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                    <span className="text-xs text-slate-500 group-hover:text-slate-300 transition-colors">Ver painel completo</span>
+                    <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
+                  </Link>
+                </div>
+              )
+            })()}
           </div>
         </div>
 
