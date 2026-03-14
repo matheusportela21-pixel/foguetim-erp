@@ -81,7 +81,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
         {/* User */}
         <div className="flex items-center gap-2 pl-3 ml-1 border-l border-white/[0.06]">
           {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+            <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
               {initials}

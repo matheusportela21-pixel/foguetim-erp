@@ -311,6 +311,7 @@ function EspiarTab() {
                                   src={item.thumbnail}
                                   alt=""
                                   className="w-9 h-9 rounded-lg object-cover shrink-0 bg-dark-700 border border-white/[0.06]"
+                                  onError={e => { (e.currentTarget as HTMLImageElement).src = '' }}
                                 />
                               ) : (
                                 <div className="w-9 h-9 rounded-lg bg-dark-700 flex items-center justify-center shrink-0">
@@ -391,6 +392,7 @@ function HealthList({ items }: { items: HealthItem[] }) {
               src={item.thumbnail}
               alt=""
               className="w-10 h-10 rounded-lg object-cover shrink-0 bg-dark-700 border border-white/[0.06]"
+              onError={e => { (e.currentTarget as HTMLImageElement).src = '' }}
             />
           ) : (
             <div className="w-10 h-10 rounded-lg bg-dark-700 flex items-center justify-center shrink-0">

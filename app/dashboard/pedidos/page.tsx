@@ -279,7 +279,7 @@ function MLOrdersTab() {
                 <div className="space-y-2">
                   {selectedOrder.order_items.map((it, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      {it.thumbnail && <img src={it.thumbnail.replace('http://', 'https://')} alt="" className="w-8 h-8 rounded object-cover" />}
+                      {it.thumbnail && <img src={it.thumbnail.replace('http://', 'https://')} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0 bg-dark-700" onError={e => { (e.currentTarget as HTMLImageElement).src = '' }} />}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-white truncate">{it.title}</p>
                         <p className="text-[10px] text-slate-500">{it.quantity}× {fmtBRL(it.unit_price)}</p>

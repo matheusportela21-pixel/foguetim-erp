@@ -217,7 +217,7 @@ export default function ContaSection() {
         <div className="relative">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="" className="w-16 h-16 rounded-2xl object-cover" />
+            <img src={avatarUrl} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-lg font-bold text-white">
               {initials}

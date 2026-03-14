@@ -134,7 +134,8 @@ function MLQuestionsTab() {
                 <div className="flex items-start gap-3">
                   {q.item?.thumbnail ? (
                     <img src={q.item.thumbnail.replace('http://', 'https://')} alt=""
-                      className="w-9 h-9 rounded-lg object-cover shrink-0 bg-dark-700" />
+                      className="w-9 h-9 rounded-lg object-cover shrink-0 bg-dark-700"
+                      onError={e => { (e.currentTarget as HTMLImageElement).src = '' }} />
                   ) : (
                     <div className="w-9 h-9 rounded-lg bg-dark-700 shrink-0" />
                   )}
@@ -163,7 +164,8 @@ function MLQuestionsTab() {
                 {selected.item && (
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-dark-700/50 border border-white/[0.06]">
                     <img src={selected.item.thumbnail.replace('http://', 'https://')} alt=""
-                      className="w-10 h-10 rounded-lg object-cover" />
+                      className="w-10 h-10 rounded-lg object-cover shrink-0 bg-dark-700"
+                      onError={e => { (e.currentTarget as HTMLImageElement).src = '' }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{selected.item.title}</p>
                       <p className="text-[10px] text-slate-600 font-mono">{selected.item_id}</p>

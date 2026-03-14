@@ -372,7 +372,7 @@ function MLProductsTab() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-dark-700 shrink-0">
                           {item.thumbnail
-                            ? <img src={item.thumbnail.replace('http://', 'https://')} alt="" className="w-full h-full object-cover" />
+                            ? <img src={item.thumbnail.replace('http://', 'https://')} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
                             : <ImageOff className="w-4 h-4 text-slate-700 m-auto mt-3" />}
                         </div>
                         <div className="min-w-0">
@@ -859,7 +859,7 @@ export default function ProdutosPage() {
                         <div className="flex items-center gap-3 min-w-[160px]">
                           <div className="w-9 h-9 rounded-lg bg-dark-700 flex items-center justify-center shrink-0 overflow-hidden border border-white/[0.06]">
                             {p.imagens.length > 0
-                              ? <img src={p.imagens[0]} alt="" className="w-full h-full object-cover" />
+                              ? <img src={p.imagens[0]} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
                               : <ImageOff className="w-4 h-4 text-slate-700" />}
                           </div>
                           <div className="min-w-0">

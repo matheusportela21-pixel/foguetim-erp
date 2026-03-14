@@ -595,7 +595,7 @@ export default function EmpresaSection() {
           <div className="flex items-center gap-4 mb-3">
             <div className="w-28 h-14 rounded-xl bg-dark-700 border border-white/[0.08] flex items-center justify-center overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={form.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+              <img src={form.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
             </div>
             <button
               type="button"

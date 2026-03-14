@@ -157,6 +157,7 @@ function ClaimCard({ claim }: { claim: ClaimItem }) {
             src={claim.order.product_thumbnail}
             alt=""
             className="w-12 h-12 rounded-lg object-cover shrink-0 bg-dark-700 border border-white/[0.06]"
+            onError={e => { (e.currentTarget as HTMLImageElement).src = '' }}
           />
         ) : (
           <div className="w-12 h-12 rounded-lg bg-dark-700 flex items-center justify-center shrink-0 border border-white/[0.06]">
