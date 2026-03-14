@@ -115,6 +115,7 @@ export default function LandingPage() {
             <a href="#planos"      className="hover:text-navy-900 transition-colors">Planos</a>
             <Link href="/sobre"        className="hover:text-navy-900 transition-colors">Sobre</Link>
             <Link href="/integracoes"  className="hover:text-navy-900 transition-colors">Integrações</Link>
+            <Link href="/planos"       className="hover:text-navy-900 transition-colors">Preços</Link>
             <Link href="/contato"      className="hover:text-navy-900 transition-colors">Contato</Link>
           </div>
 
@@ -140,6 +141,7 @@ export default function LandingPage() {
             })}
             <Link href="/sobre"       onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Sobre</Link>
             <Link href="/integracoes" onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Integrações</Link>
+            <Link href="/planos"      onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Preços</Link>
             <Link href="/contato"     onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Contato</Link>
             <div className="flex gap-3 pt-3 border-t border-slate-100">
               <Link href="/login"    className="flex-1 btn-outline py-2.5 rounded-xl text-sm text-center">Entrar</Link>
