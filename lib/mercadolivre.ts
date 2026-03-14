@@ -224,7 +224,11 @@ export async function saveConnection(
       { onConflict: 'user_id,marketplace' },
     )
 
-  if (error) console.error('[ML] saveConnection error:', error)
+  if (error) {
+    console.error('[ML] saveConnection error:', error)
+    throw new Error(`saveConnection falhou: ${error.message}`)
+  }
+  console.log('[ML] saveConnection OK — user_id:', userId, 'ml_nickname:', mlNickname)
 }
 
 /** Desconecta ML — mantém o registro mas marca connected = false */

@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import Header from '@/components/Header'
 import {
   CheckCircle, RefreshCw, Zap, Truck, ChevronDown, ChevronUp,
   Eye, EyeOff, ExternalLink, Copy, AlertCircle, X, Globe, HelpCircle,
-  Loader2,
+  Loader2, CheckCircle2,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -373,13 +375,37 @@ interface MLStatus {
   ml_user_id?: number
 }
 
-export default function IntegracoesPage() {
+function IntegracoesContent() {
+  const searchParams = useSearchParams()
   const [mks, setMks]         = useState<MktEntry[]>(INIT_MKT)
   const [fts, setFts]         = useState(fretes)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [mlStatus, setMlStatus] = useState<MLStatus | null>(null)
   const [mlLoading, setMlLoading] = useState(true)
   const [mlDisconnecting, setMlDisconnecting] = useState(false)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+
+  // Handle ?connected=true or ?ml_error=... from OAuth redirect
+  useEffect(() => {
+    const connected = searchParams.get('connected')
+    const mlError   = searchParams.get('ml_error')
+    if (connected === 'true') {
+      const nickname = searchParams.get('nickname') ?? ''
+      setToast({ type: 'success', msg: `Mercado Livre conectado${nickname ? ` como ${nickname}` : ''}!` })
+      // Remove query params from URL without reload
+      window.history.replaceState({}, '', '/dashboard/integracoes')
+    } else if (mlError) {
+      setToast({ type: 'error', msg: `Erro ao conectar: ${decodeURIComponent(mlError)}` })
+      window.history.replaceState({}, '', '/dashboard/integracoes')
+    }
+  }, [searchParams])
+
+  // Auto-dismiss toast after 5s
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   // Load real ML connection status on mount
   useEffect(() => {
@@ -437,6 +463,23 @@ export default function IntegracoesPage() {
   return (
     <div>
       <Header title="Integrações" subtitle="Conecte seus canais de venda e ferramentas" />
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-semibold transition-all ${
+          toast.type === 'success'
+            ? 'bg-green-900/90 border-green-500/30 text-green-300'
+            : 'bg-red-900/90 border-red-500/30 text-red-300'
+        }`}>
+          {toast.type === 'success'
+            ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+            : <AlertCircle className="w-4 h-4 shrink-0" />}
+          {toast.msg}
+          <button onClick={() => setToast(null)} className="ml-2 text-white/40 hover:text-white/80">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       <div className="p-6 space-y-8">
 
@@ -619,5 +662,13 @@ export default function IntegracoesPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function IntegracoesPage() {
+  return (
+    <Suspense>
+      <IntegracoesContent />
+    </Suspense>
   )
 }
