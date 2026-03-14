@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -8,6 +9,7 @@ import {
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { supabase, isConfigured } from '@/lib/supabase'
 
 const navGroups = [
   {
@@ -23,11 +25,11 @@ const navGroups = [
   {
     label: 'Operação',
     items: [
-      { href: '/dashboard/pedidos',      icon: ShoppingCart,    label: 'Pedidos'                },
-      { href: '/dashboard/sac',          icon: MessagesSquare,  label: 'SAC',     badge: 'Novo'  },
-      { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição', badge: 'Dev' },
-      { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e',    badge: 'Breve' },
-      { href: '/dashboard/integracoes',  icon: Link2,           label: 'Integrações'             },
+      { href: '/dashboard/pedidos',      icon: ShoppingCart,    label: 'Pedidos'                 },
+      { href: '/dashboard/sac',          icon: MessagesSquare,  label: 'SAC',      badge: 'Novo'  },
+      { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição', badge: 'Dev'  },
+      { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e',     badge: 'Breve' },
+      { href: '/dashboard/integracoes',  icon: Link2,           label: 'Integrações'              },
     ],
   },
   {
@@ -41,8 +43,8 @@ const navGroups = [
   {
     label: 'Gestão',
     items: [
-      { href: '/dashboard/equipe',        icon: Users,      label: 'Equipe'        },
-      { href: '/dashboard/configuracoes', icon: Settings,   label: 'Configurações' },
+      { href: '/dashboard/equipe',        icon: Users,    label: 'Equipe'        },
+      { href: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
     ],
   },
   {
@@ -59,33 +61,88 @@ const badgeColors: Record<string, string> = {
   Novo:  'bg-green-900/40 text-green-400 ring-1 ring-green-700/40',
 }
 
+// ─── Role mapping ─────────────────────────────────────────────────────────────
+// Cobre tanto os valores em português (salvos pelo signUp) quanto variantes inglesas
+
 const ROLE_LABELS: Record<string, string> = {
-  diretor:             'Diretor · Admin',
+  // Português (padrão do sistema)
+  diretor:             'Diretor',
   supervisor:          'Supervisor',
   analista_produtos:   'Analista de Produtos',
   analista_financeiro: 'Analista Financeiro',
   suporte:             'Suporte',
   operador:            'Operador',
+  // Variantes em inglês
+  director:            'Diretor',
+  analyst_products:    'Analista de Produtos',
+  analyst_financial:   'Analista Financeiro',
+  support:             'Suporte',
+  operator:            'Operador',
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  explorador:  'Explorador',
-  crescimento: 'Crescimento',
-  comandante:  'Comandante',
-  enterprise:  'Enterprise',
+// ─── Plan config ──────────────────────────────────────────────────────────────
+
+interface PlanCfg { label: string; limit: number; badge: string }
+
+const PLAN_CONFIG: Record<string, PlanCfg> = {
+  // Explorador — padrão para novos usuários (signUp)
+  explorador:  { label: 'Explorador',  limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
+  explorer:    { label: 'Explorador',  limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
+  // Crescimento
+  crescimento: { label: 'Crescimento', limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
+  // Comandante
+  comandante:  { label: 'Comandante',  limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
+  commander:   { label: 'Comandante',  limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
+  // Almirante / Enterprise — ilimitado
+  almirante:   { label: 'Almirante',   limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  admiral:     { label: 'Almirante',   limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  enterprise:  { label: 'Enterprise',  limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
 }
+
+const DEFAULT_PLAN: PlanCfg = {
+  label: 'Explorador', limit: 50, badge: 'text-purple-400 bg-purple-900/30',
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
   const { profile, signOut } = useAuth()
 
+  // Contagem real de produtos no Supabase
+  const [productCount, setProductCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!profile?.id || !isConfigured()) return
+    supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .then(({ count }) => setProductCount(count ?? 0))
+  }, [profile?.id])
+
+  // Dados derivados
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
     : 'MP'
   const displayName = profile?.name ?? 'Usuário'
-  const displayRole = profile?.role ? (ROLE_LABELS[profile.role] ?? profile.role) : 'Administrador'
-  const displayPlan = profile?.plan ? (PLAN_LABELS[profile.plan] ?? profile.plan) : 'Free'
+  const displayRole = profile?.role
+    ? (ROLE_LABELS[profile.role] ?? profile.role)
+    : 'Administrador'
+
+  const planCfg   = profile?.plan ? (PLAN_CONFIG[profile.plan] ?? DEFAULT_PLAN) : DEFAULT_PLAN
+  const unlimited  = !isFinite(planCfg.limit)
+  const barPct     = unlimited
+    ? 100
+    : productCount !== null
+      ? Math.min(100, Math.round((productCount / planCfg.limit) * 100))
+      : 0
+  const countText  = unlimited
+    ? 'Ilimitado'
+    : productCount !== null
+      ? `${productCount} / ${planCfg.limit} produtos`
+      : 'Carregando...'
 
   const handleSignOut = async () => {
     await signOut()
@@ -146,12 +203,19 @@ export default function Sidebar() {
       <div className="mx-3 mb-3 p-3 rounded-xl bg-dark-700 border border-white/[0.06]">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wider">Plano Ativo</p>
-          <span className="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded-full">{displayPlan}</span>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planCfg.badge}`}>
+            {planCfg.label}
+          </span>
         </div>
-        <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
-          <div className="h-full w-[57%] rounded-full bg-gradient-to-r from-purple-600 to-cyan-500" />
-        </div>
-        <p className="text-[10px] text-slate-600">Gerencie seu catálogo</p>
+        {!unlimited && (
+          <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 transition-all duration-500"
+              style={{ width: `${barPct}%` }}
+            />
+          </div>
+        )}
+        <p className="text-[10px] text-slate-600">{countText}</p>
       </div>
 
       {/* User */}

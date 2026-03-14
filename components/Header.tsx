@@ -10,6 +10,15 @@ interface HeaderProps {
   subtitle?: string
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  diretor: 'Diretor', director: 'Diretor',
+  supervisor: 'Supervisor',
+  analista_produtos: 'Analista de Produtos', analyst_products: 'Analista de Produtos',
+  analista_financeiro: 'Analista Financeiro', analyst_financial: 'Analista Financeiro',
+  suporte: 'Suporte', support: 'Suporte',
+  operador: 'Operador', operator: 'Operador',
+}
+
 export default function Header({ title, subtitle }: HeaderProps) {
   const { profile } = useAuth()
   const router = useRouter()
@@ -18,8 +27,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
     : 'MP'
-  const displayName = profile?.name ?? 'Matheus Portela'
-  const displayRole = profile?.role === 'diretor' ? 'Diretor' : (profile?.role ?? 'Diretor')
+  const displayName = profile?.name ?? 'Usuário'
+  const displayRole = profile?.role ? (ROLE_LABELS[profile.role] ?? profile.role) : 'Administrador'
 
   return (
     <header className="dash-header sticky top-0 z-20 flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-xl">
