@@ -10,7 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ThemeProvider>
       <PlanProvider>
         <SidebarProvider>
-          <div className="flex h-screen overflow-hidden">
+          <div className="flex flex-1 min-w-0 h-screen overflow-hidden">
             {/* Ambient background */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
               <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-[0.04]"
@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto relative z-10 bg-dark-900 dash-main">
+            <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden relative z-10 bg-dark-900 dash-main">
               <DashboardMobileWarning />
               <DashboardPlanGate>
                 {children}
