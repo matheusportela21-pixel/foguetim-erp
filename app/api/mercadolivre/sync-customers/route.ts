@@ -38,14 +38,14 @@ interface RawOrder {
 
 interface CustomerAccum {
   ml_buyer_id:  string
-  nickname:     string
-  first_name:   string
-  last_name:    string
-  email:        string
-  phone:        string
-  city:         string
-  state:        string
-  zip_code:     string
+  nickname:     string | null
+  first_name:   string | null
+  last_name:    string | null
+  email:        string | null   // ML não retorna email por privacidade
+  phone:        string | null
+  city:         string | null
+  state:        string | null
+  zip_code:     string | null
   total_orders: number
   total_spent:  number
   first_order_date: string
@@ -114,14 +114,14 @@ export async function POST() {
     if (!existing) {
       map.set(bid, {
         ml_buyer_id:      bid,
-        nickname:         o.buyer.nickname    ?? '',
-        first_name:       o.buyer.first_name  ?? '',
-        last_name:        o.buyer.last_name   ?? '',
-        email:            o.buyer.email       ?? '',
-        phone:            o.buyer.phone       ?? '',
-        city:             addr.city?.name     ?? '',
-        state:            addr.state?.name    ?? '',
-        zip_code:         addr.zip_code       ?? '',
+        nickname:         o.buyer.nickname    ?? null,
+        first_name:       o.buyer.first_name  ?? null,
+        last_name:        o.buyer.last_name   ?? null,
+        email:            o.buyer.email       ?? null,
+        phone:            o.buyer.phone       ?? null,
+        city:             addr.city?.name     ?? null,
+        state:            addr.state?.name    ?? null,
+        zip_code:         addr.zip_code       ?? null,
         total_orders:     1,
         total_spent:      o.total_amount,
         first_order_date: o.date_created,
@@ -134,9 +134,9 @@ export async function POST() {
       if (o.date_created > existing.last_order_date)  existing.last_order_date  = o.date_created
       // Atualizar endereço com o mais recente (last_order)
       if (o.date_created === existing.last_order_date && addr.city?.name) {
-        existing.city     = addr.city?.name  ?? existing.city
-        existing.state    = addr.state?.name ?? existing.state
-        existing.zip_code = addr.zip_code    ?? existing.zip_code
+        existing.city     = addr.city?.name  ?? existing.city  ?? null
+        existing.state    = addr.state?.name ?? existing.state ?? null
+        existing.zip_code = addr.zip_code    ?? existing.zip_code ?? null
       }
     }
   }
