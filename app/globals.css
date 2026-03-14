@@ -720,3 +720,67 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; }
 .theme-light .bg-dark-700.rounded-xl {
   background-color: #e2e8f0 !important;
 }
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT MODE — SAC CONTRAST FIXES
+   Commit: fix bolha de resposta e textos de baixo contraste
+   ═══════════════════════════════════════════════════════ */
+
+/* 1. text-slate-200 — era o principal causador do texto invisível nas bolhas.
+      Remapeado para cinza-escuro legível em fundo claro. */
+.theme-light .text-slate-200 { color: #1e293b !important; }
+
+/* 2. text-purple-400/60 — timestamps das bolhas de mensagem do vendedor.
+      A opacidade 60% sobre fundo claro deixa o roxo quase invisível. */
+.theme-light .text-purple-400\/60 {
+  color: #6d28d9 !important;
+  opacity: 1 !important;
+}
+
+/* 3. Bolha de resposta respondida (MLQuestionsTab) — bg-purple-500/10
+      Texto "Sua resposta" em text-purple-400 e conteúdo em text-slate-200. */
+.theme-light [class*="bg-purple-500\/"] {
+  background-color: rgba(168,85,247,0.10) !important;
+}
+.theme-light [class*="bg-purple-500\/"] .text-purple-400 { color: #6d28d9 !important; }
+.theme-light [class*="bg-purple-500\/"] .text-slate-200  { color: #1e293b !important; }
+.theme-light [class*="bg-purple-500\/"] .text-slate-600  { color: #4b5563 !important; }
+
+/* 4. Bolhas do vendedor no SAC local — bg-purple-600/20 com text-slate-200 */
+.theme-light [class*="bg-purple-600\/"] {
+  background-color: rgba(168,85,247,0.13) !important;
+}
+.theme-light [class*="bg-purple-600\/"] .text-slate-200 { color: #1e293b !important; }
+
+/* 5. Títulos de produto em amarelo (ML question list) — text-yellow-400 em <p>
+      Amarelo puro (#facc15) sobre branco tem contraste de ~1.1:1 — ilegível.
+      Mantido apenas para ícones/estrelas via fill-yellow-400. */
+.theme-light p.text-yellow-400,
+.theme-light p.text-yellow-300  { color: #92400e !important; }  /* amber-800 */
+
+/* 6. Badges ML (MktBadge / MktAvatar) com text-yellow-300 em <span>
+      bg-yellow-400/10 e bg-yellow-400/20 já recebem color:#92400e via regra anterior,
+      mas sem !important o Tailwind vence — adicionamos aqui explicitamente. */
+.theme-light span.text-yellow-300,
+.theme-light span.text-yellow-400 { color: #92400e !important; }
+.theme-light [class*="bg-yellow-400\/10"]  { color: #92400e !important; }
+.theme-light [class*="bg-yellow-400\/20"]  { color: #78350f !important; }
+
+/* 7. Itens da lista ML — bg de imagem placeholder e bordas laterais ativas */
+.theme-light .border-l-purple-500  { border-left-color: #7c3aed !important; }
+
+/* 8. Toolbar superior do MLQuestionsTab — bg-dark-900/30 */
+.theme-light [class*="bg-dark-900\/"] {
+  background-color: rgba(241,245,249,0.8) !important;
+}
+
+/* 9. Painel esquerdo SAC local — bg-dark-900/50 */
+/* já coberto pela regra [class*="bg-dark-900"] acima */
+
+/* 10. bg-dark-800/50 usado nas textareas desabilitadas do SAC */
+.theme-light [class*="bg-dark-800\/"] {
+  background-color: rgba(248,250,252,0.9) !important;
+}
+
+/* 11. Resposta de avaliação (bg-purple-500/[0.07]) */
+.theme-light [class*="bg-purple-500\/"] { background-color: rgba(168,85,247,0.08) !important; }
