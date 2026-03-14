@@ -17,6 +17,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// Arrow functions no nível do módulo — evita "function declaration inside block" em strict mode
+const daysOpen = (dateStr: string): number => {
+  try {
+    return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
+  } catch {
+    return 0
+  }
+}
+
+const getUrgency = (days: number): 'urgent' | 'warning' | 'normal' => {
+  if (days > 5) return 'urgent'
+  if (days >= 3) return 'warning'
+  return 'normal'
+}
+
 // ─── Reason mapping ────────────────────────────────────────────────────────────
 
 const REASON_LABELS: Record<string, string> = {
@@ -158,24 +173,7 @@ export async function GET(req: NextRequest) {
       rawClaims = rawClaims.filter(c => c.reason_id !== 'PDD')
     }
 
-    // ── 3. Calcular dias em aberto ───────────────────────────────────────────
-    const now = Date.now()
-
-    function daysOpen(dateStr: string): number {
-      try {
-        return Math.floor((now - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
-      } catch {
-        return 0
-      }
-    }
-
-    function getUrgency(days: number): 'urgent' | 'warning' | 'normal' {
-      if (days > 5) return 'urgent'
-      if (days >= 3) return 'warning'
-      return 'normal'
-    }
-
-    // ── 4. Buscar detalhes dos pedidos em lotes de 5 ────────────────────────
+    // ── 3 → 4. Buscar detalhes dos pedidos em lotes de 5 ────────────────────
     const orderMap = new Map<string, MLOrder>()
 
     for (let i = 0; i < rawClaims.length; i += ORDER_BATCH) {
