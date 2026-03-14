@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import { useAuth } from '@/lib/auth-context'
 import { getProducts, deleteProduct } from '@/lib/db/products'
+import { logActivity } from '@/lib/activity-log'
 import {
   Plus, Upload, Download, RefreshCw, Copy, Search, SlidersHorizontal,
   ChevronDown, ChevronUp, X, TrendingDown,
@@ -470,10 +471,16 @@ export default function ProdutosPage() {
 
   const handleDelete = async (id: number) => {
     if (!user) return
+    const prod = allProdutos.find(p => p.id === id)
     const ok = await deleteProduct(id, user.id)
     if (ok) {
       setAllProdutos(prev => prev.filter(p => p.id !== id))
       setSelected(prev => prev.filter(x => x !== id))
+      void logActivity({
+        action: 'delete_product', category: 'products',
+        description: `Produto excluído: ${prod?.nome ?? String(id)}`,
+        metadata: { id, sku: prod?.sku },
+      })
     }
     setDeleteConfirm(null)
   }

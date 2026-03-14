@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle,
+  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import EmpresaSection     from './components/EmpresaSection'
@@ -12,6 +12,7 @@ import NotifSection       from './components/NotifSection'
 import SegurancaSection   from './components/SegurancaSection'
 import PlanoSection       from './components/PlanoSection'
 import DangerSection      from './components/DangerSection'
+import HistoricoSection   from './components/HistoricoSection'
 
 /* ── Sidebar menu definition ────────────────────────────────────────────────── */
 type SectionId =
@@ -21,6 +22,7 @@ type SectionId =
   | 'notificacoes'
   | 'seguranca'
   | 'plano'
+  | 'historico'
   | 'perigo'
 
 interface MenuItem {
@@ -32,12 +34,13 @@ interface MenuItem {
 }
 
 const MENU: MenuItem[] = [
-  { id: 'empresa',       icon: Building2,   label: 'Empresa'             },
-  { id: 'conta',         icon: User,        label: 'Minha Conta'         },
-  { id: 'impressao',     icon: Printer,     label: 'Impressão', badge: 'Em breve' },
-  { id: 'notificacoes',  icon: Bell,        label: 'Notificações'        },
-  { id: 'seguranca',     icon: ShieldCheck, label: 'Segurança'           },
-  { id: 'plano',         icon: CreditCard,  label: 'Plano e Assinatura'  },
+  { id: 'empresa',       icon: Building2,    label: 'Empresa'             },
+  { id: 'conta',         icon: User,         label: 'Minha Conta'         },
+  { id: 'impressao',     icon: Printer,      label: 'Impressão', badge: 'Em breve' },
+  { id: 'notificacoes',  icon: Bell,         label: 'Notificações'        },
+  { id: 'seguranca',     icon: ShieldCheck,  label: 'Segurança'           },
+  { id: 'plano',         icon: CreditCard,   label: 'Plano e Assinatura'  },
+  { id: 'historico',     icon: History,      label: 'Histórico'           },
   { id: 'perigo',        icon: AlertTriangle, label: 'Zona de Perigo', danger: true },
 ]
 
@@ -50,6 +53,7 @@ function SectionContent({ id }: { id: SectionId }) {
     case 'notificacoes': return <NotifSection />
     case 'seguranca':    return <SegurancaSection />
     case 'plano':        return <PlanoSection />
+    case 'historico':    return <HistoricoSection />
     case 'perigo':       return <DangerSection />
   }
 }

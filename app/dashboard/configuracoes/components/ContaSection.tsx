@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Loader2, Check, AlertCircle, Camera, Eye, EyeOff, X, Mail } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity-log'
 import type { ExtendedProfile } from '../types'
 import { INPUT_CLS, LABEL_CLS } from '../types'
 
@@ -114,6 +115,7 @@ export default function ContaSection() {
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
       setAvatarUrl(publicUrl)
       await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', profile.id)
+      void logActivity({ action: 'update_avatar', category: 'account', description: 'Foto de perfil atualizada' })
       showToast('success', 'Foto atualizada!')
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro ao enviar foto.')
@@ -135,6 +137,7 @@ export default function ContaSection() {
         .update({ name, whatsapp })
         .eq('id', profile.id)
       if (error) throw new Error(error.message)
+      void logActivity({ action: 'update_profile', category: 'account', description: 'Dados do perfil atualizados', metadata: { fields: ['name', 'whatsapp'] } })
       showToast('success', 'Dados salvos com sucesso!')
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro ao salvar.')
@@ -151,6 +154,7 @@ export default function ContaSection() {
     try {
       const { error } = await supabase.auth.updateUser({ email: newEmail })
       if (error) throw new Error(error.message)
+      void logActivity({ action: 'request_email_change', category: 'security', description: 'Solicitação de alteração de e-mail enviada' })
       showToast('success', 'Verifique seu e-mail para confirmar a alteração.')
       setEmailModal(false)
       setNewEmail('')
@@ -182,6 +186,7 @@ export default function ContaSection() {
       if (signInErr) throw new Error('Senha atual incorreta.')
       const { error } = await supabase.auth.updateUser({ password: newPwd })
       if (error) throw new Error(error.message)
+      void logActivity({ action: 'update_password', category: 'security', description: 'Senha alterada com sucesso' })
       showToast('success', 'Senha alterada com sucesso!')
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('')
     } catch (err) {

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Check, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity-log'
 import type { ExtendedProfile, NotifPrefs } from '../types'
 
 const DEFAULT_PREFS: Required<NotifPrefs> = {
@@ -76,6 +77,7 @@ export default function NotifSection() {
         .update({ notification_prefs: prefs })
         .eq('id', profile.id)
       if (error) throw new Error(error.message)
+      void logActivity({ action: 'update_notifications', category: 'notifications', description: 'Preferências de notificação atualizadas' })
       showToast('success', 'Preferências salvas com sucesso!')
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro ao salvar.')

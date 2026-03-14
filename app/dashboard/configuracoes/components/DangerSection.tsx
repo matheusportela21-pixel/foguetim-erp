@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Download, X, Loader2, Check, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity-log'
 import type { ExtendedProfile } from '../types'
 
 /* ── Cancel reasons ─────────────────────────────────────────────────────────── */
@@ -119,7 +120,13 @@ export default function DangerSection() {
         .eq('id', profile.id)
       if (updErr) throw new Error(updErr.message)
 
-      // 3. Sign out and redirect
+      // 3. Log cancellation and sign out
+      void logActivity({
+        action: 'cancel_account', category: 'account',
+        description: 'Conta cancelada pelo usuário',
+        metadata: { reason },
+        visibility: 'support',
+      })
       resetModal()
       await signOut()
       router.push('/?cancelled=true')

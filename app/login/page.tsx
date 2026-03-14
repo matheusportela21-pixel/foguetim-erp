@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Rocket, Eye, EyeOff, AlertCircle, AlertTriangle, CheckCircle2, Loader2, Shield, Zap } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { logActivity } from '@/lib/activity-log'
 
 function LoginForm() {
   const [email,    setEmail]    = useState('')
@@ -44,6 +45,7 @@ function LoginForm() {
         setError('Email ou senha inválidos. Verifique os dados e tente novamente.')
         setLoading(false)
       } else {
+        void logActivity({ action: 'login', category: 'auth', description: 'Login realizado com sucesso' })
         // Hard redirect — garante que a cookie de sessão está presente no próximo request
         const redirect = searchParams.get('redirect') ?? '/dashboard'
         window.location.href = redirect

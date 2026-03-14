@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase, isConfigured } from './supabase'
+import { logActivity } from './activity-log'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!configured) return
+    await logActivity({ action: 'logout', category: 'auth', description: 'Sessão encerrada' })
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)

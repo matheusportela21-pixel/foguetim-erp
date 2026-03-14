@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Loader2, Check, AlertCircle, Upload, X, ImageIcon } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
+import { logActivity } from '@/lib/activity-log'
 import type { ExtendedProfile } from '../types'
 import { INPUT_CLS, LABEL_CLS } from '../types'
 
@@ -348,6 +349,11 @@ export default function EmpresaSection() {
         })
         .eq('id', profile.id)
       if (error) throw new Error(error.message)
+      void logActivity({
+        action: 'update_company', category: 'company',
+        description: 'Dados da empresa atualizados',
+        metadata: { fields: ['razao_social', 'nome_fantasia', 'document_number', 'endereco', 'regime_tributario'] },
+      })
       showToast('success', 'Dados salvos com sucesso!')
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro ao salvar.')

@@ -20,6 +20,7 @@ import {
 } from '../_data'
 import { useAuth } from '@/lib/auth-context'
 import { getProduct, createProduct, updateProduct, saveProductMarketplaces, saveStockMovement } from '@/lib/db/products'
+import { logActivity } from '@/lib/activity-log'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
@@ -1578,6 +1579,11 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
         if (!created) { setToast({ msg: 'Erro ao criar produto.', type: 'error' }); return }
         await saveProductMarketplaces(created.id, saved.mkt, user.id)
         setUnsaved(false)
+        void logActivity({
+          action: 'create_product', category: 'products',
+          description: `Produto criado: ${saved.nome}`,
+          metadata: { id: created.id, sku: saved.sku, status: saved.status },
+        })
         setToast({ msg: 'Produto criado com sucesso!', type: 'success' })
         setTimeout(() => router.replace(`/dashboard/produtos/${created.id}`), 1000)
       } else {
@@ -1585,6 +1591,11 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
         if (!ok) { setToast({ msg: 'Erro ao salvar produto.', type: 'error' }); return }
         await saveProductMarketplaces(saved.id, saved.mkt, user.id)
         setUnsaved(false)
+        void logActivity({
+          action: publish ? 'publish_product' : 'update_product', category: 'products',
+          description: publish ? `Produto publicado: ${saved.nome}` : `Produto atualizado: ${saved.nome}`,
+          metadata: { id: saved.id, sku: saved.sku },
+        })
         setToast({ msg: publish ? 'Produto salvo e publicado!' : 'Rascunho salvo!', type: 'success' })
       }
     } finally {
