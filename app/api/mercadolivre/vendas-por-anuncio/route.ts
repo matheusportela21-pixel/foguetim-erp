@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Thumbnails via /items?ids=... em lotes de 20 ──────────────────────────
-  const itemIds   = [...map.keys()]
+  const itemIds   = Array.from(map.keys())
   const BATCH     = 20
 
   for (let i = 0; i < itemIds.length; i += BATCH) {
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Calcula métricas finais e ordena ──────────────────────────────────────
-  const allItems     = [...map.values()]
+  const allItems     = Array.from(map.values())
   const totalVendas  = allItems.reduce((s, x) => s + x.total_vendas, 0)
   const validOrders  = allOrders.filter(o => (o.status as string) !== 'cancelled')
 
