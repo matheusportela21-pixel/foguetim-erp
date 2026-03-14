@@ -113,6 +113,9 @@ export default function LandingPage() {
             <a href="#solucoes"    className="hover:text-navy-900 transition-colors">Soluções</a>
             <a href="#ferramentas" className="hover:text-navy-900 transition-colors">Ferramentas</a>
             <a href="#planos"      className="hover:text-navy-900 transition-colors">Planos</a>
+            <Link href="/sobre"        className="hover:text-navy-900 transition-colors">Sobre</Link>
+            <Link href="/integracoes"  className="hover:text-navy-900 transition-colors">Integrações</Link>
+            <Link href="/contato"      className="hover:text-navy-900 transition-colors">Contato</Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -135,6 +138,9 @@ export default function LandingPage() {
               const [href, label] = s.split(':')
               return <a key={href} href={href} onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">{label}</a>
             })}
+            <Link href="/sobre"       onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Sobre</Link>
+            <Link href="/integracoes" onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Integrações</Link>
+            <Link href="/contato"     onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">Contato</Link>
             <div className="flex gap-3 pt-3 border-t border-slate-100">
               <Link href="/login"    className="flex-1 btn-outline py-2.5 rounded-xl text-sm text-center">Entrar</Link>
               <Link href="/registro" className="flex-1 btn-primary py-2.5 rounded-xl text-sm text-center">Cadastrar</Link>
@@ -403,37 +409,54 @@ export default function LandingPage() {
                 </div>
                 <span className="font-bold text-navy-900" style={{ fontFamily: 'Sora, sans-serif' }}>Foguetim ERP</span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed mb-3">
                 O ERP completo para sellers de marketplace brasileiro. Seu e-commerce em órbita.
               </p>
+              <div className="space-y-1 text-xs text-slate-400">
+                <p>Operado por FIO CABANA INDUSTRIA E COMERCIO DE CONFECCOES LTDA</p>
+                <p>CNPJ: 33.685.241/0001-70 | Fortaleza — CE — Brasil</p>
+                <a href="mailto:contato@foguetim.com.br" className="hover:text-navy-900 transition-colors block">
+                  contato@foguetim.com.br
+                </a>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-8 text-sm">
-              {[
-                { title: 'Produto', links: ['Soluções', 'Preços', 'Changelog'] },
-                { title: 'Empresa', links: ['Sobre', 'Blog', 'Carreiras'] },
-                { title: 'Suporte', links: ['Documentação', 'Status', 'Contato'] },
-              ].map(col => (
-                <div key={col.title}>
-                  <p className="font-bold text-navy-900 mb-3 text-xs uppercase tracking-wider">{col.title}</p>
-                  <ul className="space-y-2">
-                    {col.links.map(l => (
-                      <li key={l}>
-                        <a href="#" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">{l}</a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              <div>
+                <p className="font-bold text-navy-900 mb-3 text-xs uppercase tracking-wider">Produto</p>
+                <ul className="space-y-2">
+                  <li><a href="#solucoes" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Soluções</a></li>
+                  <li><a href="#planos" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Preços</a></li>
+                  <li><Link href="/integracoes" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Integrações</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-bold text-navy-900 mb-3 text-xs uppercase tracking-wider">Empresa</p>
+                <ul className="space-y-2">
+                  <li><Link href="/sobre" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Sobre</Link></li>
+                  <li><Link href="/contato" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Contato</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-bold text-navy-900 mb-3 text-xs uppercase tracking-wider">Legal</p>
+                <ul className="space-y-2">
+                  <li><Link href="/termos" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Termos de Uso</Link></li>
+                  <li><Link href="/privacidade" className="text-slate-500 hover:text-navy-900 transition-colors text-sm">Privacidade</Link></li>
+                </ul>
+              </div>
             </div>
           </div>
 
           <div className="border-t border-slate-100 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-            <p>© 2026 Foguetim ERP. Todos os direitos reservados.</p>
+            <p>© 2026 Foguetim ERP — Todos os direitos reservados.</p>
+            <p className="text-center text-xs text-slate-400 italic">
+              Foguetim é uma plataforma independente. As integrações são realizadas via APIs oficiais de cada marketplace.
+            </p>
             <div className="flex gap-5">
-              {['Privacidade', 'Termos de Uso', 'Cookies'].map(l => (
-                <a key={l} href="#" className="hover:text-navy-900 transition-colors">{l}</a>
-              ))}
+              <Link href="/sobre" className="hover:text-navy-900 transition-colors">Sobre</Link>
+              <Link href="/termos" className="hover:text-navy-900 transition-colors">Termos de Uso</Link>
+              <Link href="/privacidade" className="hover:text-navy-900 transition-colors">Privacidade</Link>
+              <Link href="/contato" className="hover:text-navy-900 transition-colors">Contato</Link>
             </div>
           </div>
         </div>
