@@ -112,7 +112,6 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
             <a href="#solucoes"    className="hover:text-navy-900 transition-colors">Soluções</a>
             <a href="#ferramentas" className="hover:text-navy-900 transition-colors">Ferramentas</a>
-            <a href="#planos"      className="hover:text-navy-900 transition-colors">Planos</a>
             <Link href="/sobre"        className="hover:text-navy-900 transition-colors">Sobre</Link>
             <Link href="/integracoes"  className="hover:text-navy-900 transition-colors">Integrações</Link>
             <Link href="/planos"       className="hover:text-navy-900 transition-colors">Preços</Link>
@@ -135,7 +134,7 @@ export default function LandingPage() {
 
         {menu && (
           <div className="md:hidden border-t border-slate-100 bg-white px-6 py-4 space-y-1">
-            {['#solucoes:Soluções', '#ferramentas:Ferramentas', '#planos:Planos'].map(s => {
+            {['#solucoes:Soluções', '#ferramentas:Ferramentas'].map(s => {
               const [href, label] = s.split(':')
               return <a key={href} href={href} onClick={() => setMenu(false)} className="block text-sm font-medium text-slate-600 py-2.5">{label}</a>
             })}
