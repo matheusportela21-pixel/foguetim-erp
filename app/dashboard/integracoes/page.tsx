@@ -56,12 +56,12 @@ const INIT_MKT: MktEntry[] = [
 ]
 
 const fretes = [
-  { name: 'Melhor Envio', desc: 'Multi-transportadora', logo: '📦', connected: true  },
-  { name: 'Loggi',        desc: 'Entregas expressas',   logo: '🚀', connected: false },
-  { name: 'Total Express',desc: 'Fretes regionais',     logo: '🚛', connected: false },
-  { name: 'Jadlog',       desc: 'Encomendas B2B',       logo: '📮', connected: false },
-  { name: 'Kangu',        desc: 'Coleta em pontos',     logo: '📍', connected: false },
-  { name: 'Correios',     desc: 'PAC, SEDEX e mais',    logo: '🏣', connected: true  },
+  { name: 'Melhor Envio', desc: 'Multi-transportadora', logo: '📦', connected: false, soon: true },
+  { name: 'Correios',     desc: 'PAC, SEDEX e mais',    logo: '🏣', connected: false, soon: true },
+  { name: 'Loggi',        desc: 'Entregas expressas',   logo: '🚀', connected: false, soon: true },
+  { name: 'Total Express',desc: 'Fretes regionais',     logo: '🚛', connected: false, soon: true },
+  { name: 'Jadlog',       desc: 'Encomendas B2B',       logo: '📮', connected: false, soon: true },
+  { name: 'Kangu',        desc: 'Coleta em pontos',     logo: '📍', connected: false, soon: true },
 ]
 
 const erps = [
@@ -590,26 +590,20 @@ function IntegracoesContent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {fts.map(f => (
-              <div key={f.name} className={`dash-card rounded-xl p-4 border ${f.connected ? 'border-green-500/20 bg-green-500/5' : 'border-white/[0.06]'}`}>
+              <div key={f.name} className="dash-card rounded-xl p-4 border border-white/[0.06]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{f.logo}</span>
                     <div>
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-bold text-white">{f.name}</p>
-                        {f.connected && <CheckCircle className="w-3 h-3 text-green-400" />}
                       </div>
                       <p className="text-[10px] text-slate-600">{f.desc}</p>
                     </div>
                   </div>
-                  <button onClick={() => toggleFt(f.name)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      f.connected
-                        ? 'bg-dark-700 border border-white/[0.06] text-slate-400 hover:text-red-400'
-                        : 'bg-purple-600 hover:bg-purple-500 text-white'
-                    }`}>
-                    {f.connected ? 'Desconectar' : 'Conectar'}
-                  </button>
+                  <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-amber-900/40 text-amber-400 ring-1 ring-amber-700/40">
+                    Em breve
+                  </span>
                 </div>
               </div>
             ))}

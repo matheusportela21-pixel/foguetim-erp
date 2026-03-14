@@ -12,6 +12,7 @@ import {
   Package, CheckSquare, Square, Edit3, CopyPlus,
   ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
   AlertCircle, ImageOff, Info, CheckCircle2,
+  ExternalLink, Loader2, ShoppingBag, Link2,
 } from 'lucide-react'
 import {
   produtos as mockProdutos, MARCAS, CATEGORIAS, MKTS, MKT_COLOR,
@@ -211,12 +212,235 @@ function CopyModal({ produto, onClose }: { produto: Produto | null; onClose: () 
   )
 }
 
+// ─── ML Types ─────────────────────────────────────────────────────────────────
+
+interface MLItem {
+  id: string
+  title: string
+  price: number
+  original_price: number | null
+  available_quantity: number
+  sold_quantity: number
+  status: string
+  permalink: string
+  thumbnail: string
+  listing_type_id: string
+  condition: string
+  date_created: string
+  last_updated: string
+}
+
+// ─── ML Products Tab ──────────────────────────────────────────────────────────
+
+function MLProductsTab() {
+  const [items, setItems]           = useState<MLItem[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [notConnected, setNotConnected] = useState(false)
+  const [search, setSearch]         = useState('')
+  const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'all'>('active')
+  const [offset, setOffset]         = useState(0)
+  const [paging, setPaging]         = useState({ total: 0, offset: 0, limit: 50 })
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+    fetch(`/api/mercadolivre/products?offset=${offset}&limit=50&status=${statusFilter}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.notConnected) { setNotConnected(true); return }
+        if (d.error) { setError(d.error); return }
+        setItems(d.items ?? [])
+        setPaging(d.paging ?? { total: 0, offset, limit: 50 })
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [offset, statusFilter, refreshKey])
+
+  const listingLabel = (lt: string) => {
+    if (lt?.includes('gold_special') || lt?.includes('gold_pro')) return 'Premium'
+    if (lt?.includes('gold'))  return 'Clássico'
+    if (lt?.includes('silver')) return 'Gratuita'
+    return lt ?? '—'
+  }
+
+  const statusBadge = (s: string) => {
+    const map: Record<string, string> = {
+      active:       'bg-green-400/10 text-green-400',
+      paused:       'bg-amber-400/10 text-amber-400',
+      closed:       'bg-red-400/10 text-red-400',
+      under_review: 'bg-slate-400/10 text-slate-400',
+    }
+    const label: Record<string, string> = { active: 'Ativo', paused: 'Pausado', closed: 'Encerrado', under_review: 'Em revisão' }
+    return (
+      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${map[s] ?? 'bg-slate-700 text-slate-400'}`}>
+        {label[s] ?? s}
+      </span>
+    )
+  }
+
+  const filtered = search
+    ? items.filter(i => i.title.toLowerCase().includes(search.toLowerCase()))
+    : items
+
+  if (notConnected) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4">
+      <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+        <Link2 className="w-6 h-6 text-yellow-400" />
+      </div>
+      <p className="text-sm font-semibold text-white">Mercado Livre não conectado</p>
+      <p className="text-xs text-slate-500">Conecte sua conta em Integrações para ver seus anúncios.</p>
+      <a href="/dashboard/integracoes"
+        className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+        Ir para Integrações
+      </a>
+    </div>
+  )
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-16 gap-2 text-slate-500">
+      <Loader2 className="w-5 h-5 animate-spin" />
+      <span className="text-sm">Carregando anúncios do Mercado Livre...</span>
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <AlertCircle className="w-8 h-8 text-red-400" />
+      <p className="text-sm text-red-400 font-semibold">Erro ao carregar anúncios</p>
+      <p className="text-xs text-slate-500 max-w-sm text-center">{error}</p>
+      <button onClick={() => setRefreshKey(k => k + 1)}
+        className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 text-xs font-bold hover:bg-white/10 transition-colors">
+        Tentar novamente
+      </button>
+    </div>
+  )
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por título..."
+            className="pl-9 pr-4 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-52" />
+        </div>
+
+        <div className="flex items-center gap-1">
+          {(['active', 'paused', 'all'] as const).map(s => (
+            <button key={s} onClick={() => { setStatusFilter(s); setOffset(0) }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
+              {{ active: 'Ativos', paused: 'Pausados', all: 'Todos' }[s]}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={() => setRefreshKey(k => k + 1)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-auto">
+          <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+        </button>
+
+        <span className="text-xs text-slate-600">
+          <span className="text-white font-bold">{paging.total}</span> anúncios no ML
+        </span>
+      </div>
+
+      {/* Table */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <ShoppingBag className="w-8 h-8 text-slate-700" />
+          <p className="text-sm text-slate-500">Nenhum anúncio encontrado</p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {['Anúncio', 'Preço', 'Qtd', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
+                    <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {filtered.map(item => (
+                  <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-dark-700 shrink-0">
+                          {item.thumbnail
+                            ? <img src={item.thumbnail.replace('http://', 'https://')} alt="" className="w-full h-full object-cover" />
+                            : <ImageOff className="w-4 h-4 text-slate-700 m-auto mt-3" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-semibold leading-snug truncate max-w-[260px]">{item.title}</p>
+                          <p className="text-[10px] text-slate-600 font-mono">{item.id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="text-white font-bold">
+                        {item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className={`font-bold ${item.available_quantity === 0 ? 'text-red-400' : item.available_quantity <= 5 ? 'text-amber-400' : 'text-white'}`}>
+                        {item.available_quantity}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="text-slate-400">{item.sold_quantity}</span>
+                    </td>
+                    <td className="py-3 px-3">{statusBadge(item.status)}</td>
+                    <td className="py-3 px-3">
+                      <span className="text-[9px] font-semibold text-slate-400">{listingLabel(item.listing_type_id)}</span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <a href={item.permalink} target="_blank" rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg text-slate-600 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all inline-flex"
+                        title="Ver no Mercado Livre">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {paging.total > 50 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-slate-600">
+                Mostrando {offset + 1}–{Math.min(offset + 50, paging.total)} de {paging.total}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setOffset(Math.max(0, offset - 50))} disabled={offset === 0}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
+                  ← Anterior
+                </button>
+                <button onClick={() => setOffset(offset + 50)} disabled={offset + 50 >= paging.total}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
+                  Próxima →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProdutosPage() {
   const { user } = useAuth()
   const router   = useRouter()
 
+  const [view,        setView]        = useState<'local' | 'ml'>('local')
   const [allProdutos, setAllProdutos] = useState<Produto[]>(mockProdutos)
   const [dbLoading,   setDbLoading]   = useState(false)
 
@@ -379,6 +603,42 @@ export default function ProdutosPage() {
       <Header title="Produtos" subtitle="Gerencie seu catálogo completo" />
 
       <div className="p-6 space-y-4">
+
+        {/* ── View Tabs ── */}
+        <div className="flex items-center gap-1 bg-dark-800/60 rounded-xl p-1 self-start w-fit border border-white/[0.06]">
+          {[
+            { id: 'local', label: 'Cadastrados Localmente' },
+            { id: 'ml',    label: '📦 Mercado Livre'       },
+          ].map(t => (
+            <button key={t.id} onClick={() => setView(t.id as 'local' | 'ml')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                view === t.id
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── ML Tab ── */}
+        {view === 'ml' && (
+          <div className="dash-card rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+              <div>
+                <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Anúncios no Mercado Livre</p>
+                <p className="text-xs text-slate-600 mt-0.5">Dados em tempo real da API do ML · Somente leitura</p>
+              </div>
+              <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
+                🔒 Somente leitura
+              </span>
+            </div>
+            <MLProductsTab />
+          </div>
+        )}
+
+        {/* ── Local Tab ── */}
+        {view === 'local' && <>
 
         {/* Action Bar */}
         <div className="flex flex-wrap items-center gap-2">
@@ -690,6 +950,8 @@ export default function ProdutosPage() {
             </div>
           </div>
         </div>
+
+      </>} {/* end view === 'local' */}
       </div>
 
       <CopyModal produto={copyProd} onClose={() => setCopyProd(null)} />

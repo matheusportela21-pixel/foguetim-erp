@@ -1,18 +1,310 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ShoppingCart, Clock, Package, Truck, CheckCircle2, XCircle,
   CircleDollarSign, ScanLine, Send, RotateCcw, Star,
   Search, Filter, Eye, Printer, Tag, X, CheckSquare, Square,
   AlertTriangle, Bell, ChevronDown, ChevronUp, ArrowUpDown,
-  TrendingUp, Calendar, MapPin, Zap,
+  TrendingUp, Calendar, MapPin, Zap, Loader2, RefreshCw, Link2,
 } from 'lucide-react'
 import {
   PEDIDOS, STATUS_META, MKT_META,
   type Pedido, type PedidoStatus, type MKTPedido,
 } from './_data'
+
+// ─── ML ORDER TYPES ──────────────────────────────────────────────────────────
+
+interface MLOrder {
+  id: number
+  status: string
+  date_created: string
+  date_closed: string | null
+  total_amount: number
+  buyer: { id: number; nickname: string; first_name?: string; last_name?: string }
+  order_items: { title: string; quantity: number; unit_price: number; thumbnail?: string }[]
+  payments: { status: string; total_paid_amount: number; payment_method_id: string }[]
+  shipping: { id: number; status: string; tracking_number?: string }
+}
+
+// ─── ML ORDERS TAB ───────────────────────────────────────────────────────────
+
+function MLOrdersTab() {
+  const [orders, setOrders]         = useState<MLOrder[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [notConnected, setNotConnected] = useState(false)
+  const [search, setSearch]         = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [days, setDays]             = useState(30)
+  const [paging, setPaging]         = useState({ total: 0, offset: 0, limit: 50 })
+  const [offset, setOffset]         = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedOrder, setSelectedOrder] = useState<MLOrder | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+    fetch(`/api/mercadolivre/orders?offset=${offset}&limit=50&status=${statusFilter}&days=${days}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.notConnected) { setNotConnected(true); return }
+        if (d.error) { setError(d.error); return }
+        setOrders(d.orders ?? [])
+        setPaging(d.paging ?? { total: 0, offset, limit: 50 })
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [offset, statusFilter, days, refreshKey])
+
+  const STATUS_PT: Record<string, { label: string; cls: string }> = {
+    paid:           { label: 'Pago',        cls: 'bg-green-400/10 text-green-400'  },
+    shipped:        { label: 'Enviado',     cls: 'bg-blue-400/10 text-blue-400'    },
+    delivered:      { label: 'Entregue',    cls: 'bg-purple-400/10 text-purple-400'},
+    cancelled:      { label: 'Cancelado',   cls: 'bg-red-400/10 text-red-400'      },
+    payment_required: { label: 'Ag. Pag.', cls: 'bg-amber-400/10 text-amber-400'  },
+    confirmed:      { label: 'Confirmado',  cls: 'bg-cyan-400/10 text-cyan-400'    },
+    in_process:     { label: 'Em processo', cls: 'bg-slate-400/10 text-slate-400'  },
+  }
+
+  const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const fmtDate = (iso: string) => {
+    const d = new Date(iso)
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+      + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const filtered = search
+    ? orders.filter(o =>
+        String(o.id).includes(search) ||
+        o.buyer.nickname?.toLowerCase().includes(search.toLowerCase()) ||
+        o.order_items.some(i => i.title?.toLowerCase().includes(search.toLowerCase()))
+      )
+    : orders
+
+  if (notConnected) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4">
+      <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+        <Link2 className="w-6 h-6 text-yellow-400" />
+      </div>
+      <p className="text-sm font-semibold text-white">Mercado Livre não conectado</p>
+      <p className="text-xs text-slate-500">Conecte sua conta em Integrações para ver seus pedidos.</p>
+      <a href="/dashboard/integracoes" className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+        Ir para Integrações
+      </a>
+    </div>
+  )
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-16 gap-2 text-slate-500">
+      <Loader2 className="w-5 h-5 animate-spin" />
+      <span className="text-sm">Carregando pedidos do Mercado Livre...</span>
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <AlertTriangle className="w-8 h-8 text-red-400" />
+      <p className="text-sm text-red-400 font-semibold">Erro ao carregar pedidos</p>
+      <p className="text-xs text-slate-500 max-w-sm text-center">{error}</p>
+      <button onClick={() => setRefreshKey(k => k + 1)}
+        className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 text-xs font-bold hover:bg-white/10 transition-colors">
+        Tentar novamente
+      </button>
+    </div>
+  )
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="ID, comprador, produto..."
+            className="pl-9 pr-4 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-52" />
+        </div>
+
+        <div className="flex items-center gap-1">
+          {[
+            { v: 'all',      l: 'Todos'     },
+            { v: 'paid',     l: 'Pagos'     },
+            { v: 'shipped',  l: 'Enviados'  },
+            { v: 'delivered',l: 'Entregues' },
+            { v: 'cancelled',l: 'Cancelados'},
+          ].map(s => (
+            <button key={s.v} onClick={() => { setStatusFilter(s.v); setOffset(0) }}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.v ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
+              {s.l}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 ml-auto">
+          {[7, 30, 90].map(d => (
+            <button key={d} onClick={() => { setDays(d); setOffset(0) }}
+              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${days === d ? 'bg-purple-500/15 text-purple-400' : 'text-slate-600 hover:text-slate-400'}`}>
+              {d}d
+            </button>
+          ))}
+          <button onClick={() => setRefreshKey(k => k + 1)}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-1">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <span className="text-xs text-slate-600">
+          <span className="text-white font-bold">{paging.total}</span> pedidos últimos {days}d
+        </span>
+      </div>
+
+      {/* Summary KPIs */}
+      {orders.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Total de pedidos', value: String(paging.total),                                                  cls: 'text-white'    },
+            { label: 'Faturamento',      value: fmtBRL(orders.reduce((s, o) => s + o.total_amount, 0)),               cls: 'text-green-400'},
+            { label: 'Ticket médio',     value: orders.length ? fmtBRL(orders.reduce((s,o)=>s+o.total_amount,0)/orders.length) : '—', cls: 'text-cyan-400' },
+          ].map(k => (
+            <div key={k.label} className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.06]">
+              <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">{k.label}</p>
+              <p className={`text-lg font-bold ${k.cls}`}>{k.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Orders table */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <ShoppingCart className="w-8 h-8 text-slate-700" />
+          <p className="text-sm text-slate-500">Nenhum pedido encontrado</p>
+          <p className="text-xs text-slate-600">Tente ampliar o período ou remover filtros</p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {['Nº Pedido', 'Data', 'Comprador', 'Produtos', 'Valor', 'Status', 'Envio'].map(h => (
+                    <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {filtered.map(order => {
+                  const st = STATUS_PT[order.status] ?? { label: order.status, cls: 'bg-slate-700 text-slate-400' }
+                  return (
+                    <tr key={order.id}
+                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      onClick={() => setSelectedOrder(order)}>
+                      <td className="py-3 px-3 font-mono text-slate-400 text-[10px]">#{order.id}</td>
+                      <td className="py-3 px-3 text-slate-400 whitespace-nowrap">{fmtDate(order.date_created)}</td>
+                      <td className="py-3 px-3">
+                        <p className="text-white font-semibold">{order.buyer.nickname}</p>
+                        {order.buyer.first_name && (
+                          <p className="text-[10px] text-slate-600">{order.buyer.first_name} {order.buyer.last_name ?? ''}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 max-w-[200px]">
+                        {order.order_items.map((it, i) => (
+                          <p key={i} className="text-slate-300 truncate text-[10px]">
+                            {it.quantity}× {it.title}
+                          </p>
+                        ))}
+                      </td>
+                      <td className="py-3 px-3 font-bold text-white whitespace-nowrap">
+                        {fmtBRL(order.total_amount)}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      </td>
+                      <td className="py-3 px-3 text-[10px] text-slate-500">
+                        {order.shipping?.tracking_number ?? '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {paging.total > 50 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-slate-600">
+                Mostrando {offset + 1}–{Math.min(offset + 50, paging.total)} de {paging.total}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setOffset(Math.max(0, offset - 50))} disabled={offset === 0}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
+                  ← Anterior
+                </button>
+                <button onClick={() => setOffset(offset + 50)} disabled={offset + 50 >= paging.total}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
+                  Próxima →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Order detail modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setSelectedOrder(null)}>
+          <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+              <div>
+                <p className="font-bold text-white text-sm">Pedido #{selectedOrder.id}</p>
+                <p className="text-xs text-slate-500">{fmtDate(selectedOrder.date_created)}</p>
+              </div>
+              <button onClick={() => setSelectedOrder(null)}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/[0.06] transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">Comprador</p>
+                <p className="text-sm text-white font-semibold">{selectedOrder.buyer.nickname}</p>
+                <p className="text-xs text-slate-500">{selectedOrder.buyer.first_name} {selectedOrder.buyer.last_name}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2">Itens</p>
+                <div className="space-y-2">
+                  {selectedOrder.order_items.map((it, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      {it.thumbnail && <img src={it.thumbnail.replace('http://', 'https://')} alt="" className="w-8 h-8 rounded object-cover" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-white truncate">{it.title}</p>
+                        <p className="text-[10px] text-slate-500">{it.quantity}× {fmtBRL(it.unit_price)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
+                <p className="text-xs text-slate-500">Total</p>
+                <p className="text-lg font-bold text-white">{fmtBRL(selectedOrder.total_amount)}</p>
+              </div>
+              {selectedOrder.shipping?.tracking_number && (
+                <div>
+                  <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">Rastreamento</p>
+                  <p className="text-xs font-mono text-cyan-400">{selectedOrder.shipping.tracking_number}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -91,6 +383,7 @@ function KpiCard({
 // ─── PAGE ───────────────────────────────────────────────────────────────────
 
 export default function PedidosPage() {
+  const [view, setView]                   = useState<'ml' | 'local'>('ml')
   const [search, setSearch]               = useState('')
   const [statusFilter, setStatusFilter]   = useState<PedidoStatus | 'todos'>('todos')
   const [mktFilter, setMktFilter]         = useState<MKTPedido[]>([])
@@ -197,6 +490,20 @@ export default function PedidosPage() {
           <h1 className="text-xl font-bold text-white">Pedidos</h1>
           <p className="text-slate-500 text-sm">Gerencie todos os pedidos da sua loja</p>
         </div>
+        {/* View tabs */}
+        <div className="flex items-center gap-1 bg-dark-800/60 rounded-xl p-1 border border-white/[0.06]">
+          {[
+            { id: 'ml',    label: '📦 Mercado Livre' },
+            { id: 'local', label: 'Local'             },
+          ].map(t => (
+            <button key={t.id} onClick={() => setView(t.id as 'ml' | 'local')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                view === t.id ? 'bg-purple-600 text-white' : 'text-slate-500 hover:text-slate-300'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-3">
           <button className="relative p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all">
             <Bell className="w-5 h-5" />
@@ -212,7 +519,23 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      <div className="p-6 space-y-5">
+      {/* ML Pedidos Tab */}
+      {view === 'ml' && (
+        <div className="dash-card m-6 rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+            <div>
+              <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Pedidos do Mercado Livre</p>
+              <p className="text-xs text-slate-600 mt-0.5">Dados em tempo real da API do ML · Clique em um pedido para ver detalhes</p>
+            </div>
+            <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
+              🔒 Somente leitura
+            </span>
+          </div>
+          <MLOrdersTab />
+        </div>
+      )}
+
+      {view === 'local' && <div className="p-6 space-y-5">
 
         {/* ── KPI CARDS ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -599,7 +922,7 @@ export default function PedidosPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div>} {/* end view === 'local' */}
     </div>
   )
 }

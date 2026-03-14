@@ -6,9 +6,231 @@ import {
   MessageSquare, Star, RotateCcw, Send, CheckCircle2,
   AlertTriangle, Search, X, Zap, ExternalLink, Bell,
   HelpCircle, MessageCircle, ThumbsUp, Package, BarChart2,
-  Clock, ChevronRight, ArrowLeft,
+  Clock, ChevronRight, ArrowLeft, Loader2, RefreshCw, Link2,
 } from 'lucide-react'
 import { SAC_ITEMS, SAC_TEMPLATES, type SACItem, type SACTipo, type SACStatus, type MKTPedido } from './_data'
+
+// ─── ML QUESTION TYPES ───────────────────────────────────────────────────────
+
+interface MLQuestion {
+  id: number
+  text: string
+  date_created: string
+  status: string
+  item_id: string
+  item: { title: string; thumbnail: string } | null
+  from: { id: number; answered_questions: number } | null
+  answer: { text: string; date_created: string; status: string } | null
+}
+
+// ─── ML QUESTIONS TAB ────────────────────────────────────────────────────────
+
+function MLQuestionsTab() {
+  const [questions, setQuestions]   = useState<MLQuestion[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [notConnected, setNotConnected] = useState(false)
+  const [tab, setTab]               = useState<'UNANSWERED' | 'ANSWERED'>('UNANSWERED')
+  const [paging, setPaging]         = useState({ total: 0, offset: 0, limit: 50 })
+  const [offset, setOffset]         = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [selected, setSelected]     = useState<MLQuestion | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+    fetch(`/api/mercadolivre/questions?status=${tab}&offset=${offset}&limit=50`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.notConnected) { setNotConnected(true); return }
+        if (d.error) { setError(d.error); return }
+        setQuestions(d.questions ?? [])
+        setPaging(d.paging ?? { total: 0, offset, limit: 50 })
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [tab, offset, refreshKey])
+
+  const timeAgo = (iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    if (diff < 60)    return 'agora'
+    if (diff < 3600)  return `há ${Math.floor(diff / 60)} min`
+    if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`
+    return `há ${Math.floor(diff / 86400)}d`
+  }
+
+  if (notConnected) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4">
+      <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+        <Link2 className="w-6 h-6 text-yellow-400" />
+      </div>
+      <p className="text-sm font-semibold text-white">Mercado Livre não conectado</p>
+      <p className="text-xs text-slate-500">Conecte sua conta para ver perguntas.</p>
+      <a href="/dashboard/integracoes" className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+        Ir para Integrações
+      </a>
+    </div>
+  )
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-dark-900/30">
+        <div className="flex items-center gap-1">
+          {[
+            { v: 'UNANSWERED', l: 'Pendentes', cls: 'text-red-400 bg-red-400/10' },
+            { v: 'ANSWERED',   l: 'Respondidas', cls: 'text-green-400 bg-green-400/10' },
+          ].map(t => (
+            <button key={t.v} onClick={() => { setTab(t.v as 'UNANSWERED' | 'ANSWERED'); setOffset(0) }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                tab === t.v ? t.cls : 'text-slate-500 hover:text-slate-300'
+              }`}>
+              {t.l}
+              {tab === t.v && paging.total > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-current/20 text-[9px]">{paging.total}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setRefreshKey(k => k + 1)}
+          className="ml-auto p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all">
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
+        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20">
+          Responder — Em breve
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16 gap-2 text-slate-500">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm">Carregando perguntas...</span>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <AlertTriangle className="w-8 h-8 text-red-400" />
+          <p className="text-sm text-red-400">{error}</p>
+          <button onClick={() => setRefreshKey(k => k + 1)}
+            className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 text-xs font-bold">
+            Tentar novamente
+          </button>
+        </div>
+      ) : questions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <CheckCircle2 className="w-10 h-10 text-green-500/40" />
+          <p className="text-sm text-slate-500">
+            {tab === 'UNANSWERED' ? 'Nenhuma pergunta pendente 🎉' : 'Nenhuma pergunta respondida'}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Question list */}
+          <div className="w-96 border-r border-white/[0.06] overflow-y-auto">
+            {questions.map(q => (
+              <button key={q.id} onClick={() => setSelected(q)}
+                className={`w-full text-left p-4 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors ${
+                  selected?.id === q.id ? 'bg-purple-500/5 border-l-2 border-l-purple-500' : ''
+                }`}>
+                <div className="flex items-start gap-3">
+                  {q.item?.thumbnail ? (
+                    <img src={q.item.thumbnail.replace('http://', 'https://')} alt=""
+                      className="w-9 h-9 rounded-lg object-cover shrink-0 bg-dark-700" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-lg bg-dark-700 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    {q.item && <p className="text-[10px] text-yellow-400 truncate mb-0.5">{q.item.title}</p>}
+                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">{q.text}</p>
+                    <p className="text-[10px] text-slate-600 mt-1">{timeAgo(q.date_created)}</p>
+                  </div>
+                  {tab === 'UNANSWERED' && (
+                    <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 mt-1 animate-pulse" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Question detail */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {!selected ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-slate-600">Selecione uma pergunta para ver detalhes</p>
+              </div>
+            ) : (
+              <div className="max-w-xl space-y-5">
+                {/* Item */}
+                {selected.item && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-dark-700/50 border border-white/[0.06]">
+                    <img src={selected.item.thumbnail.replace('http://', 'https://')} alt=""
+                      className="w-10 h-10 rounded-lg object-cover" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white truncate">{selected.item.title}</p>
+                      <p className="text-[10px] text-slate-600 font-mono">{selected.item_id}</p>
+                    </div>
+                    <a href={`https://www.mercadolivre.com.br/p/${selected.item_id}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg text-slate-600 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Question bubble */}
+                <div className="bg-dark-700/50 rounded-2xl rounded-tl-sm p-4 border border-white/[0.06]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-slate-600">Comprador #{selected.from?.id}</span>
+                    <span className="text-[10px] text-slate-600">{timeAgo(selected.date_created)}</span>
+                  </div>
+                  <p className="text-sm text-white leading-relaxed">{selected.text}</p>
+                </div>
+
+                {/* Answer or disabled CTA */}
+                {selected.answer ? (
+                  <div className="bg-purple-500/10 rounded-2xl rounded-tr-sm p-4 border border-purple-500/20 ml-8">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] text-purple-400 font-bold">Sua resposta</span>
+                      <span className="text-[10px] text-slate-600">{timeAgo(selected.answer.date_created)}</span>
+                    </div>
+                    <p className="text-sm text-slate-200 leading-relaxed">{selected.answer.text}</p>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl border border-dashed border-white/10 bg-dark-700/30">
+                    <div className="flex items-center gap-2 mb-3">
+                      <HelpCircle className="w-4 h-4 text-amber-400" />
+                      <p className="text-xs font-semibold text-white">Responder esta pergunta</p>
+                      <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">Em breve</span>
+                    </div>
+                    <textarea disabled
+                      placeholder="Funcionalidade de resposta estará disponível em breve..."
+                      className="w-full bg-dark-800/50 border border-white/[0.06] rounded-xl p-3 text-xs text-slate-500 resize-none h-20 cursor-not-allowed opacity-50" />
+                    <button disabled
+                      className="mt-2 px-4 py-2 rounded-xl bg-purple-600/30 text-purple-400 text-xs font-bold cursor-not-allowed opacity-50 flex items-center gap-1.5">
+                      <Send className="w-3.5 h-3.5" /> Responder (em breve)
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {paging.total > 50 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
+          <span className="text-xs text-slate-600">{offset + 1}–{Math.min(offset + 50, paging.total)} de {paging.total}</span>
+          <div className="flex gap-2">
+            <button onClick={() => setOffset(Math.max(0, offset - 50))} disabled={offset === 0}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30">← Ant.</button>
+            <button onClick={() => setOffset(offset + 50)} disabled={offset + 50 >= paging.total}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30">Próx. →</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -99,6 +321,7 @@ function DevolStatusBadge({ status }: { status: string }) {
 // ─── PAGE ───────────────────────────────────────────────────────────────────
 
 export default function SACPage() {
+  const [mainView, setMainView]           = useState<'ml' | 'sac'>('ml')
   const [activeTab, setActiveTab]         = useState<SACTipo | 'todos'>('todos')
   const [selectedItem, setSelectedItem]   = useState<SACItem | null>(SAC_ITEMS[0])
   const [reply, setReply]                 = useState('')
@@ -171,9 +394,19 @@ export default function SACPage() {
           <p className="text-slate-500 text-sm">Central de Atendimento ao Cliente</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            {pendingCount} pendente{pendingCount !== 1 ? 's' : ''}
+          {/* Main view tabs */}
+          <div className="flex items-center gap-1 bg-dark-800/60 rounded-xl p-1 border border-white/[0.06]">
+            {[
+              { id: 'ml',  label: '📦 Perguntas ML' },
+              { id: 'sac', label: 'SAC Local'        },
+            ].map(t => (
+              <button key={t.id} onClick={() => setMainView(t.id as 'ml' | 'sac')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  mainView === t.id ? 'bg-purple-600 text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}>
+                {t.label}
+              </button>
+            ))}
           </div>
           <button className="relative p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all">
             <Bell className="w-5 h-5" />
@@ -183,14 +416,14 @@ export default function SACPage() {
               </span>
             )}
           </button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white">
-            MP
-          </div>
         </div>
       </div>
 
-      {/* ── SPLIT PANEL ── */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* ── ML Questions View ── */}
+      {mainView === 'ml' && <MLQuestionsTab />}
+
+      {/* ── SAC SPLIT PANEL ── */}
+      {mainView === 'sac' && <div className="flex-1 flex overflow-hidden">
 
         {/* ===== LEFT PANEL ===== */}
         <div className="w-80 xl:w-96 flex-shrink-0 border-r border-white/[0.06] flex flex-col overflow-hidden bg-dark-900/50">
@@ -568,7 +801,7 @@ export default function SACPage() {
             </div>
           )}
         </div>
-      </div>
+      </div>} {/* end mainView === 'sac' */}
     </div>
   )
 }

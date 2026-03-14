@@ -1,14 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  TrendingUp, TrendingDown, Package, DollarSign, ShoppingCart,
+  TrendingUp, Package, DollarSign, ShoppingCart,
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
-  Eye, Clock, Megaphone, Bell, Sparkles,
+  Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+
+/* ── ML Metrics type ────────────────────────────────────────────────── */
+interface MLMetrics {
+  connected:        boolean
+  nickname?:        string
+  totalActive?:     number
+  totalOrders30d?:  number
+  revenue30d?:      number
+  avgTicket?:       number
+  pendingQuestions?: number
+}
 
 /* ── Notices & Changelog (informational content, not mock data) ─────────── */
 const notices = [
@@ -19,9 +30,9 @@ const notices = [
 ]
 
 const changelog = [
-  { version: 'v1.1.0', title: 'Módulo de Expedição lançado!',   desc: 'Gerencie envios, gere etiquetas e acompanhe rastreamento.',              date: '12/03/2026' },
-  { version: 'v1.0.5', title: 'Relatórios avançados',           desc: 'Novos gráficos de desempenho por marca e marketplace.',                  date: '10/03/2026' },
-  { version: 'v1.0.0', title: 'Lançamento do Foguetim ERP',     desc: 'Dashboard, Produtos, Precificação, Listagens e Financeiro.',              date: '01/03/2026' },
+  { version: 'v1.1.0', title: 'Integração Mercado Livre lançada!', desc: 'Sincronize anúncios, pedidos e perguntas do ML em tempo real.', date: '14/03/2026' },
+  { version: 'v1.0.5', title: 'Relatórios avançados',             desc: 'Novos gráficos de desempenho por marca e marketplace.',         date: '10/03/2026' },
+  { version: 'v1.0.0', title: 'Lançamento do Foguetim ERP',       desc: 'Dashboard, Produtos, Precificação, Listagens e Financeiro.',    date: '01/03/2026' },
 ]
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
@@ -30,6 +41,10 @@ function greeting() {
   if (h < 12) return 'Bom dia'
   if (h < 18) return 'Boa tarde'
   return 'Boa noite'
+}
+
+function fmtBRL(v: number) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 /* ── Task dot ──────────────────────────────────────────────────────────── */
@@ -48,12 +63,46 @@ function EmptyCard({ message, hint }: { message: string; hint?: string }) {
   )
 }
 
+/* ── KPI Skeleton ──────────────────────────────────────────────────────── */
+function KpiSkeleton() {
+  return (
+    <div className="dash-card p-4 rounded-2xl animate-pulse">
+      <div className="flex items-center justify-between mb-3">
+        <div className="h-2.5 w-24 bg-slate-800 rounded" />
+        <div className="w-7 h-7 rounded-lg bg-slate-800" />
+      </div>
+      <div className="h-6 w-20 bg-slate-800 rounded mb-2" />
+      <div className="h-2 w-32 bg-slate-800 rounded" />
+    </div>
+  )
+}
+
 /* ── Page ──────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
-  const [infoTab, setInfoTab] = useState<'avisos' | 'updates'>('avisos')
+  const [infoTab, setInfoTab]   = useState<'avisos' | 'updates'>('avisos')
+  const [metrics, setMetrics]   = useState<MLMetrics | null>(null)
+  const [mlLoading, setMlLoading] = useState(true)
   const { user } = useAuth()
 
   const firstName = user?.user_metadata?.name?.split(' ')[0] ?? 'lá'
+
+  useEffect(() => {
+    fetch('/api/mercadolivre/metrics')
+      .then(r => r.json())
+      .then((d: MLMetrics) => setMetrics(d))
+      .catch(() => setMetrics({ connected: false }))
+      .finally(() => setMlLoading(false))
+  }, [])
+
+  /* Derived KPI values */
+  const ml = metrics
+  const revenue   = ml?.connected ? fmtBRL(ml.revenue30d ?? 0)       : 'R$ 0,00'
+  const orders    = ml?.connected ? String(ml.totalOrders30d ?? 0)    : '0'
+  const active    = ml?.connected ? String(ml.totalActive ?? 0)       : '0'
+  const questions = ml?.connected ? (ml.pendingQuestions ?? 0)        : 0
+
+  const dotLevel = (n: number): 'ok' | 'warn' | 'danger' | 'muted' =>
+    !ml?.connected ? 'muted' : n > 5 ? 'danger' : n > 0 ? 'warn' : 'ok'
 
   return (
     <div>
@@ -67,7 +116,9 @@ export default function DashboardPage() {
                 {greeting()}, {firstName}! 👋
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                Conecte seus canais de venda para ver seus dados em tempo real.
+                {ml?.connected
+                  ? `Conta ML: ${ml.nickname} · dados dos últimos 30 dias`
+                  : 'Conecte seus canais de venda para ver seus dados em tempo real.'}
               </p>
             </div>
             <p className="text-xs text-slate-600 shrink-0">
@@ -77,26 +128,46 @@ export default function DashboardPage() {
         </div>
 
         {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
-          {[
-            { label: 'Receita do mês',    value: 'R$ 0,00',  icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro' },
-            { label: 'Lucro líquido',     value: 'R$ 0,00',  icon: TrendingUp,   color: 'text-green-400 bg-green-400/10',   href: '/dashboard/financeiro' },
-            { label: 'Pedidos realizados',value: '0',        icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos'    },
-            { label: 'Produtos ativos',   value: '0',        icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos'   },
-          ].map(k => (
-            <Link key={k.label} href={k.href}
-              className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight">{k.label}</p>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
-                  <k.icon className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
-              <p className="text-[10px] text-slate-600 mt-1.5">Nenhum dado ainda</p>
+        {mlLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[0,1,2,3].map(i => <KpiSkeleton key={i} />)}
+          </div>
+        ) : !ml?.connected ? (
+          <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
+              <Link2 className="w-5 h-5 text-yellow-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">Conecte seu Mercado Livre para ver métricas reais</p>
+              <p className="text-xs text-slate-500 mt-0.5">Pedidos, faturamento e anúncios aparecerão aqui automaticamente.</p>
+            </div>
+            <Link href="/dashboard/integracoes"
+              className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+              Conectar ML
             </Link>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+            {[
+              { label: 'Faturamento 30d',   value: revenue,  sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro' },
+              { label: 'Pedidos 30d',       value: orders,   sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos'    },
+              { label: 'Anúncios Ativos',   value: active,   sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos'   },
+              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Responder no SAC' : 'Nenhuma pendente', icon: MessageCircle, color: questions > 0 ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/sac' },
+            ].map(k => (
+              <Link key={k.label} href={k.href}
+                className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight">{k.label}</p>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
+                    <k.icon className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
+                <p className="text-[10px] text-slate-600 mt-1.5">{k.sub}</p>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* ── Task Boxes ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up">
@@ -111,12 +182,10 @@ export default function DashboardPage() {
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
-                { label: 'Para Reservar',          val: 0, level: 'muted' as const, href: '/dashboard/pedidos' },
-                { label: 'Para Emitir NF-e',       val: 0, level: 'muted' as const, href: '/dashboard/nfe'     },
-                { label: 'Para Enviar',             val: 0, level: 'muted' as const, href: '/dashboard/expedicao'},
-                { label: 'Expirando',               val: 0, level: 'muted' as const, href: '/dashboard/pedidos' },
-                { label: 'Para Imprimir Etiqueta',  val: 0, level: 'muted' as const, href: '/dashboard/expedicao'},
-                { label: 'Devoluções Pendentes',    val: 0, level: 'muted' as const, href: '/dashboard/pedidos' },
+                { label: 'Total 30 dias',             val: ml?.connected ? ml.totalOrders30d ?? 0 : 0, level: dotLevel(ml?.totalOrders30d ?? 0), href: '/dashboard/pedidos' },
+                { label: 'Para Emitir NF-e',          val: 0,  level: 'muted' as const, href: '/dashboard/nfe'      },
+                { label: 'Para Enviar',               val: 0,  level: 'muted' as const, href: '/dashboard/expedicao'},
+                { label: 'Devoluções Pendentes',      val: 0,  level: 'muted' as const, href: '/dashboard/pedidos'  },
               ].map(item => (
                 <Link key={item.label} href={item.href}
                   className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
@@ -125,7 +194,7 @@ export default function DashboardPage() {
                     <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-slate-600">{item.val}</span>
+                    <span className={`text-sm font-bold ${item.val > 0 ? 'text-white' : 'text-slate-600'}`}>{item.val}</span>
                     <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
                   </div>
                 </Link>
@@ -139,28 +208,33 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
                 <Package className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Estoque</p>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Anúncios ML</p>
             </div>
-            <div className="divide-y divide-white/[0.04]">
-              {[
-                { label: 'Estoque Baixo',    val: 0, level: 'muted' as const, href: '/dashboard/produtos?filtro=estoque-baixo' },
-                { label: 'Sem Estoque',      val: 0, level: 'muted' as const, href: '/dashboard/produtos?filtro=sem-estoque'   },
-                { label: 'Produtos Ativos',  val: 0, level: 'muted' as const, href: '/dashboard/produtos'                      },
-                { label: 'Produtos Inativos',val: 0, level: 'muted' as const, href: '/dashboard/produtos'                      },
-              ].map(item => (
-                <Link key={item.label} href={item.href}
-                  className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
-                  <div className="flex items-center gap-2.5">
-                    <Dot level={item.level} />
-                    <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-slate-600">{item.val}</span>
-                    <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
-                  </div>
-                </Link>
-              ))}
-            </div>
+            {mlLoading ? (
+              <div className="p-4 flex items-center gap-2 text-xs text-slate-600">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
+              </div>
+            ) : (
+              <div className="divide-y divide-white/[0.04]">
+                {[
+                  { label: 'Anúncios Ativos',   val: ml?.connected ? ml.totalActive ?? 0 : 0, level: ml?.connected && (ml.totalActive ?? 0) > 0 ? 'ok' as const : 'muted' as const, href: '/dashboard/produtos' },
+                  { label: 'Anúncios Pausados', val: 0, level: 'muted' as const, href: '/dashboard/produtos' },
+                  { label: 'Em Revisão',        val: 0, level: 'muted' as const, href: '/dashboard/produtos' },
+                ].map(item => (
+                  <Link key={item.label} href={item.href}
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                    <div className="flex items-center gap-2.5">
+                      <Dot level={item.level} />
+                      <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-sm font-bold ${item.val > 0 ? 'text-white' : 'text-slate-600'}`}>{item.val}</span>
+                      <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* SAC */}
@@ -173,10 +247,10 @@ export default function DashboardPage() {
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
-                { label: 'Perguntas Pendentes ML',    val: 0, level: 'muted' as const, href: '/dashboard/sac' },
-                { label: 'Mensagens Não Lidas',        val: 0, level: 'muted' as const, href: '/dashboard/sac' },
-                { label: 'Reclamações Pendentes',     val: 0, level: 'muted' as const, href: '/dashboard/sac' },
-                { label: 'Devoluções / Reembolsos',   val: 0, level: 'muted' as const, href: '/dashboard/sac' },
+                { label: 'Perguntas Pendentes ML', val: questions, level: dotLevel(questions), href: '/dashboard/sac' },
+                { label: 'Mensagens Não Lidas',    val: 0, level: 'muted' as const, href: '/dashboard/sac' },
+                { label: 'Reclamações Pendentes',  val: 0, level: 'muted' as const, href: '/dashboard/sac' },
+                { label: 'Devoluções / Reembolsos',val: 0, level: 'muted' as const, href: '/dashboard/sac' },
               ].map(item => (
                 <Link key={item.label} href={item.href}
                   className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
@@ -185,7 +259,7 @@ export default function DashboardPage() {
                     <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-slate-600">{item.val}</span>
+                    <span className={`text-sm font-bold ${item.val > 0 ? 'text-red-400' : 'text-slate-600'}`}>{item.val}</span>
                     <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
                   </div>
                 </Link>
@@ -204,7 +278,7 @@ export default function DashboardPage() {
               { icon: Calculator,  label: 'Calcular Preço',    href: '/dashboard/precificacao'},
               { icon: FileCheck,   label: 'Emitir NF-e',       href: '/dashboard/nfe'         },
               { icon: Truck,       label: 'Gerar Etiqueta',    href: '/dashboard/expedicao'   },
-              { icon: DollarSign,  label: 'Novo Lançamento',   href: '/dashboard/financeiro'  },
+              { icon: DollarSign,  label: 'Financeiro',        href: '/dashboard/financeiro'  },
             ].map(a => (
               <Link key={a.label} href={a.href}
                 className="dash-card flex flex-col items-center gap-2 py-3 px-2 rounded-xl hover:border-purple-600/25 hover:bg-purple-600/5 transition-all group text-center">
@@ -230,8 +304,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <EmptyCard
-                message="Nenhum dado de vendas ainda"
-                hint="Conecte seus canais de venda em Integrações para começar"
+                message="Gráfico em desenvolvimento"
+                hint="Em breve: evolução de receita e lucro por período"
               />
             </div>
 
@@ -244,24 +318,24 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <EmptyCard
-                message="Nenhum pedido encontrado"
-                hint="Os pedidos aparecerão aqui após conectar seus marketplaces"
+                message="Acesse Pedidos para ver os pedidos do ML"
+                hint="Os pedidos são carregados diretamente da API do Mercado Livre"
               />
             </div>
           </div>
 
-          {/* Right: Platform distribution + Low stock */}
+          {/* Right: Platform distribution + Stats */}
           <div className="space-y-4">
             <div className="dash-card p-5 rounded-2xl">
               <p className="font-bold text-white text-sm mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>Vendas por Plataforma</p>
               <p className="text-xs text-slate-600 mb-4">Distribuição no mês</p>
               <EmptyCard
-                message="Nenhuma venda ainda"
-                hint="Conecte marketplaces para ver a distribuição"
+                message="Apenas ML integrado"
+                hint="Shopee e Amazon em breve"
               />
             </div>
 
-            {/* Low stock */}
+            {/* Estoque crítico */}
             <div className="dash-card rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -282,7 +356,6 @@ export default function DashboardPage() {
 
           {/* Notices + Changelog */}
           <div className="lg:col-span-2 dash-card rounded-2xl overflow-hidden">
-            {/* Tabs */}
             <div className="flex border-b border-white/[0.06]">
               {(['avisos', 'updates'] as const).map(t => (
                 <button key={t} onClick={() => setInfoTab(t)}
@@ -335,27 +408,37 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Performance de Anúncios</p>
             </div>
             <div className="p-4 space-y-3">
-              {[
-                { label: 'Visitas hoje',        val: '0',   color: 'text-slate-500', icon: Eye         },
-                { label: 'Taxa de conversão',   val: '—',   color: 'text-slate-500', icon: TrendingUp  },
-                { label: 'Anúncios ativos',     val: '0',   color: 'text-slate-500', icon: Zap         },
-                { label: 'Anúncios pausados',   val: '0',   color: 'text-slate-500', icon: Clock       },
-              ].map(s => (
-                <div key={s.label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <s.icon className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-xs text-slate-500">{s.label}</span>
-                  </div>
-                  <span className={`text-sm font-bold ${s.color}`}>{s.val}</span>
+              {mlLoading ? (
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
                 </div>
-              ))}
+              ) : (
+                <>
+                  {[
+                    { label: 'Visitas hoje',      val: '—',                                                     icon: Eye         },
+                    { label: 'Ticket médio 30d',  val: ml?.connected ? fmtBRL(ml.avgTicket ?? 0) : '—',         icon: TrendingUp  },
+                    { label: 'Anúncios ativos',   val: ml?.connected ? String(ml.totalActive ?? 0) : '—',       icon: Zap         },
+                    { label: 'Perguntas pend.',   val: ml?.connected ? String(questions) : '—',                 icon: Clock       },
+                  ].map(s => (
+                    <div key={s.label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <s.icon className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="text-xs text-slate-500">{s.label}</span>
+                      </div>
+                      <span className="text-sm font-bold text-white">{s.val}</span>
+                    </div>
+                  ))}
 
-              <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                <p className="text-[10px] text-slate-600 mb-1.5 flex items-center gap-1">
-                  <BarChart3 className="w-3 h-3" /> Melhor anúncio do mês
-                </p>
-                <p className="text-xs text-slate-600 italic">Nenhum dado disponível</p>
-              </div>
+                  <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                    <p className="text-[10px] text-slate-600 mb-1.5 flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" /> Melhor anúncio do mês
+                    </p>
+                    <p className="text-xs text-slate-600 italic">
+                      {ml?.connected ? 'Acesse Produtos para ver detalhes' : 'Nenhum dado disponível'}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

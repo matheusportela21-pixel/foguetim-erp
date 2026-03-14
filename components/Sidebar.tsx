@@ -82,9 +82,9 @@ export default function Sidebar() {
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
     : 'MP'
-  const displayName = profile?.name ?? 'Matheus Portela'
-  const displayRole = profile?.role ? (ROLE_LABELS[profile.role] ?? profile.role) : 'Diretor · Admin'
-  const displayPlan = profile?.plan ? (PLAN_LABELS[profile.plan] ?? profile.plan) : 'Comandante'
+  const displayName = profile?.name ?? 'Usuário'
+  const displayRole = profile?.role ? (ROLE_LABELS[profile.role] ?? profile.role) : 'Administrador'
+  const displayPlan = profile?.plan ? (PLAN_LABELS[profile.plan] ?? profile.plan) : 'Free'
 
   const handleSignOut = async () => {
     await signOut()
