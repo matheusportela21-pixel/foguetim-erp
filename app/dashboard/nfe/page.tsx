@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   FileText, Plus, Search, Download, Eye, XCircle,
   CheckCircle2, Clock, AlertTriangle, Loader2, ShieldCheck,
-  AlertCircle, RefreshCw, X,
+  AlertCircle, RefreshCw, X, Calculator,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -378,12 +378,20 @@ export default function NfePage() {
                             </a>
                           )}
                           {nfe.status === 'autorizada' && (
-                            <button
-                              title="Cancelar NF-e"
-                              className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-900/10 transition-all"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                            </button>
+                            <>
+                              <button
+                                title="Enviar para Espaço do Contador"
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-purple-400 hover:bg-purple-900/10 transition-all"
+                              >
+                                <Calculator className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                title="Cancelar NF-e"
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-900/10 transition-all"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

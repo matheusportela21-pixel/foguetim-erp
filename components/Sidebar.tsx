@@ -49,8 +49,9 @@ const navGroups = [
   {
     label: 'Gestão',
     items: [
-      { href: '/dashboard/equipe',        icon: Users,    label: 'Equipe'        },
-      { href: '/dashboard/configuracoes', icon: Settings, label: 'Configurações' },
+      { href: '/dashboard/equipe',        icon: Users,       label: 'Equipe'        },
+      { href: '/dashboard/contador',      icon: Calculator,  label: 'Contador'      },
+      { href: '/dashboard/configuracoes', icon: Settings,    label: 'Configurações' },
     ],
   },
   {
