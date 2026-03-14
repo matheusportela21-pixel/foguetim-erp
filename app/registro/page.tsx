@@ -135,23 +135,24 @@ export default function RegistroPage() {
                 <p className="text-sm text-slate-500">Comece grátis, sem cartão de crédito</p>
               </div>
               <div className="bg-[#0d0f1a]/90 border border-white/[0.08] rounded-2xl p-6 shadow-2xl">
-                <form onSubmit={handleStep1} className="space-y-4">
+                <form onSubmit={handleStep1} autoComplete="off" className="space-y-4">
                   {[
-                    { label: 'Nome completo',  value: name,    set: setName,    type: 'text',  placeholder: 'Seu nome completo'  },
-                    { label: 'Email',          value: email,   set: setEmail,   type: 'email', placeholder: 'seu@email.com'       },
-                    { label: 'Empresa / Loja', value: company, set: setCompany, type: 'text',  placeholder: 'Nome da sua empresa' },
+                    { label: 'Nome completo',  value: name,    set: setName,    type: 'text',  placeholder: 'Seu nome completo',  name: 'name-reg'    },
+                    { label: 'Email',          value: email,   set: setEmail,   type: 'email', placeholder: 'seu@email.com',       name: 'email-reg'   },
+                    { label: 'Empresa / Loja', value: company, set: setCompany, type: 'text',  placeholder: 'Nome da sua empresa', name: 'company-reg' },
                   ].map(f => (
                     <div key={f.label}>
                       <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{f.label}</label>
-                      <input type={f.type} value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} required
+                      <input type={f.type} name={f.name} value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.placeholder} required
+                        autoComplete="off"
                         className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-[#0a0b14] border border-white/[0.07] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/50 focus:border-purple-600/50 transition-all" />
                     </div>
                   ))}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Senha</label>
                     <div className="relative">
-                      <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                        placeholder="Mínimo 6 caracteres" required
+                      <input type={showPwd ? 'text' : 'password'} name="password-reg" value={password} onChange={e => setPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres" required autoComplete="new-password"
                         className="w-full px-3.5 py-2.5 pr-10 rounded-xl text-sm bg-[#0a0b14] border border-white/[0.07] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/50 transition-all" />
                       <button type="button" onClick={() => setShowPwd(v => !v)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">

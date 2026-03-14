@@ -7,7 +7,7 @@ import { Rocket, Eye, EyeOff, AlertCircle, AlertTriangle, CheckCircle2, Loader2,
 import { useAuth } from '@/lib/auth-context'
 
 function LoginForm() {
-  const [email,    setEmail]    = useState('matheus.portela21@gmail.com')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [showPwd,  setShowPwd]  = useState(false)
   const [loading,  setLoading]  = useState(false)
@@ -138,16 +138,17 @@ function LoginForm() {
           )}
 
           <div className="bg-[#0d0f1a]/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-2xl">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
                 <input
                   type="email"
+                  name="email-login"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
-                  autoComplete="email"
+                  autoComplete="off"
                   className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-[#0a0b14] border border-white/[0.07] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/50 focus:border-purple-600/50 transition-all"
                 />
               </div>
@@ -157,11 +158,12 @@ function LoginForm() {
                 <div className="relative">
                   <input
                     type={showPwd ? 'text' : 'password'}
+                    name="password-login"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     className="w-full px-3.5 py-2.5 pr-10 rounded-xl text-sm bg-[#0a0b14] border border-white/[0.07] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/50 focus:border-purple-600/50 transition-all"
                   />
                   <button type="button" onClick={() => setShowPwd(v => !v)}
