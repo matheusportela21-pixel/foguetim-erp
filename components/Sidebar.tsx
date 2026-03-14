@@ -35,9 +35,10 @@ const navGroups = [
   {
     label: 'Análise',
     items: [
-      { href: '/dashboard/relatorios', icon: BarChart3,   label: 'Relatórios' },
-      { href: '/dashboard/reputacao',  icon: ShieldCheck, label: 'Reputação'  },
-      { href: '/dashboard/clientes',   icon: UserCheck,   label: 'Clientes'   },
+      { href: '/dashboard/relatorios',         icon: BarChart3,   label: 'Relatórios'          },
+      { href: '/dashboard/reputacao',          icon: ShieldCheck, label: 'Reputação'           },
+      { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp,  label: 'Vendas por Anúncio'  },
+      { href: '/dashboard/clientes',           icon: UserCheck,   label: 'Clientes'            },
     ],
   },
   {
