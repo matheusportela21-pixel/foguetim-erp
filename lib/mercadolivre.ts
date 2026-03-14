@@ -7,7 +7,7 @@
  * requer clique manual do usuário + confirmação explícita no front-end.
  * Sincronização é apenas LEITURA (importar dados para visualização).
  */
-import { supabase } from './supabase'
+import { supabaseAdmin } from './supabase-admin'
 
 // ─── Constants (lazy — lidos dentro das funções para garantir disponibilidade) ──
 
@@ -131,7 +131,8 @@ export async function refreshToken(refreshTk: string): Promise<MLTokenResponse> 
 // ─── getValidToken — busca e auto-renova se necessário ───────────────────────
 
 export async function getValidToken(userId: string): Promise<string | null> {
-  const { data: conn, error } = await supabase
+  const db = supabaseAdmin()
+  const { data: conn, error } = await db
     .from('marketplace_connections')
     .select('*')
     .eq('user_id', userId)
@@ -149,7 +150,7 @@ export async function getValidToken(userId: string): Promise<string | null> {
     try {
       const tokens = await refreshToken(c.refresh_token)
       const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-      await supabase
+      await db
         .from('marketplace_connections')
         .update({
           access_token:  tokens.access_token,
@@ -206,7 +207,7 @@ export async function saveConnection(
 ): Promise<void> {
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin()
     .from('marketplace_connections')
     .upsert(
       {
@@ -228,7 +229,7 @@ export async function saveConnection(
 
 /** Desconecta ML — mantém o registro mas marca connected = false */
 export async function disconnectML(userId: string): Promise<void> {
-  await supabase
+  await supabaseAdmin()
     .from('marketplace_connections')
     .update({ connected: false, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
@@ -237,7 +238,7 @@ export async function disconnectML(userId: string): Promise<void> {
 
 /** Retorna a conexão ML atual do usuário */
 export async function getMLConnection(userId: string): Promise<MLConnection | null> {
-  const { data } = await supabase
+  const { data } = await supabaseAdmin()
     .from('marketplace_connections')
     .select('*')
     .eq('user_id', userId)
