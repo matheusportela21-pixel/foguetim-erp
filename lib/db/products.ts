@@ -5,7 +5,7 @@
  */
 import { supabase, isConfigured } from '../supabase'
 import {
-  produtos as mockProdutos, MKTS,
+  MKTS,
   type Produto, type MktListing, type MKT,
   type Status, type Condicao, type Unidade, type Garantia, type TipoEmb,
 } from '@/app/dashboard/produtos/_data'
@@ -175,7 +175,7 @@ function mktRowToListing(row: Record<string, unknown>): MktListing {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function getProducts(userId: string): Promise<Produto[]> {
-  if (!isConfigured()) return mockProdutos
+  if (!isConfigured()) return []
 
   const { data, error } = await supabase
     .from('products')
@@ -185,13 +185,13 @@ export async function getProducts(userId: string): Promise<Produto[]> {
 
   if (error || !data) {
     console.error('[getProducts]', error)
-    return mockProdutos
+    return []
   }
   return data.map(r => rowToProduct(r as Record<string, unknown>))
 }
 
 export async function getProduct(id: number, userId: string): Promise<Produto | null> {
-  if (!isConfigured()) return mockProdutos.find(p => p.id === id) ?? null
+  if (!isConfigured()) return null
 
   const { data: row, error } = await supabase
     .from('products')

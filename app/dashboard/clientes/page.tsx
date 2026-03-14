@@ -9,28 +9,8 @@ interface Cliente {
   pedidos: number; gasto: number; ultimaCompra: string; status: 'ativo' | 'inativo'
 }
 
-const clientes: Cliente[] = [
-  { id:  1, nome: 'Ana Beatriz Sousa',     email: 'ana.sousa@gmail.com',      cidade: 'Fortaleza, CE',       pedidos: 14, gasto: 1249.60, ultimaCompra: '12/03/2026', status: 'ativo'  },
-  { id:  2, nome: 'Carlos Henrique Lima',  email: 'carlos.lima@hotmail.com',   cidade: 'Caucaia, CE',         pedidos:  8, gasto:  589.20, ultimaCompra: '12/03/2026', status: 'ativo'  },
-  { id:  3, nome: 'Fernanda Gomes',        email: 'fegomes@gmail.com',         cidade: 'Maracanaú, CE',       pedidos: 21, gasto: 2149.90, ultimaCompra: '11/03/2026', status: 'ativo'  },
-  { id:  4, nome: 'José Raimundo Silva',   email: 'jose.r.silva@gmail.com',    cidade: 'Sobral, CE',          pedidos:  3, gasto:  179.70, ultimaCompra: '11/03/2026', status: 'inativo'},
-  { id:  5, nome: 'Maria das Graças Reis', email: 'mgracas.reis@yahoo.com',    cidade: 'Juazeiro do Norte, CE',pedidos: 17, gasto: 1198.30, ultimaCompra: '10/03/2026', status: 'ativo'  },
-  { id:  6, nome: 'Antônio Vieira Neto',   email: 'antonio.neto@gmail.com',    cidade: 'Fortaleza, CE',       pedidos:  9, gasto:  404.10, ultimaCompra: '10/03/2026', status: 'ativo'  },
-  { id:  7, nome: 'Rosângela Ferreira',    email: 'rosa.ferreira@gmail.com',   cidade: 'Eusébio, CE',         pedidos: 31, gasto: 4649.70, ultimaCompra: '10/03/2026', status: 'ativo'  },
-  { id:  8, nome: 'Paulo Sérgio Alves',    email: 'paulo.alves@outlook.com',   cidade: 'Crato, CE',           pedidos:  5, gasto:  949.50, ultimaCompra: '09/03/2026', status: 'ativo'  },
-  { id:  9, nome: 'Luciana de Oliveira',   email: 'lu.oliveira@gmail.com',     cidade: 'Iguatu, CE',          pedidos: 12, gasto:  899.80, ultimaCompra: '09/03/2026', status: 'ativo'  },
-  { id: 10, nome: 'Francisco Rodrigues',   email: 'frodrigues@gmail.com',      cidade: 'Fortaleza, CE',       pedidos:  7, gasto:  419.30, ultimaCompra: '08/03/2026', status: 'ativo'  },
-  { id: 11, nome: 'Suzana Barbosa',        email: 'su.barbosa@hotmail.com',    cidade: 'Quixadá, CE',         pedidos:  4, gasto:  319.60, ultimaCompra: '08/03/2026', status: 'inativo'},
-  { id: 12, nome: 'Marcos Aurélio Costa',  email: 'marcos.costa@gmail.com',    cidade: 'Russas, CE',          pedidos: 18, gasto: 1648.20, ultimaCompra: '07/03/2026', status: 'ativo'  },
-  { id: 13, nome: 'Tatiana Nascimento',    email: 'tati.nascimento@gmail.com', cidade: 'Pacatuba, CE',        pedidos:  2, gasto:  269.80, ultimaCompra: '07/03/2026', status: 'inativo'},
-  { id: 14, nome: 'Raimunda Alves Brito',  email: 'raimunda.brito@uol.com.br', cidade: 'Fortaleza, CE',       pedidos: 25, gasto: 2124.75, ultimaCompra: '06/03/2026', status: 'ativo'  },
-  { id: 15, nome: 'Sebastião Pinheiro',    email: 'pinheiro.s@gmail.com',      cidade: 'Itapipoca, CE',       pedidos:  6, gasto:  389.40, ultimaCompra: '06/03/2026', status: 'ativo'  },
-  { id: 16, nome: 'Cleide Sampaio',        email: 'cleide.s@gmail.com',        cidade: 'Aracati, CE',         pedidos: 11, gasto:  549.90, ultimaCompra: '05/03/2026', status: 'ativo'  },
-  { id: 17, nome: 'Edilson Freitas',       email: 'edilson.f@hotmail.com',     cidade: 'Fortaleza, CE',       pedidos:  9, gasto:  629.10, ultimaCompra: '05/03/2026', status: 'ativo'  },
-  { id: 18, nome: 'Joselita Vasconcelos',  email: 'joselita.v@gmail.com',      cidade: 'Barbalha, CE',        pedidos:  1, gasto:   59.90, ultimaCompra: '04/03/2026', status: 'inativo'},
-  { id: 19, nome: 'Raul Mendonça',         email: 'raul.m@gmail.com',          cidade: 'Fortaleza, CE',       pedidos: 16, gasto: 1598.40, ultimaCompra: '04/03/2026', status: 'ativo'  },
-  { id: 20, nome: 'Adriana Cavalcante',    email: 'adriana.cav@gmail.com',     cidade: 'Maracanaú, CE',       pedidos: 29, gasto: 5798.10, ultimaCompra: '03/03/2026', status: 'ativo'  },
-]
+const clientes: Cliente[] = []
+
 
 function tier(gasto: number) {
   if (gasto >= 2000) return { label: 'VIP', cls: 'text-amber-400 bg-amber-400/10 ring-1 ring-amber-400/20' }

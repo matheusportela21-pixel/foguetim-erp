@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import {
   CheckCircle, RefreshCw, Zap, Truck, ChevronDown, ChevronUp,
   Eye, EyeOff, ExternalLink, Copy, AlertCircle, X, Globe, HelpCircle,
+  Loader2,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,17 +40,17 @@ const API_STATUS_META: Record<ApiStatus, { label: string; cls: string; dot: stri
 }
 
 const INIT_MKT: MktEntry[] = [
-  { id: 'ml',      name: 'Mercado Livre',    logo: '🟡', color: 'border-amber-500/30 bg-amber-500/5',    connected: true,  products: 312, lastSync: '5 min atrás',  share: '50%', apiStatus: 'conectado',          clientId: 'APP-1234567890', clientSecret: '',               accessToken: 'APP_USR-1234...', webhookUrl: '', guideUrl: '#' },
-  { id: 'shopee',  name: 'Shopee',           logo: '🟠', color: 'border-orange-500/30 bg-orange-500/5',  connected: true,  products: 198, lastSync: '12 min atrás', share: '25%', apiStatus: 'conectado',          clientId: 'shop_12345678',  clientSecret: '',               accessToken: 'aat_live_xxx', webhookUrl: '', guideUrl: '#' },
-  { id: 'amazon',  name: 'Amazon',           logo: '🔵', color: 'border-cyan-500/30 bg-cyan-500/5',      connected: false, products: 0,   lastSync: null,           apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'magalu',  name: 'Magalu',           logo: '🔷', color: 'border-blue-500/30 bg-blue-500/5',      connected: false, products: 0,   lastSync: null, soon: true, apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'tiktok',  name: 'TikTok Shop',      logo: '⬛', color: 'border-slate-500/30 bg-slate-500/5',    connected: false, products: 0,   lastSync: null, soon: true, apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'ame',     name: 'Americanas',       logo: '🔴', color: 'border-red-500/30 bg-red-500/5',        connected: false, products: 0,   lastSync: null,           apiStatus: 'credenciais_salvas', clientId: 'ame_client_abc', clientSecret: '••••••••••••',  accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'cb',      name: 'Casas Bahia',      logo: '🟢', color: 'border-green-500/30 bg-green-500/5',    connected: false, products: 0,   lastSync: null,           apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'ns',      name: 'Nuvemshop',        logo: '☁️', color: 'border-indigo-500/30 bg-indigo-500/5',  connected: false, products: 0,   lastSync: null, soon: true, apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'tray',    name: 'Tray',             logo: '🟤', color: 'border-yellow-800/30 bg-yellow-900/5',  connected: false, products: 0,   lastSync: null, soon: true, apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'li',      name: 'Loja Integrada',   logo: '🟣', color: 'border-purple-500/30 bg-purple-500/5',  connected: false, products: 0,   lastSync: null, soon: true, apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'ali',     name: 'AliExpress',       logo: '🟥', color: 'border-rose-500/30 bg-rose-500/5',      connected: false, products: 0,   lastSync: null, soon: true, apiStatus: 'nao_configurado',    clientId: '',               clientSecret: '',               accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'ml',      name: 'Mercado Livre',    logo: '🟡', color: 'border-amber-500/30 bg-amber-500/5',    connected: false, products: 0, lastSync: null, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'shopee',  name: 'Shopee',           logo: '🟠', color: 'border-orange-500/30 bg-orange-500/5',  connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'amazon',  name: 'Amazon',           logo: '🔵', color: 'border-cyan-500/30 bg-cyan-500/5',      connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'magalu',  name: 'Magalu',           logo: '🔷', color: 'border-blue-500/30 bg-blue-500/5',      connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'tiktok',  name: 'TikTok Shop',      logo: '⬛', color: 'border-slate-500/30 bg-slate-500/5',    connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'ame',     name: 'Americanas',       logo: '🔴', color: 'border-red-500/30 bg-red-500/5',        connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'cb',      name: 'Casas Bahia',      logo: '🟢', color: 'border-green-500/30 bg-green-500/5',    connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'ns',      name: 'Nuvemshop',        logo: '☁️', color: 'border-indigo-500/30 bg-indigo-500/5',  connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'tray',    name: 'Tray',             logo: '🟤', color: 'border-yellow-800/30 bg-yellow-900/5',  connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'li',      name: 'Loja Integrada',   logo: '🟣', color: 'border-purple-500/30 bg-purple-500/5',  connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'ali',     name: 'AliExpress',       logo: '🟥', color: 'border-rose-500/30 bg-rose-500/5',      connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
 ]
 
 const fretes = [
@@ -62,12 +63,12 @@ const fretes = [
 ]
 
 const erps = [
-  { name: 'Bling',     desc: 'ERP e emissão de NF-e',  logo: '🟢' },
   { name: 'Tiny',      desc: 'Gestão de e-commerce',   logo: '🔵' },
   { name: 'Omie',      desc: 'Gestão financeira',      logo: '🟣' },
-  { name: 'Olist',     desc: 'Hub de marketplace',     logo: '⚪' },
   { name: 'Yampi',     desc: 'Plataforma de vendas',   logo: '🟡' },
   { name: 'Nuvemshop', desc: 'Loja virtual',           logo: '🔷' },
+  { name: 'Tray',      desc: 'Plataforma de vendas',   logo: '🟤' },
+  { name: 'Loja Integrada', desc: 'Hub multicanal',    logo: '🟣' },
 ]
 
 const WEBHOOK_EVENTS = [
@@ -366,14 +367,61 @@ function MktCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+interface MLStatus {
+  connected:   boolean
+  nickname?:   string
+  ml_user_id?: number
+}
+
 export default function IntegracoesPage() {
   const [mks, setMks]         = useState<MktEntry[]>(INIT_MKT)
   const [fts, setFts]         = useState(fretes)
   const [syncing, setSyncing] = useState<string | null>(null)
+  const [mlStatus, setMlStatus] = useState<MLStatus | null>(null)
+  const [mlLoading, setMlLoading] = useState(true)
+  const [mlDisconnecting, setMlDisconnecting] = useState(false)
+
+  // Load real ML connection status on mount
+  useEffect(() => {
+    fetch('/api/mercadolivre/status')
+      .then(r => r.json())
+      .then((data: MLStatus) => {
+        setMlStatus(data)
+        if (data.connected) {
+          setMks(prev => prev.map(m =>
+            m.id === 'ml'
+              ? { ...m, connected: true, apiStatus: 'conectado' }
+              : m
+          ))
+        }
+      })
+      .catch(() => setMlStatus({ connected: false }))
+      .finally(() => setMlLoading(false))
+  }, [])
+
+  async function disconnectML() {
+    setMlDisconnecting(true)
+    try {
+      await fetch('/api/mercadolivre/disconnect', { method: 'DELETE' })
+      setMlStatus({ connected: false })
+      setMks(prev => prev.map(m =>
+        m.id === 'ml' ? { ...m, connected: false, apiStatus: 'nao_configurado' } : m
+      ))
+    } finally {
+      setMlDisconnecting(false)
+    }
+  }
 
   function sync(id: string) {
-    setSyncing(id)
-    setTimeout(() => setSyncing(null), 2000)
+    if (id === 'ml') {
+      // Real sync: refresh token + fetch orders/products
+      setSyncing(id)
+      fetch('/api/mercadolivre/refresh', { method: 'POST' })
+        .finally(() => setSyncing(null))
+    } else {
+      setSyncing(id)
+      setTimeout(() => setSyncing(null), 2000)
+    }
   }
 
   function updateMk(id: string, patch: Partial<MktEntry>) {
@@ -405,15 +453,85 @@ export default function IntegracoesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {mks.map(mk => (
-              <MktCard
-                key={mk.id}
-                mk={mk}
-                onUpdate={updateMk}
-                onSync={sync}
-                syncing={syncing}
-              />
-            ))}
+            {mks.map(mk => {
+              if (mk.id === 'ml') {
+                // ML card with real OAuth connect/disconnect
+                return (
+                  <div key="ml" className={`dash-card rounded-2xl border ${mk.color} overflow-hidden`}>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center text-xl shrink-0">
+                            🟡
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-white text-sm">Mercado Livre</p>
+                            {mlLoading ? (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Loader2 className="w-3 h-3 text-slate-600 animate-spin" />
+                                <span className="text-[10px] text-slate-600">Verificando...</span>
+                              </div>
+                            ) : mlStatus?.connected ? (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <CheckCircle className="w-3 h-3 text-green-400" />
+                                <span className="text-[10px] text-green-400">Conectado como {mlStatus.nickname}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                                <span className="text-[10px] text-slate-500">Não conectado</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-1.5 shrink-0 items-center">
+                          {mlStatus?.connected && (
+                            <button onClick={() => sync('ml')}
+                              title="Sincronizar agora"
+                              className={`p-1.5 rounded-lg border border-white/[0.06] text-slate-500 hover:text-slate-200 transition-all ${syncing === 'ml' ? 'animate-spin text-purple-400' : ''}`}>
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {mlStatus?.connected ? (
+                            <button
+                              onClick={disconnectML}
+                              disabled={mlDisconnecting}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-dark-700 border border-white/[0.06] text-slate-400 hover:text-red-400 disabled:opacity-50 transition-all">
+                              {mlDisconnecting ? 'Desconectando...' : 'Desconectar'}
+                            </button>
+                          ) : (
+                            <a href="/api/mercadolivre/auth"
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition-all flex items-center gap-1.5">
+                              <ExternalLink className="w-3 h-3" /> Conectar
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {mlStatus?.connected && (
+                        <div className="mt-3 p-3 bg-dark-700 rounded-xl">
+                          <p className="text-[10px] text-slate-600 mb-1">Webhook URL (para configurar no Painel ML)</p>
+                          <p className="text-[10px] font-mono text-slate-400 break-all">
+                            https://foguetim.com.br/api/webhooks/mercadolivre
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <MktCard
+                  key={mk.id}
+                  mk={mk}
+                  onUpdate={updateMk}
+                  onSync={sync}
+                  syncing={syncing}
+                />
+              )
+            })}
           </div>
         </div>
 
