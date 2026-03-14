@@ -31,7 +31,7 @@ const navGroups = [
       { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',          badge: 'Novo'  },
       { href: '/dashboard/reclamacoes',  icon: AlertTriangle,   label: 'Reclamações'                },
       { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição', badge: 'Dev'  },
-      { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e',     badge: 'Breve' },
+      { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e'                  },
       { href: '/dashboard/integracoes',  icon: Link2,           label: 'Integrações'              },
     ],
   },

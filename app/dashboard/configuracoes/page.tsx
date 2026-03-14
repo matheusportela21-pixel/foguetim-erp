@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import {
-  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History,
+  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History, FileText,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import EmpresaSection     from './components/EmpresaSection'
 import ContaSection       from './components/ContaSection'
 import ImpressaoSection   from './components/ImpressaoSection'
+import FiscalSection      from './components/FiscalSection'
 import NotifSection       from './components/NotifSection'
 import SegurancaSection   from './components/SegurancaSection'
 import PlanoSection       from './components/PlanoSection'
@@ -19,6 +20,7 @@ type SectionId =
   | 'empresa'
   | 'conta'
   | 'impressao'
+  | 'fiscal'
   | 'notificacoes'
   | 'seguranca'
   | 'plano'
@@ -37,6 +39,7 @@ const MENU: MenuItem[] = [
   { id: 'empresa',       icon: Building2,    label: 'Empresa'             },
   { id: 'conta',         icon: User,         label: 'Minha Conta'         },
   { id: 'impressao',     icon: Printer,      label: 'Impressão', badge: 'Em breve' },
+  { id: 'fiscal',        icon: FileText,     label: 'Fiscal e NF-e'       },
   { id: 'notificacoes',  icon: Bell,         label: 'Notificações'        },
   { id: 'seguranca',     icon: ShieldCheck,  label: 'Segurança'           },
   { id: 'plano',         icon: CreditCard,   label: 'Plano e Assinatura'  },
@@ -50,6 +53,7 @@ function SectionContent({ id }: { id: SectionId }) {
     case 'empresa':      return <EmpresaSection />
     case 'conta':        return <ContaSection />
     case 'impressao':    return <ImpressaoSection />
+    case 'fiscal':       return <FiscalSection />
     case 'notificacoes': return <NotifSection />
     case 'seguranca':    return <SegurancaSection />
     case 'plano':        return <PlanoSection />
