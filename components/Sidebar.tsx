@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
+  AlertTriangle,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -26,7 +27,8 @@ const navGroups = [
     label: 'Operação',
     items: [
       { href: '/dashboard/pedidos',      icon: ShoppingCart,    label: 'Pedidos'                 },
-      { href: '/dashboard/sac',          icon: MessagesSquare,  label: 'SAC',      badge: 'Novo'  },
+      { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',          badge: 'Novo'  },
+      { href: '/dashboard/reclamacoes',  icon: AlertTriangle,   label: 'Reclamações'                },
       { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição', badge: 'Dev'  },
       { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e',     badge: 'Breve' },
       { href: '/dashboard/integracoes',  icon: Link2,           label: 'Integrações'              },
@@ -116,6 +118,9 @@ export default function Sidebar() {
   // Contagem real de produtos no Supabase
   const [productCount, setProductCount] = useState<number | null>(null)
 
+  // Contagem de reclamações abertas (lida do localStorage com TTL de 5 min)
+  const [claimCount, setClaimCount] = useState<number>(0)
+
   useEffect(() => {
     if (!profile?.id || !isConfigured()) return
     supabase
@@ -124,6 +129,18 @@ export default function Sidebar() {
       .eq('user_id', profile.id)
       .then(({ count }) => setProductCount(count ?? 0))
   }, [profile?.id])
+
+  // Lê contagem de reclamações do localStorage (TTL 5 min)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('claims_count_cache')
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { count: number; ts: number }
+      if (Date.now() - parsed.ts < 5 * 60 * 1000) {
+        setClaimCount(parsed.count)
+      }
+    } catch { /* ignore */ }
+  }, [])
 
   // Dados derivados
   const initials    = profile?.name
@@ -176,6 +193,7 @@ export default function Sidebar() {
             <ul className="space-y-0.5">
               {group.items.map(({ href, icon: Icon, label, badge }) => {
                 const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+                const isReclamacoes = href === '/dashboard/reclamacoes'
                 return (
                   <li key={href}>
                     <Link
@@ -188,9 +206,16 @@ export default function Sidebar() {
                     >
                       <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? 'nav-active-icon' : 'text-slate-600 group-hover:text-slate-400'}`} />
                       <span className="flex-1 truncate">{label}</span>
+                      {/* Badge estático (Novo, Dev, Breve) */}
                       {badge && (
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeColors[badge] ?? 'bg-slate-800 text-slate-500'}`}>
                           {badge}
+                        </span>
+                      )}
+                      {/* Badge dinâmico de reclamações abertas */}
+                      {isReclamacoes && claimCount > 0 && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-900/40 text-red-400 ring-1 ring-red-700/40 animate-pulse">
+                          {claimCount}
                         </span>
                       )}
                     </Link>
