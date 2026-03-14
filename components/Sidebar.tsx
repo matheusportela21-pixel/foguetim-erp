@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
-  AlertTriangle,
+  AlertTriangle, BarChart2,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -38,6 +38,7 @@ const navGroups = [
   {
     label: 'Análise',
     items: [
+      { href: '/dashboard/performance',        icon: BarChart2,   label: 'Performance'         },
       { href: '/dashboard/relatorios',         icon: BarChart3,   label: 'Relatórios'          },
       { href: '/dashboard/reputacao',          icon: ShieldCheck, label: 'Reputação'           },
       { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp,  label: 'Vendas por Anúncio'  },
