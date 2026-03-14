@@ -100,13 +100,22 @@ export async function GET(req: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const conn    = await getMLConnection(user.id)
-  const token   = conn?.connected ? await getValidToken(user.id) : null
-  const myMlId: number | null = conn?.ml_user_id ?? null
+  const conn = await getMLConnection(user.id)
+  if (!conn?.connected) {
+    return NextResponse.json(
+      { error: 'Conecte sua conta do Mercado Livre em Integrações para usar esta função.', code: 'NOT_CONNECTED' }
+    )
+  }
 
-  const authHeaders: Record<string, string> = token
-    ? { Authorization: `Bearer ${token}` }
-    : {}
+  const token = await getValidToken(user.id)
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Token do Mercado Livre inválido. Reconecte sua conta em Integrações.', code: 'NOT_CONNECTED' }
+    )
+  }
+
+  const myMlId: number = conn.ml_user_id
+  const authHeaders: Record<string, string> = { Authorization: `Bearer ${token}` }
 
   const sp     = new URL(req.url).searchParams
   const q      = (sp.get('q') ?? '').trim()
@@ -128,9 +137,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // ── 1. Busca pública por termo ──────────────────────────────────────────
+    // ── 1. Busca autenticada por termo ──────────────────────────────────────
     const searchRes = await fetch(
-      `${ML_API_BASE}/sites/MLB/search?q=${encodeURIComponent(q)}&limit=20`
+      `${ML_API_BASE}/sites/MLB/search?q=${encodeURIComponent(q)}&limit=20`,
+      { headers: authHeaders }
     )
     if (!searchRes.ok) {
       throw new Error(`ML search falhou (${searchRes.status})`)

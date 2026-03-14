@@ -130,10 +130,11 @@ export default function ConcorrentesPage() {
   const [inputValue,   setInputValue]   = useState('')
   const [concorrentes, setConcorrentes] = useState<ConcorrenteItem[]>([])
   const [meuAnuncio,   setMeuAnuncio]   = useState<MeuAnuncio | null>(null)
-  const [loading,      setLoading]      = useState(false)
-  const [error,        setError]        = useState<string | null>(null)
-  const [hasSearched,  setHasSearched]  = useState(false)
-  const [history,      setHistory]      = useState<string[]>([])
+  const [loading,        setLoading]        = useState(false)
+  const [error,          setError]          = useState<string | null>(null)
+  const [notConnected,   setNotConnected]   = useState(false)
+  const [hasSearched,    setHasSearched]    = useState(false)
+  const [history,        setHistory]        = useState<string[]>([])
 
   // Load history from localStorage
   useEffect(() => {
@@ -157,6 +158,7 @@ export default function ConcorrentesPage() {
 
     setLoading(true)
     setError(null)
+    setNotConnected(false)
     setHasSearched(true)
     setConcorrentes([])
     setMeuAnuncio(null)
@@ -168,11 +170,13 @@ export default function ConcorrentesPage() {
     try {
       const res  = await fetch(`/api/mercadolivre/concorrentes?${params.toString()}`)
       const data = await res.json() as {
-        error?:       string
+        error?:        string
+        code?:         string
         concorrentes?: ConcorrenteItem[]
-        meu_anuncio?: MeuAnuncio | null
+        meu_anuncio?:  MeuAnuncio | null
       }
 
+      if (data.code === 'NOT_CONNECTED') { setNotConnected(true); return }
       if (data.error) { setError(data.error); return }
       setConcorrentes(data.concorrentes ?? [])
       setMeuAnuncio(data.meu_anuncio ?? null)
@@ -281,6 +285,27 @@ export default function ConcorrentesPage() {
           <div className="glass-card p-4 rounded-xl border border-red-500/20 bg-red-500/5 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
             <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* ── Not connected ───────────────────────────────────────────────── */}
+        {notConnected && (
+          <div className="flex flex-col items-center justify-center py-20 gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
+              <Link2 className="w-7 h-7 text-slate-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-slate-300 text-lg font-semibold mb-1">Mercado Livre não conectado</p>
+              <p className="text-slate-500 text-sm max-w-sm">
+                Conecte sua conta do Mercado Livre em Integrações para usar a Análise de Concorrentes.
+              </p>
+            </div>
+            <a
+              href="/dashboard/integracoes"
+              className="px-5 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-colors"
+            >
+              Ir para Integrações
+            </a>
           </div>
         )}
 
