@@ -147,7 +147,7 @@ export async function POST() {
 
   /* ── Buscar clientes já existentes para diferenciar new vs updated ───────── */
   const mlIds = Array.from(map.keys())
-  const { data: existing } = await supabaseAdmin
+  const { data: existing } = await supabaseAdmin()
     .from('customers')
     .select('ml_buyer_id')
     .eq('user_id', user.id)
@@ -177,7 +177,7 @@ export async function POST() {
     synced_at:        new Date().toISOString(),
   }))
 
-  const { error } = await supabaseAdmin
+  const { error } = await supabaseAdmin()
     .from('customers')
     .upsert(payload, { onConflict: 'user_id,ml_buyer_id', ignoreDuplicates: false })
 

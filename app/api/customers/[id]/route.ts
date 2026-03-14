@@ -42,7 +42,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nenhum campo válido para atualizar' }, { status: 400 })
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin()
     .from('customers')
     .update(patch)
     .eq('id', id)

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   const from   = (page - 1) * limit
   const to     = from + limit - 1
 
-  let query = supabaseAdmin
+  let query = supabaseAdmin()
     .from('customers')
     .select('*', { count: 'exact' })
     .eq('user_id', user.id)
