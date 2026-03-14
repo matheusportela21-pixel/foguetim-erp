@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import {
   Rocket, Package, Calculator, FileText, TrendingUp, BarChart2,
-  Users, ShoppingCart, Zap, Star, Check, ArrowRight, ChevronRight,
-  Globe, Clock, Shield, Menu, X, CheckCircle2,
+  Users, ShoppingCart, Zap, Check, ArrowRight, ChevronRight,
+  Globe, Clock, Shield, Menu, X, CheckCircle2, BarChart3,
 } from 'lucide-react'
 
 /* ── Deterministic star positions ────────────────────────────────────────── */
@@ -18,25 +18,35 @@ const stars = Array.from({ length: 35 }, (_, i) => ({
   delay: ((i * phi * 8) % 5).toFixed(1),
 }))
 
+/* ── Hero benefits ────────────────────────────────────────────────────────── */
+const heroBenefits = [
+  { icon: CheckCircle2, text: 'Plano gratuito para sempre, sem cartão de crédito' },
+  { icon: Package,      text: 'Controle de estoque em tempo real por SKU' },
+  { icon: BarChart3,    text: 'Dashboard financeiro consolidado por plataforma' },
+  { icon: FileText,     text: 'Gerador de listagens otimizadas por marketplace' },
+  { icon: Calculator,   text: 'Precificação automática com comissões e frete' },
+  { icon: Shield,       text: 'Dados seguros com backup diário e criptografia' },
+]
+
 /* ── Data ─────────────────────────────────────────────────────────────────── */
 const solutions = [
-  { icon: Package,    color: 'bg-blue-50 text-blue-600',   title: 'Gestão de Produtos',          desc: 'Cadastre, organize e controle todos os seus SKUs com estoque em tempo real e alertas automáticos de reposição.' },
-  { icon: Calculator, color: 'bg-purple-50 text-purple-600', title: 'Precificação Inteligente',    desc: 'Calcule preços ideais considerando comissões, frete e impostos de cada marketplace automaticamente.' },
-  { icon: FileText,   color: 'bg-cyan-50 text-cyan-600',   title: 'Gerador de Listagens',        desc: 'Crie títulos, descrições e bullets otimizados para Mercado Livre, Shopee e Amazon com foco em SEO.' },
-  { icon: TrendingUp, color: 'bg-orange-50 text-orange-500', title: 'Painel Financeiro',          desc: 'Acompanhe receitas, custos e lucro com dashboards intuitivos e relatórios consolidados por plataforma.' },
-  { icon: ShoppingCart,color:'bg-green-50 text-green-600', title: 'Gestão de Pedidos',            desc: 'Centralize pedidos de todos os canais de venda com rastreamento e atualização de status em tempo real.' },
-  { icon: BarChart2,  color: 'bg-indigo-50 text-indigo-600',title: 'Relatórios & Analytics',     desc: 'Tome decisões baseadas em dados com relatórios completos de desempenho e tendências de venda.' },
+  { icon: Package,    color: 'bg-blue-50 text-blue-600',    title: 'Gestão de Produtos',       desc: 'Cadastre, organize e controle todos os seus SKUs com estoque em tempo real e alertas automáticos de reposição.' },
+  { icon: Calculator, color: 'bg-purple-50 text-purple-600', title: 'Precificação Inteligente', desc: 'Calcule preços ideais considerando comissões, frete e impostos de cada marketplace automaticamente.' },
+  { icon: FileText,   color: 'bg-cyan-50 text-cyan-600',    title: 'Gerador de Listagens',     desc: 'Crie títulos, descrições e bullets otimizados para Mercado Livre, Shopee e Amazon com foco em SEO.' },
+  { icon: TrendingUp, color: 'bg-orange-50 text-orange-500', title: 'Painel Financeiro',        desc: 'Acompanhe receitas, custos e lucro com dashboards intuitivos e relatórios consolidados por plataforma.' },
+  { icon: ShoppingCart,color:'bg-green-50 text-green-600',  title: 'Gestão de Pedidos',        desc: 'Centralize pedidos de todos os canais de venda com rastreamento e atualização de status em tempo real.' },
+  { icon: BarChart2,  color: 'bg-indigo-50 text-indigo-600',title: 'Relatórios & Analytics',   desc: 'Tome decisões baseadas em dados com relatórios completos de desempenho e tendências de venda.' },
 ]
 
 const tools = [
-  { icon: Globe,    label: 'Multi-marketplace',   desc: 'ML, Shopee, Amazon em um painel',    status: 'active' },
-  { icon: Shield,   label: 'Nota Fiscal (NF-e)',  desc: 'Emissão automática de NF-e',          status: 'soon'   },
-  { icon: Users,    label: 'Gestão de Equipe',    desc: 'Controle de acesso por perfil',       status: 'active' },
-  { icon: Zap,      label: 'Integrações',          desc: 'Conexão direta com marketplaces',     status: 'active' },
-  { icon: BarChart2,label: 'BI com IA',            desc: 'Relatórios preditivos inteligentes',  status: 'future' },
-  { icon: Clock,    label: 'Automações',           desc: 'Regras e workflows automáticos',      status: 'soon'   },
-  { icon: Package,  label: 'Bling & Tiny',         desc: 'Integração com outros ERPs',          status: 'soon'   },
-  { icon: ShoppingCart,label:'App Mobile',         desc: 'iOS e Android em breve',              status: 'future' },
+  { icon: Globe,       label: 'Multi-marketplace',  desc: 'ML, Shopee, Amazon em um painel',    status: 'active' },
+  { icon: Shield,      label: 'Nota Fiscal (NF-e)', desc: 'Emissão automática de NF-e',          status: 'soon'   },
+  { icon: Users,       label: 'Gestão de Equipe',   desc: 'Controle de acesso por perfil',       status: 'active' },
+  { icon: Zap,         label: 'Integrações',         desc: 'Conexão direta com marketplaces',     status: 'active' },
+  { icon: BarChart2,   label: 'BI com IA',           desc: 'Relatórios preditivos inteligentes',  status: 'future' },
+  { icon: Clock,       label: 'Automações',          desc: 'Regras e workflows automáticos',      status: 'soon'   },
+  { icon: Package,     label: 'Estoque Real',        desc: 'Sincronização de estoque cross-canal',status: 'active' },
+  { icon: ShoppingCart,label: 'SAC Unificado',       desc: 'Atendimento centralizado em um lugar',status: 'active' },
 ]
 
 const statusMap = {
@@ -45,39 +55,92 @@ const statusMap = {
   future: { label: 'Futuro',   cls: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200'},
 }
 
-const plans = [
+/* ── Integrations (honest social proof) ────────────────────────────────────── */
+const integrations = [
   {
-    name: 'Explorador', price: 'Grátis', period: '',
-    desc: 'Ideal para quem está começando',
-    badge: null, popular: false,
-    features: ['Até 50 produtos', '1 marketplace', 'Precificação básica', 'Dashboard essencial', '1 usuário'],
-    cta: 'Começar Grátis', href: '/registro',
+    name: 'Mercado Livre',
+    color: '#f59e0b',
+    status: 'Ativo',
+    statusCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+    desc: 'Produtos, pedidos, financeiro e reputação integrados via API oficial.',
+    dot: 'bg-amber-400',
   },
   {
-    name: 'Comandante', price: 'R$49,90', period: '/mês',
-    desc: 'Para sellers em crescimento',
-    badge: 'Mais Popular', popular: true,
-    features: ['Até 500 produtos', '3 marketplaces', 'Todos os módulos', 'Precificação avançada', 'Gerador de listagens', 'Painel financeiro completo', 'Até 5 usuários', 'Suporte prioritário'],
-    cta: 'Assinar Agora', href: '/registro?plano=comandante',
+    name: 'Shopee',
+    color: '#f97316',
+    status: 'Em breve',
+    statusCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    desc: 'Integração em desenvolvimento. Previsão para os próximos meses.',
+    dot: 'bg-orange-400',
   },
   {
-    name: 'Almirante', price: 'R$99,90', period: '/mês',
-    desc: 'Para grandes operações',
-    badge: null, popular: false,
-    features: ['Produtos ilimitados', 'Marketplaces ilimitados', 'NF-e automática', 'API de integração', 'Usuários ilimitados', 'Relatórios com IA', 'Gerente de sucesso dedicado', 'Suporte 24/7'],
-    cta: 'Falar com Vendas', href: '/registro?plano=almirante',
+    name: 'Amazon',
+    color: '#0ea5e9',
+    status: 'Em breve',
+    statusCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    desc: 'Suporte à API SP-API da Amazon em planejamento ativo.',
+    dot: 'bg-sky-400',
   },
 ]
 
-const testimonials = [
-  { name: 'Carla Mendes',    role: 'Cosméticos · Fortaleza, CE',     avatar: 'CM', stars: 5, text: 'O Foguetim transformou minha operação. Reduzi o tempo de precificação de horas para minutos e aumentei minha margem em 18% em 3 meses.' },
-  { name: 'Ricardo Souza',   role: 'Eletrônicos · São Paulo, SP',    avatar: 'RS', stars: 5, text: 'Finalmente consigo ter visão real do meu financeiro consolidado de todas as plataformas. Os relatórios são incríveis!' },
-  { name: 'Ana Paula Lima',  role: 'Moda Feminina · Recife, PE',     avatar: 'AP', stars: 5, text: 'O gerador de listagens economizou horas do meu dia. Meus anúncios ficaram muito mais profissionais no Mercado Livre.' },
-]
+/* ── Plans ──────────────────────────────────────────────────────────────────── */
+type Billing = 'monthly' | 'annual'
+
+const plansData = {
+  monthly: [
+    {
+      name: 'Explorador', price: 'Grátis', period: '',
+      desc: 'Ideal para quem está começando',
+      badge: null, popular: false,
+      features: ['Até 50 produtos', '1 marketplace', 'Precificação básica', 'Dashboard essencial', '1 usuário'],
+      cta: 'Começar Grátis', href: '/registro',
+    },
+    {
+      name: 'Comandante', price: 'R$59', period: '/mês',
+      desc: 'Para sellers em crescimento',
+      badge: 'Mais Popular', popular: true,
+      features: ['Até 500 produtos', '3 marketplaces', 'Todos os módulos', 'Precificação avançada', 'Gerador de listagens', 'Painel financeiro completo', 'Até 5 usuários', 'Suporte prioritário'],
+      cta: 'Criar minha conta grátis', href: '/registro?plano=comandante',
+    },
+    {
+      name: 'Almirante', price: 'R$99', period: '/mês',
+      desc: 'Para grandes operações',
+      badge: null, popular: false,
+      features: ['Produtos ilimitados', 'Marketplaces ilimitados', 'NF-e automática', 'API de integração', 'Usuários ilimitados', 'Relatórios com IA', 'Gerente de sucesso dedicado', 'Suporte 24/7'],
+      cta: 'Criar minha conta grátis', href: '/registro?plano=almirante',
+    },
+  ],
+  annual: [
+    {
+      name: 'Explorador', price: 'Grátis', period: '',
+      desc: 'Ideal para quem está começando',
+      badge: null, popular: false,
+      features: ['Até 50 produtos', '1 marketplace', 'Precificação básica', 'Dashboard essencial', '1 usuário'],
+      cta: 'Começar Grátis', href: '/registro',
+    },
+    {
+      name: 'Comandante', price: 'R$47', period: '/mês',
+      desc: 'Para sellers em crescimento · cobrado anualmente',
+      badge: 'Mais Popular', popular: true,
+      features: ['Até 500 produtos', '3 marketplaces', 'Todos os módulos', 'Precificação avançada', 'Gerador de listagens', 'Painel financeiro completo', 'Até 5 usuários', 'Suporte prioritário'],
+      cta: 'Criar minha conta grátis', href: '/registro?plano=comandante&billing=annual',
+    },
+    {
+      name: 'Almirante', price: 'R$79', period: '/mês',
+      desc: 'Para grandes operações · cobrado anualmente',
+      badge: null, popular: false,
+      features: ['Produtos ilimitados', 'Marketplaces ilimitados', 'NF-e automática', 'API de integração', 'Usuários ilimitados', 'Relatórios com IA', 'Gerente de sucesso dedicado', 'Suporte 24/7'],
+      cta: 'Criar minha conta grátis', href: '/registro?plano=almirante&billing=annual',
+    },
+  ],
+}
 
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export default function LandingPage() {
-  const [menu, setMenu] = useState(false)
+  const [menu, setMenu]       = useState(false)
+  const [billing, setBilling] = useState<Billing>('monthly')
+
+  const plans = plansData[billing]
 
   return (
     <div className="landing-bg min-h-screen overflow-x-hidden">
@@ -164,16 +227,16 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            O ERP completo para sellers de marketplace. Gerencie produtos, precificação,
-            listagens e financeiro em um só lugar.
+            Gerencie Mercado Livre, Shopee e Amazon em um painel unificado.
+            Precificação, estoque, pedidos e financeiro — tudo em um só lugar.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/registro" className="btn-primary px-8 py-4 rounded-2xl text-base">
-              Começar Grátis <ArrowRight className="w-4 h-4" />
+              Começar gratuitamente <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/dashboard" className="btn-outline px-8 py-4 rounded-2xl text-base">
-              Ver Demonstração
+            <Link href="/registro" className="btn-outline px-8 py-4 rounded-2xl text-base">
+              Criar minha conta grátis
             </Link>
           </div>
           <p className="text-xs text-slate-400 mt-4">Sem cartão de crédito · Cancele quando quiser</p>
@@ -191,16 +254,12 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="mt-16 grid grid-cols-3 gap-6 max-w-md mx-auto">
-            {[
-              { val: '2.400+', label: 'Sellers ativos' },
-              { val: 'R$18M+', label: 'Gerenciados/mês' },
-              { val: '98%',    label: 'Satisfação' },
-            ].map(s => (
-              <div key={s.label}>
-                <p className="text-2xl font-bold text-navy-900" style={{ fontFamily: 'Sora, sans-serif' }}>{s.val}</p>
-                <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+          {/* Hero benefits replacing fake stats */}
+          <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto text-left">
+            {heroBenefits.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-2.5 text-sm text-slate-600">
+                <Icon className="w-4 h-4 shrink-0 text-purple-500" />
+                {text}
               </div>
             ))}
           </div>
@@ -271,7 +330,7 @@ export default function LandingPage() {
               return (
                 <div key={label} className="landing-card p-5 flex flex-col gap-3">
                   <div className="w-9 h-9 rounded-xl bg-navy-50 flex items-center justify-center">
-                    <Icon className="w-4.5 h-4.5 text-navy-700 w-[18px] h-[18px]" />
+                    <Icon className="w-[18px] h-[18px] text-navy-700" />
                   </div>
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -290,12 +349,29 @@ export default function LandingPage() {
       {/* ── Pricing ─────────────────────────────────────────────────────────── */}
       <section id="planos" className="relative z-10 py-24 px-6 bg-slate-50">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10">
             <p className="text-sm font-semibold text-orange-500 mb-3 uppercase tracking-wider">Planos</p>
             <h2 className="text-3xl md:text-4xl font-bold text-navy-900 mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
               Escolha sua missão
             </h2>
-            <p className="text-slate-500">Comece grátis e cresça no seu ritmo. Sem contratos longos.</p>
+            <p className="text-slate-500 mb-8">Comece grátis e cresça no seu ritmo. Sem contratos longos.</p>
+
+            {/* Billing toggle */}
+            <div className="inline-flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+              <button
+                onClick={() => setBilling('monthly')}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${billing === 'monthly' ? 'bg-navy-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Mensal
+              </button>
+              <button
+                onClick={() => setBilling('annual')}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${billing === 'annual' ? 'bg-navy-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Anual
+                <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">-20%</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -326,7 +402,7 @@ export default function LandingPage() {
                 <ul className="space-y-2.5 flex-1">
                   {plan.features.map(f => (
                     <li key={f} className="flex items-center gap-2.5 text-sm text-slate-600">
-                      <CheckCircle2 className={`w-4 h-4 shrink-0 ${plan.popular ? 'text-purple-500' : 'text-slate-400'}`} />
+                      <Check className={`w-4 h-4 shrink-0 ${plan.popular ? 'text-purple-500' : 'text-slate-400'}`} />
                       {f}
                     </li>
                   ))}
@@ -335,39 +411,55 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-8">
-            Todos os planos incluem SSL, backups diários e acesso via web e mobile.
-          </p>
+          <div className="text-center mt-8 space-y-2">
+            <p className="text-xs text-slate-400">
+              Todos os planos incluem SSL, backups diários e acesso via web e mobile.
+            </p>
+            <Link href="/planos" className="inline-block text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors">
+              Ver todos os planos e comparativo completo →
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ── Testimonials ────────────────────────────────────────────────────── */}
+      {/* ── Integrations (honest social proof) ──────────────────────────────── */}
       <section className="relative z-10 py-24 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <p className="text-sm font-semibold text-purple-600 mb-3 uppercase tracking-wider">Depoimentos</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-navy-900" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Quem usa, recomenda
+            <p className="text-sm font-semibold text-purple-600 mb-3 uppercase tracking-wider">Integrações</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Conectado aos maiores marketplaces
             </h2>
+            <p className="text-slate-500 max-w-xl mx-auto">
+              Status real das nossas integrações. Transparência total sobre o que está disponível hoje.
+            </p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map(t => (
-              <div key={t.name} className="landing-card p-7 flex flex-col">
-                <div className="flex gap-0.5 mb-5">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed flex-1">&ldquo;{t.text}&rdquo;</p>
-                <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-100">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                    {t.avatar}
+            {integrations.map(int => (
+              <div key={int.name} className="landing-card p-7 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${int.dot}`} />
+                    <span className="font-bold text-navy-900 text-base" style={{ color: int.color }}>{int.name}</span>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-navy-900">{t.name}</p>
-                    <p className="text-[11px] text-slate-400">{t.role}</p>
-                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${int.statusCls}`}>{int.status}</span>
                 </div>
+                <p className="text-sm text-slate-500 leading-relaxed">{int.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Value props */}
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+            {[
+              { title: 'Dados reais',        desc: 'Nenhum número fabricado. Todos os dados refletem sua operação real.' },
+              { title: 'Sem senhas expostas', desc: 'Integração via OAuth e tokens de API. Suas credenciais nunca passam por nós.' },
+              { title: 'Sempre atualizado',  desc: 'Nossos dados são sincronizados com os marketplaces em tempo real.' },
+            ].map(v => (
+              <div key={v.title} className="landing-card p-6">
+                <p className="font-bold text-navy-900 mb-2 text-sm">{v.title}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{v.desc}</p>
               </div>
             ))}
           </div>
@@ -389,11 +481,12 @@ export default function LandingPage() {
                 Pronto para decolar?
               </h2>
               <p className="text-white/70 mb-8 max-w-md mx-auto">
-                Junte-se a mais de 2.400 sellers que já transformaram sua operação com o Foguetim.
+                Crie sua conta gratuita agora e comece a organizar seu e-commerce em minutos.
               </p>
               <Link href="/registro" className="btn-orange px-8 py-3.5 rounded-2xl text-base font-bold inline-flex items-center gap-2">
                 Criar conta grátis <Rocket className="w-4 h-4" />
               </Link>
+              <p className="text-white/40 text-xs mt-4">Sem cartão de crédito · Plano gratuito para sempre</p>
             </div>
           </div>
         </div>

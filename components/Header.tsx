@@ -1,9 +1,10 @@
 'use client'
 
-import { Bell, Search, Sun, Moon } from 'lucide-react'
+import { Bell, Search, Sun, Moon, Menu } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/context/ThemeContext'
+import { useSidebar } from '@/context/SidebarContext'
 
 interface HeaderProps {
   title: string
@@ -23,6 +24,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const { profile } = useAuth()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { toggle } = useSidebar()
 
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
@@ -31,14 +33,25 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const displayRole = profile?.role ? (ROLE_LABELS[profile.role] ?? profile.role) : 'Administrador'
 
   return (
-    <header className="dash-header sticky top-0 z-20 flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-xl">
-      <div>
-        <h2 className="text-lg font-bold text-white leading-tight" style={{ fontFamily: 'Sora, sans-serif' }}>{title}</h2>
-        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    <header className="dash-header sticky top-0 z-20 flex items-center justify-between px-4 md:px-6 py-4 border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        {/* Mobile hamburger */}
+        <button
+          onClick={toggle}
+          aria-label="Abrir menu"
+          className="md:hidden p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-all"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div>
+          <h2 className="text-base md:text-lg font-bold text-white leading-tight" style={{ fontFamily: 'Sora, sans-serif' }}>{title}</h2>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Search */}
+        {/* Search — hidden on mobile */}
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
           <input

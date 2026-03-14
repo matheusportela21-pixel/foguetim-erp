@@ -17,7 +17,14 @@
       "Bash(git commit:*)",
       "Bash(git config:*)",
       "Bash(npx tsc:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "Bash(node -e \":*)",
+      "Bash(grep -n \"view === ''local''\" app/dashboard/produtos/page.tsx)",
+      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(public\\\\\\)/)",
+      "Bash(git -C /c/Users/mathe/foguetim add app/page.tsx \"app/\\(public\\)/planos/page.tsx\")",
+      "Bash(git -C:*)"
     ]
   }
 }

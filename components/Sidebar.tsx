@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
+import { useSidebar } from '@/context/SidebarContext'
 
 const navGroups = [
   {
@@ -66,18 +67,13 @@ const badgeColors: Record<string, string> = {
   Novo:  'bg-green-900/40 text-green-400 ring-1 ring-green-700/40',
 }
 
-// ─── Role mapping ─────────────────────────────────────────────────────────────
-// Cobre tanto os valores em português (salvos pelo signUp) quanto variantes inglesas
-
 const ROLE_LABELS: Record<string, string> = {
-  // Português (padrão do sistema)
   diretor:             'Diretor',
   supervisor:          'Supervisor',
   analista_produtos:   'Analista de Produtos',
   analista_financeiro: 'Analista Financeiro',
   suporte:             'Suporte',
   operador:            'Operador',
-  // Variantes em inglês
   director:            'Diretor',
   analyst_products:    'Analista de Produtos',
   analyst_financial:   'Analista Financeiro',
@@ -85,41 +81,33 @@ const ROLE_LABELS: Record<string, string> = {
   operator:            'Operador',
 }
 
-// ─── Plan config ──────────────────────────────────────────────────────────────
-
 interface PlanCfg { label: string; limit: number; badge: string }
 
 const PLAN_CONFIG: Record<string, PlanCfg> = {
-  // Explorador — padrão para novos usuários (signUp)
-  explorador:  { label: 'Explorador',  limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
-  explorer:    { label: 'Explorador',  limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
-  // Crescimento
-  crescimento: { label: 'Crescimento', limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
-  // Comandante
-  comandante:  { label: 'Comandante',  limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
-  commander:   { label: 'Comandante',  limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
-  // Almirante / Enterprise — ilimitado
-  almirante:   { label: 'Almirante',   limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
-  admiral:     { label: 'Almirante',   limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
-  enterprise:  { label: 'Enterprise',  limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  explorador:      { label: 'Explorador',      limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
+  explorer:        { label: 'Explorador',      limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
+  piloto:          { label: 'Piloto',          limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
+  crescimento:     { label: 'Crescimento',     limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
+  comandante:      { label: 'Comandante',      limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
+  commander:       { label: 'Comandante',      limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
+  almirante:       { label: 'Almirante',       limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  admiral:         { label: 'Almirante',       limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  enterprise:      { label: 'Enterprise',      limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  missao_espacial: { label: 'Missão Espacial', limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
 }
 
 const DEFAULT_PLAN: PlanCfg = {
   label: 'Explorador', limit: 50, badge: 'text-purple-400 bg-purple-900/30',
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
   const { profile, signOut } = useAuth()
+  const { isOpen, close }    = useSidebar()
 
-  // Contagem real de produtos no Supabase
   const [productCount, setProductCount] = useState<number | null>(null)
-
-  // Contagem de reclamações abertas (lida do localStorage com TTL de 5 min)
-  const [claimCount, setClaimCount] = useState<number>(0)
+  const [claimCount,   setClaimCount]   = useState<number>(0)
 
   useEffect(() => {
     if (!profile?.id || !isConfigured()) return
@@ -130,7 +118,6 @@ export default function Sidebar() {
       .then(({ count }) => setProductCount(count ?? 0))
   }, [profile?.id])
 
-  // Lê contagem de reclamações do localStorage (TTL 5 min)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('claims_count_cache')
@@ -142,7 +129,6 @@ export default function Sidebar() {
     } catch { /* ignore */ }
   }, [])
 
-  // Dados derivados
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
     : 'MP'
@@ -170,105 +156,137 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 flex-shrink-0 flex flex-col h-full bg-dark-900 border-r border-white/[0.06] relative z-20">
+    <>
+      {/* ── Mobile backdrop ─────────────────────────────────────────────── */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-30 md:hidden"
+          onClick={close}
+          aria-hidden
+        />
+      )}
 
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/[0.06]">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center shadow-neon-purple group-hover:scale-105 transition-transform">
-            <Rocket className="w-[18px] h-[18px] text-white" />
-          </div>
-          <div>
-            <p className="font-bold text-base text-white leading-none" style={{ fontFamily: 'Sora, sans-serif' }}>Foguetim</p>
-            <p className="text-[10px] text-slate-600 mt-0.5 font-medium">ERP v1.0</p>
-          </div>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-        {navGroups.map(group => (
-          <div key={group.label}>
-            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest px-2 mb-2">{group.label}</p>
-            <ul className="space-y-0.5">
-              {group.items.map(({ href, icon: Icon, label, badge }) => {
-                const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
-                const isReclamacoes = href === '/dashboard/reclamacoes'
-                return (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
-                        active
-                          ? 'nav-active'
-                          : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? 'nav-active-icon' : 'text-slate-600 group-hover:text-slate-400'}`} />
-                      <span className="flex-1 truncate">{label}</span>
-                      {/* Badge estático (Novo, Dev, Breve) */}
-                      {badge && (
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeColors[badge] ?? 'bg-slate-800 text-slate-500'}`}>
-                          {badge}
-                        </span>
-                      )}
-                      {/* Badge dinâmico de reclamações abertas */}
-                      {isReclamacoes && claimCount > 0 && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-900/40 text-red-400 ring-1 ring-red-700/40 animate-pulse">
-                          {claimCount}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
-
-      {/* Plan widget */}
-      <div className="mx-3 mb-3 p-3 rounded-xl bg-dark-700 border border-white/[0.06]">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wider">Plano Ativo</p>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${planCfg.badge}`}>
-            {planCfg.label}
-          </span>
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      <aside
+        className={[
+          'w-60 flex-shrink-0 flex flex-col h-full bg-dark-900 border-r border-white/[0.06]',
+          // Mobile: fixed drawer, slides in from left
+          'fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out',
+          // Desktop: relative (normal flow), always visible
+          'md:relative md:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+        ].join(' ')}
+      >
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-white/[0.06]">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center shadow-neon-purple group-hover:scale-105 transition-transform">
+              <Rocket className="w-[18px] h-[18px] text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-base text-white leading-none" style={{ fontFamily: 'Sora, sans-serif' }}>Foguetim</p>
+              <p className="text-[10px] text-slate-600 mt-0.5 font-medium">ERP v1.0</p>
+            </div>
+          </Link>
         </div>
-        {!unlimited && (
-          <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 transition-all duration-500"
-              style={{ width: `${barPct}%` }}
-            />
-          </div>
-        )}
-        <p className="text-[10px] text-slate-600">{countText}</p>
-      </div>
 
-      {/* User */}
-      <div className="px-3 pb-4 border-t border-white/[0.06] pt-3">
-        <div className="flex items-center gap-2.5">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-              {initials}
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest px-2 mb-2">{group.label}</p>
+              <ul className="space-y-0.5">
+                {group.items.map(({ href, icon: Icon, label, badge }) => {
+                  const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+                  const isReclamacoes = href === '/dashboard/reclamacoes'
+                  return (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        onClick={close}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
+                          active
+                            ? 'nav-active'
+                            : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? 'nav-active-icon' : 'text-slate-600 group-hover:text-slate-400'}`} />
+                        <span className="flex-1 truncate">{label}</span>
+                        {badge && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeColors[badge] ?? 'bg-slate-800 text-slate-500'}`}>
+                            {badge}
+                          </span>
+                        )}
+                        {isReclamacoes && claimCount > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-900/40 text-red-400 ring-1 ring-red-700/40 animate-pulse">
+                            {claimCount}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Plan widget */}
+        <div className="mx-3 mb-3 p-3 rounded-xl bg-dark-700 border border-white/[0.06]">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wider">Plano Ativo</p>
+            <Link
+              href="/planos"
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity ${planCfg.badge}`}
+              title="Ver planos disponíveis"
+            >
+              {planCfg.label}
+            </Link>
+          </div>
+          {!unlimited && (
+            <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 transition-all duration-500"
+                style={{ width: `${barPct}%` }}
+              />
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-200 truncate">{displayName}</p>
-            <p className="text-[10px] text-slate-600 truncate">{displayRole}</p>
-          </div>
-          <button
-            onClick={handleSignOut}
-            title="Sair"
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
+          <p className="text-[10px] text-slate-600">{countText}</p>
+          {/* Upgrade CTA — only for limited plans */}
+          {!unlimited && (
+            <Link
+              href="/planos"
+              className="mt-1.5 block text-[10px] font-semibold text-purple-500 hover:text-purple-400 transition-colors"
+            >
+              Fazer upgrade →
+            </Link>
+          )}
         </div>
-      </div>
-    </aside>
+
+        {/* User */}
+        <div className="px-3 pb-4 border-t border-white/[0.06] pt-3">
+          <div className="flex items-center gap-2.5">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                {initials}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-200 truncate">{displayName}</p>
+              <p className="text-[10px] text-slate-600 truncate">{displayRole}</p>
+            </div>
+            <button
+              onClick={handleSignOut}
+              title="Sair"
+              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
