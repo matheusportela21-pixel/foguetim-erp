@@ -1,8 +1,9 @@
 'use client'
 
-import { Bell, Search } from 'lucide-react'
+import { Bell, Search, Sun, Moon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { useTheme } from '@/context/ThemeContext'
 
 interface HeaderProps {
   title: string
@@ -12,6 +13,7 @@ interface HeaderProps {
 export default function Header({ title, subtitle }: HeaderProps) {
   const { profile } = useAuth()
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
@@ -36,6 +38,15 @@ export default function Header({ title, subtitle }: HeaderProps) {
             className="w-44 pl-9 pr-4 py-2 rounded-lg text-sm bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/40 focus:border-purple-600/40 transition-all"
           />
         </div>
+
+        {/* Theme toggle */}
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          className="p-2 rounded-lg border border-white/[0.06] text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-all"
+        >
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
 
         {/* Notifications */}
         <button className="relative p-2 rounded-lg border border-white/[0.06] text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-all">
