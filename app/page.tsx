@@ -1,12 +1,41 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Rocket, Package, Calculator, FileText, TrendingUp, BarChart2,
   Users, ShoppingCart, Zap, Check, ArrowRight, ChevronRight,
-  Globe, Clock, Shield, Menu, X, CheckCircle2, BarChart3,
+  Globe, Clock, Shield, Menu, X, CheckCircle2, BarChart3, Info,
 } from 'lucide-react'
+
+/* ── Cancelled banner (reads ?cancelled=true) ───────────────────────────────── */
+function CancelledBanner() {
+  const params   = useSearchParams()
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    if (params.get('cancelled') === 'true') setShow(true)
+  }, [params])
+
+  if (!show) return null
+
+  return (
+    <div className="relative z-50 w-full bg-amber-900/30 border-b border-amber-700/40 px-6 py-3 flex items-center gap-3">
+      <Info className="w-4 h-4 text-amber-400 shrink-0" />
+      <p className="text-sm text-amber-200 flex-1">
+        Sua conta foi cancelada. Seus dados serão mantidos por 30 dias.{' '}
+        Se mudar de ideia, entre em contato:{' '}
+        <a href="mailto:contato@foguetim.com.br" className="underline font-semibold hover:text-amber-100">
+          contato@foguetim.com.br
+        </a>
+      </p>
+      <button onClick={() => setShow(false)} className="text-amber-500 hover:text-amber-300 shrink-0">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
 
 /* ── Deterministic star positions ────────────────────────────────────────── */
 const phi = 0.618033988749895
@@ -144,6 +173,9 @@ export default function LandingPage() {
 
   return (
     <div className="landing-bg min-h-screen overflow-x-hidden">
+      <Suspense fallback={null}>
+        <CancelledBanner />
+      </Suspense>
 
       {/* Subtle star background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
