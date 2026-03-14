@@ -298,21 +298,20 @@ export default function ReclamacoesPage() {
   return (
     <div className="flex-1 overflow-y-auto">
       <Header
-        title={
-          <span className="flex items-center gap-2.5">
-            Devoluções e Reclamações
-            {urgentCount > 0 && (
-              <span className="animate-pulse flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 text-xs font-bold ring-1 ring-red-500/30">
-                <AlertCircle className="w-3 h-3" />
-                {urgentCount} urgente{urgentCount !== 1 ? 's' : ''}
-              </span>
-            )}
-          </span>
-        }
+        title="Devoluções e Reclamações"
         subtitle="Gerencie disputas abertas e evite impacto na sua reputação"
       />
 
       <div className="p-6 space-y-5">
+        {/* Badge de urgência — aparece logo abaixo do header quando há itens urgentes */}
+        {urgentCount > 0 && (
+          <div className="flex items-center gap-2 px-1">
+            <span className="animate-pulse flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/15 text-red-400 text-xs font-bold ring-1 ring-red-500/30">
+              <AlertCircle className="w-3.5 h-3.5" />
+              {urgentCount} reclamação{urgentCount !== 1 ? 'ões' : ''} urgente{urgentCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
 
         {notConnected && <NotConnected />}
 
