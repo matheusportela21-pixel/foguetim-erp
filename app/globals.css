@@ -591,3 +591,132 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; }
   background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
                     linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
 }
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT MODE — TARGETED PAGE OVERRIDES
+   (Produtos, Pedidos, SAC, Expedição, NF-e, Relatórios)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Generic low-contrast text safety rules ── */
+.theme-light .text-slate-300 { color: #374151 !important; }
+.theme-light .text-slate-400 { color: #4b5563 !important; }
+.theme-light .text-slate-500 { color: #374151 !important; }
+.theme-light .text-slate-600 { color: #4b5563 !important; }
+.theme-light .text-slate-700 { color: #6b7280 !important; }
+.theme-light .text-gray-300  { color: #374151 !important; }
+.theme-light .text-gray-400  { color: #4b5563 !important; }
+.theme-light .text-zinc-400  { color: #4b5563 !important; }
+
+/* ── Tab selector wrappers (Produtos, Pedidos, SAC pages) ──
+   The pill-nav uses: bg-dark-800/60 rounded-xl p-1 border border-white/[0.06]
+   bg-dark-800 is already handled but /60 opacity variant is not. */
+.theme-light [class*="bg-dark-800"] {
+  background-color: #f1f5f9 !important;
+}
+.theme-light [class*="bg-dark-900"] {
+  background-color: #f8fafc !important;
+}
+.theme-light [class*="bg-dark-700"] {
+  background-color: #e2e8f0 !important;
+}
+.theme-light [class*="bg-dark-600"] {
+  background-color: #cbd5e1 !important;
+}
+
+/* Inline bg-dark-700 used as badge/pill backgrounds (tags, filter pills) */
+.theme-light span[class*="bg-dark-700"],
+.theme-light button[class*="bg-dark-700"] {
+  background-color: #e2e8f0 !important;
+  color: #374151 !important;
+}
+
+/* ── Inactive hover text in tabs ── */
+.theme-light .hover\:text-slate-300:hover { color: #1e293b !important; }
+.theme-light .hover\:text-slate-400:hover { color: #374151 !important; }
+
+/* ── Border overrides for white/opacity borders ── */
+.theme-light [class*="border-white\/"] {
+  border-color: rgba(0,0,0,0.08) !important;
+}
+.theme-light [class*="divide-white\/"] > * + * {
+  border-color: rgba(0,0,0,0.06) !important;
+}
+
+/* ── Expedição: "Q2 2026" badge — bg-amber-900/30 text-amber-400 ──
+   amber-900/30 on white is near-invisible; force readable colors. */
+.theme-light [class*="bg-amber-900"] {
+  background-color: rgba(217,119,6,0.12) !important;
+  color: #92400e !important;
+}
+
+/* ── NF-e: PRÉVIA badge — bg-purple-900/50 text-purple-400 ── */
+.theme-light [class*="bg-purple-900"] {
+  background-color: rgba(168,85,247,0.12) !important;
+  color: #6b21a8 !important;
+}
+
+/* ── Relatórios: "Em breve" badge — bg-amber-900/40 text-amber-400 ──
+   (covered by bg-amber-900 rule above)
+   Tag pills use bg-dark-700 (covered above).
+   AI teaser "Q3 2026" uses bg-purple-900/50 (covered above). */
+
+/* ── Yellow/amber text on tinted backgrounds ── */
+.theme-light [class*="bg-yellow-"][class*="/10"],
+.theme-light [class*="bg-amber-"][class*="/10"] {
+  color: #92400e;
+}
+.theme-light [class*="bg-yellow-"][class*="/20"],
+.theme-light [class*="bg-amber-"][class*="/20"] {
+  color: #78350f;
+}
+
+/* ── SAC: message bubbles with bg-dark-700/50 ── */
+.theme-light [class*="bg-dark-700\/"] {
+  background-color: rgba(226,232,240,0.7) !important;
+}
+
+/* ── SAC: reply-box template dropdown bg-dark-800 ── */
+.theme-light .bg-dark-800 {
+  background-color: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* ── Inline inputs using bg-dark-700 (não .dash-input) ── */
+.theme-light input[class*="bg-dark-700"],
+.theme-light textarea[class*="bg-dark-700"],
+.theme-light select[class*="bg-dark-700"] {
+  background-color: #f8fafc !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: #0f172a !important;
+}
+.theme-light input[class*="bg-dark-700"]::placeholder,
+.theme-light textarea[class*="bg-dark-700"]::placeholder { color: #6b7280 !important; }
+
+/* ── NF-e: disabled mockup inputs use bg-dark-700 border-white/[0.06] ── */
+.theme-light input[disabled][class*="bg-dark-700"] {
+  background-color: #f1f5f9 !important;
+  color: #6b7280 !important;
+}
+
+/* ── Recharts text needs stronger contrast in light mode ── */
+.theme-light .recharts-text { fill: #6b7280 !important; }
+
+/* ── Backdrop/overlay modals (bg-dark-800 rounded-2xl) ── */
+.theme-light .bg-dark-800.rounded-2xl,
+.theme-light .bg-dark-800.rounded-xl {
+  background-color: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* ── Ensure white text inside dark cards stays readable ── */
+.theme-light .dash-card .text-white  { color: #0f172a !important; }
+.theme-light .dash-card .text-slate-200 { color: #1e293b !important; }
+.theme-light .dash-card .text-slate-300 { color: #374151 !important; }
+.theme-light .dash-card .text-slate-400 { color: #4b5563 !important; }
+.theme-light .dash-card .text-slate-500 { color: #374151 !important; }
+.theme-light .dash-card .text-slate-600 { color: #4b5563 !important; }
+
+/* ── Relatórios: AI teaser feature bg-dark-700 rounded-xl items ── */
+.theme-light .bg-dark-700.rounded-xl {
+  background-color: #e2e8f0 !important;
+}
