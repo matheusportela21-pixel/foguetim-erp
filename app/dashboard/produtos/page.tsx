@@ -216,20 +216,26 @@ function CopyModal({ produto, onClose }: { produto: Produto | null; onClose: () 
 // ─── ML Types ─────────────────────────────────────────────────────────────────
 
 interface MLItem {
-  id: string
-  title: string
-  price: number
-  original_price: number | null
+  id:                 string
+  title:              string
+  price:              number
+  original_price:     number | null
   available_quantity: number
-  sold_quantity: number
-  status: string
-  permalink: string
-  thumbnail: string
-  listing_type_id: string
-  condition: string
-  date_created: string
-  last_updated: string
-  description_text?: string
+  sold_quantity:      number
+  status:             string
+  permalink:          string
+  thumbnail:          string
+  listing_type_id:    string
+  condition:          string
+  date_created:       string
+  last_updated:       string
+  description_text?:  string
+  shipping?: {
+    free_shipping?: boolean
+    local_pick_up?: boolean
+    logistic_type?: string
+    tags?:          string[]
+  }
 }
 
 interface MLItemDetail extends MLItem {
@@ -252,12 +258,25 @@ function fmtBRL(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function listingLabel(lt: string) {
-  if (lt?.includes('gold_special') || lt?.includes('gold_pro')) return 'Premium'
-  if (lt?.includes('gold_pro_extra'))  return 'Gold Extra'
-  if (lt?.includes('gold'))  return 'Clássico'
-  if (lt?.includes('silver')) return 'Gratuita'
-  return lt ?? '—'
+const LISTING_TYPE_MAP: Record<string, string> = {
+  gold_pro:     'Premium',
+  gold_special: 'Clássico',
+  free:         'Gratuito',
+  gold_premium: 'Diamante',
+  gold:         'Ouro',
+  silver:       'Prata',
+  bronze:       'Bronze',
+}
+
+function listingLabel(lt: string): string {
+  return LISTING_TYPE_MAP[lt] ?? lt ?? '—'
+}
+
+function listingBadgeCls(lt: string): string {
+  if (lt === 'gold_pro')     return 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+  if (lt === 'gold_special') return 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+  if (lt === 'free')         return 'bg-slate-700/60 text-slate-400 border border-white/[0.06]'
+  return 'bg-slate-700/40 text-slate-500 border border-white/[0.04]'
 }
 
 function StatusBadgeML({ s }: { s: string }) {
@@ -752,6 +771,131 @@ function RowActions({
   )
 }
 
+// ─── Bulk Price Modal ─────────────────────────────────────────────────────────
+
+function BulkPriceModal({
+  items, onClose, onDone,
+}: {
+  items: MLItem[]; onClose: () => void; onDone: () => void
+}) {
+  type Mode = 'fixed' | 'increase' | 'decrease'
+  const [mode, setMode]       = useState<Mode>('fixed')
+  const [value, setValue]     = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+  const [saving, setSaving]   = useState(false)
+  const [log, setLog]         = useState<string[]>([])
+
+  function preview(item: MLItem): number {
+    const v = parseFloat(value) || 0
+    if (mode === 'fixed')    return v
+    if (mode === 'increase') return item.price * (1 + v / 100)
+    return Math.max(0.01, item.price * (1 - v / 100))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    const newLog: string[] = []
+    for (const item of items) {
+      const newPrice = parseFloat(preview(item).toFixed(2))
+      const res = await fetch(`/api/mercadolivre/items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: 'price', value: newPrice }),
+      })
+      const label = item.title.slice(0, 30) + (item.title.length > 30 ? '…' : '')
+      if (res.ok) newLog.push(`✅ ${label}: ${fmtBRL(newPrice)}`)
+      else {
+        const d = await res.json().catch(() => ({ error: 'Erro' }))
+        newLog.push(`❌ ${label}: ${d.error ?? 'Erro'}`)
+      }
+      setLog([...newLog])
+      await new Promise(r => setTimeout(r, 1000))
+    }
+    setSaving(false)
+    const ok = newLog.every(l => l.startsWith('✅'))
+    if (ok) { setTimeout(onDone, 1500) }
+  }
+
+  const previewLabel = mode === 'fixed' ? 'Novo preço: ' : mode === 'increase' ? `+${value || 0}%` : `-${value || 0}%`
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+      <div className="bg-dark-800 border border-white/[0.1] rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-5">
+        <p className="text-sm font-bold text-white">Alterar preço — {items.length} anúncio(s)</p>
+
+        {/* Mode selector */}
+        <div className="flex gap-2">
+          {([
+            { v: 'fixed',    label: 'Valor fixo' },
+            { v: 'increase', label: '+%' },
+            { v: 'decrease', label: '−%' },
+          ] as { v: Mode; label: string }[]).map(m => (
+            <button key={m.v} onClick={() => { setMode(m.v); setValue('') }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all
+                ${mode === m.v ? 'bg-purple-600/20 border-purple-500/40 text-purple-300' : 'border-white/[0.06] text-slate-500 hover:text-slate-300'}`}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Value input */}
+        <div className="relative">
+          {mode === 'fixed' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">R$</span>}
+          <input
+            type="number" value={value} onChange={e => setValue(e.target.value)}
+            placeholder={mode === 'fixed' ? '99,90' : '10'}
+            min={0} step={mode === 'fixed' ? 0.01 : 1}
+            className={`w-full px-3 py-2 text-sm rounded-xl bg-dark-700 border border-white/[0.08] text-white focus:outline-none focus:ring-1 focus:ring-purple-500/30 ${mode === 'fixed' ? 'pl-8' : ''}`}
+          />
+          {mode !== 'fixed' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">%</span>}
+        </div>
+
+        {/* Preview table */}
+        {value && parseFloat(value) > 0 && (
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {items.slice(0, 10).map(item => (
+              <div key={item.id} className="flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] text-xs">
+                <span className="text-slate-400 truncate max-w-[240px]">{item.title}</span>
+                <span className="text-slate-600 mx-2">
+                  <span className="line-through">{fmtBRL(item.price)}</span>
+                </span>
+                <span className="text-green-400 font-semibold shrink-0">{fmtBRL(parseFloat(preview(item).toFixed(2)))}</span>
+              </div>
+            ))}
+            {items.length > 10 && <p className="text-[10px] text-slate-600 text-center">+ {items.length - 10} anúncios</p>}
+          </div>
+        )}
+
+        {/* Save log */}
+        {log.length > 0 && (
+          <div className="space-y-0.5 max-h-28 overflow-y-auto bg-black/20 rounded-xl p-3">
+            {log.map((l, i) => (
+              <p key={i} className={`text-[11px] font-mono ${l.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{l}</p>
+            ))}
+          </div>
+        )}
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
+            className="w-3.5 h-3.5 accent-purple-500" />
+          <span className="text-[11px] text-slate-400">Confirmo a alteração de preço nos {items.length} anúncios</span>
+        </label>
+
+        <div className="flex gap-3">
+          <button onClick={onClose} disabled={saving}
+            className="flex-1 py-2.5 text-sm text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.07] transition-all disabled:opacity-50">
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={!confirmed || saving || !value || parseFloat(value) <= 0}
+            className="flex-1 py-2.5 text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : 'Alterar preços'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── ML Products Tab ──────────────────────────────────────────────────────────
 
 function MLProductsTab() {
@@ -759,13 +903,24 @@ function MLProductsTab() {
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
   const [notConnected, setNotConnected] = useState(false)
-  const [search, setSearch]             = useState('')
-  const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
-  const [listingFilter, setListingFilter] = useState<'all' | 'gold' | 'gold_special' | 'silver'>('all')
-  const [stockFilter, setStockFilter]   = useState<'all' | 'low' | 'zero'>('all')
-  const [offset, setOffset]             = useState(0)
-  const [paging, setPaging]             = useState({ total: 0, offset: 0, limit: 50 })
   const [refreshKey, setRefreshKey]     = useState(0)
+
+  // Filters
+  const [search, setSearch]                   = useState('')
+  const [statusFilter, setStatusFilter]       = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
+  const [listingFilter, setListingFilter]     = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
+  const [stockFilter, setStockFilter]         = useState<'all' | 'low' | 'zero'>('all')
+  const [freeShippingF, setFreeShippingF]     = useState(false)
+  const [flexF, setFlexF]                     = useState(false)
+  const [sortBy, setSortBy]                   = useState<'default' | 'stock_asc' | 'price_desc' | 'price_asc' | 'sold_desc'>('default')
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
+  const [offset, setOffset]                   = useState(0)
+  const [paging, setPaging]                   = useState({ total: 0, offset: 0, limit: 50 })
+
+  // Bulk actions
+  const [selectedIds, setSelectedIds]       = useState<string[]>([])
+  const [bulkSaving, setBulkSaving]         = useState(false)
+  const [showBulkPrice, setShowBulkPrice]   = useState(false)
 
   function openEditPage(itemId: string) {
     window.open(`/dashboard/produtos/editar/${itemId}`, '_blank')
@@ -774,6 +929,7 @@ function MLProductsTab() {
   useEffect(() => {
     setLoading(true)
     setError(null)
+    setSelectedIds([])
     const apiStatus = statusFilter === 'all' ? 'all' : statusFilter
     fetch(`/api/mercadolivre/products?offset=${offset}&limit=50&status=${apiStatus}`)
       .then(r => r.json())
@@ -783,7 +939,7 @@ function MLProductsTab() {
         setItems(d.items ?? [])
         setPaging(d.paging ?? { total: 0, offset, limit: 50 })
       })
-      .catch(e => setError(e.message))
+      .catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false))
   }, [offset, statusFilter, refreshKey])
 
@@ -791,17 +947,65 @@ function MLProductsTab() {
     setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it))
   }
 
+  // Apply local filters
   const filtered = items.filter(i => {
-    if (search && !i.title.toLowerCase().includes(search.toLowerCase())) return false
-    if (listingFilter !== 'all') {
-      if (listingFilter === 'gold_special' && !i.listing_type_id?.includes('gold_special') && !i.listing_type_id?.includes('gold_pro')) return false
-      if (listingFilter === 'gold' && !i.listing_type_id?.includes('gold')) return false
-      if (listingFilter === 'silver' && !i.listing_type_id?.includes('silver')) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!i.title.toLowerCase().includes(q) && !i.id.toLowerCase().includes(q)) return false
     }
-    if (stockFilter === 'zero' && i.available_quantity !== 0) return false
+    if (listingFilter !== 'all' && i.listing_type_id !== listingFilter) return false
+    if (stockFilter === 'zero' && i.available_quantity !== 0)            return false
     if (stockFilter === 'low'  && (i.available_quantity === 0 || i.available_quantity > 5)) return false
+    if (freeShippingF && !i.shipping?.free_shipping)                     return false
+    if (flexF && !i.shipping?.tags?.includes('self_service_in'))         return false
     return true
   })
+
+  // Local sort
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'price_desc')  return b.price - a.price
+    if (sortBy === 'price_asc')   return a.price - b.price
+    if (sortBy === 'stock_asc')   return a.available_quantity - b.available_quantity
+    if (sortBy === 'sold_desc')   return b.sold_quantity - a.sold_quantity
+    return 0
+  })
+
+  // Active filter chips
+  interface Chip { label: string; onRemove: () => void }
+  const chips: Chip[] = []
+  if (listingFilter !== 'all')  chips.push({ label: `Tipo: ${listingLabel(listingFilter)}`, onRemove: () => setListingFilter('all') })
+  if (stockFilter !== 'all')    chips.push({ label: stockFilter === 'zero' ? 'Sem estoque' : 'Estoque baixo', onRemove: () => setStockFilter('all') })
+  if (freeShippingF)            chips.push({ label: 'Frete grátis', onRemove: () => setFreeShippingF(false) })
+  if (flexF)                    chips.push({ label: 'Flex ativo', onRemove: () => setFlexF(false) })
+  if (sortBy !== 'default')     chips.push({ label: `Ordenado`, onRemove: () => setSortBy('default') })
+
+  // Select all / deselect
+  const allSelected = sorted.length > 0 && sorted.every(i => selectedIds.includes(i.id))
+  function toggleAll() {
+    if (allSelected) setSelectedIds([])
+    else setSelectedIds(sorted.map(i => i.id))
+  }
+  function toggleOne(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  // Bulk status change
+  async function bulkStatus(newStatus: 'active' | 'paused') {
+    setBulkSaving(true)
+    for (const id of selectedIds) {
+      await fetch(`/api/mercadolivre/items/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: 'status', value: newStatus }),
+      })
+      updateItem(id, { status: newStatus })
+      await new Promise(r => setTimeout(r, 1000))
+    }
+    setBulkSaving(false)
+    setSelectedIds([])
+  }
+
+  const selectedItems = sorted.filter(i => selectedIds.includes(i.id))
 
   if (notConnected) return (
     <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -837,64 +1041,169 @@ function MLProductsTab() {
   )
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="p-4 space-y-3">
+      {/* ── Toolbar ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por título..."
-            className="pl-9 pr-4 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-52" />
+            placeholder="Buscar por título ou ID..."
+            className="pl-9 pr-4 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-56" />
         </div>
 
-        {/* Status filter */}
-        <div className="flex items-center gap-1">
+        {/* Status tabs */}
+        <div className="flex items-center gap-0.5 bg-dark-700 rounded-xl p-0.5">
           {([
-            { v: 'active', label: 'Ativos' },
-            { v: 'paused', label: 'Pausados' },
+            { v: 'active',       label: 'Ativos' },
+            { v: 'paused',       label: 'Pausados' },
             { v: 'under_review', label: 'Em revisão' },
-            { v: 'all', label: 'Todos' },
+            { v: 'all',          label: 'Todos' },
           ] as const).map(s => (
-            <button key={s.v} onClick={() => { setStatusFilter(s.v); setOffset(0) }}
+            <button key={s.v} onClick={() => { setStatusFilter(s.v); setOffset(0); setSelectedIds([]) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.v ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
               {s.label}
             </button>
           ))}
         </div>
 
-        {/* Listing type filter */}
+        {/* Listing type */}
         <select value={listingFilter} onChange={e => setListingFilter(e.target.value as typeof listingFilter)}
-          className="px-3 py-1.5 rounded-lg text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
+          className="px-3 py-1.5 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
           <option value="all">Todos os tipos</option>
-          <option value="gold_special">Premium</option>
-          <option value="gold">Clássico</option>
-          <option value="silver">Gratuita</option>
+          <option value="gold_pro">⭐ Premium</option>
+          <option value="gold_special">Clássico</option>
+          <option value="free">Gratuito</option>
         </select>
 
-        {/* Stock filter */}
+        {/* Stock */}
         <select value={stockFilter} onChange={e => setStockFilter(e.target.value as typeof stockFilter)}
-          className="px-3 py-1.5 rounded-lg text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
+          className="px-3 py-1.5 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
           <option value="all">Todo estoque</option>
-          <option value="low">Baixo (&lt; 5)</option>
+          <option value="low">Estoque baixo</option>
           <option value="zero">Sem estoque</option>
         </select>
 
-        <button onClick={() => setRefreshKey(k => k + 1)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-auto">
-          <RefreshCw className="w-3.5 h-3.5" /> Atualizar
-        </button>
+        {/* More filters */}
+        <div className="relative">
+          <button onClick={() => setShowMoreFilters(f => !f)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${showMoreFilters || freeShippingF || flexF || sortBy !== 'default' ? 'border-purple-500/40 bg-purple-500/10 text-purple-300' : 'border-white/[0.06] text-slate-500 hover:text-slate-300'}`}>
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Mais filtros
+            {(freeShippingF || flexF || sortBy !== 'default') && (
+              <span className="w-4 h-4 rounded-full bg-purple-500 text-white text-[9px] flex items-center justify-center font-bold">
+                {Number(freeShippingF) + Number(flexF) + Number(sortBy !== 'default')}
+              </span>
+            )}
+          </button>
 
-        <span className="text-xs text-slate-600">
-          <span className="text-white font-bold">{paging.total}</span> anúncios
-          {filtered.length !== items.length && <span className="text-yellow-400"> · {filtered.length} filtrado(s)</span>}
-        </span>
+          {showMoreFilters && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setShowMoreFilters(false)} />
+              <div className="absolute left-0 top-10 z-30 w-64 bg-dark-800 border border-white/[0.1] rounded-2xl shadow-2xl p-4 space-y-3">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Filtros adicionais</p>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={freeShippingF} onChange={e => setFreeShippingF(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-purple-500" />
+                  <span className="text-xs text-slate-300">🚚 Com frete grátis</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={flexF} onChange={e => setFlexF(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-purple-500" />
+                  <span className="text-xs text-slate-300">⚡ Com Flex ativo</span>
+                </label>
+
+                <div>
+                  <p className="text-[10px] text-slate-600 mb-1.5">Ordenar por:</p>
+                  <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                    className="w-full px-3 py-1.5 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
+                    <option value="default">Padrão</option>
+                    <option value="price_desc">Maior preço</option>
+                    <option value="price_asc">Menor preço</option>
+                    <option value="stock_asc">Menor estoque</option>
+                    <option value="sold_desc">Mais vendidos</option>
+                  </select>
+                </div>
+
+                <button onClick={() => { setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+                  className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-300 border border-white/[0.06] rounded-xl transition-colors">
+                  Limpar filtros
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <button onClick={() => setRefreshKey(k => k + 1)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-xs text-slate-600">
+            Mostrando <span className="text-white font-bold">{sorted.length}</span>
+            {sorted.length !== paging.total && <span className="text-slate-500"> de <span className="text-white font-bold">{paging.total}</span></span>}
+          </span>
+        </div>
       </div>
 
+      {/* Active filter chips */}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map((chip, i) => (
+            <button key={i} onClick={chip.onRemove}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-[10px] text-purple-300 hover:bg-purple-500/20 transition-colors">
+              {chip.label}
+              <X className="w-3 h-3" />
+            </button>
+          ))}
+          <button onClick={() => { setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+            className="px-2.5 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
+            Limpar tudo
+          </button>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-purple-500/[0.08] border border-purple-500/20 rounded-xl">
+          <span className="text-xs font-bold text-purple-300">
+            {selectedIds.length} anúncio(s) selecionado(s)
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => setShowBulkPrice(true)} disabled={bulkSaving}
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-all disabled:opacity-50">
+              Alterar preço
+            </button>
+            <button onClick={() => bulkStatus('paused')} disabled={bulkSaving}
+              className="px-3 py-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50 flex items-center gap-1.5">
+              {bulkSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              Pausar todos
+            </button>
+            <button onClick={() => bulkStatus('active')} disabled={bulkSaving}
+              className="px-3 py-1.5 text-xs font-semibold text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl hover:bg-green-500/20 transition-all disabled:opacity-50">
+              Reativar todos
+            </button>
+            <button onClick={() => setSelectedIds([])}
+              className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2">
           <ShoppingBag className="w-8 h-8 text-slate-700" />
           <p className="text-sm text-slate-500">Nenhum anúncio encontrado</p>
+          {chips.length > 0 && (
+            <button onClick={() => { setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+              className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+              Limpar filtros
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -902,81 +1211,117 @@ function MLProductsTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-white/[0.06]">
+                  <th className="py-2.5 px-3 w-8">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" />
+                  </th>
                   {['Anúncio', 'Preço ML', 'Estoque', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
                     <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
-                {filtered.map(item => (
-                  <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-dark-700 shrink-0">
-                          {item.thumbnail
-                            ? <img src={item.thumbnail.replace('http://', 'https://')} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                            : <ImageOff className="w-4 h-4 text-slate-700 m-auto mt-3" />}
+                {sorted.map(item => {
+                  const isSelected  = selectedIds.includes(item.id)
+                  const isFlex      = item.shipping?.tags?.includes('self_service_in') ?? false
+                  const isFreeShip  = item.shipping?.free_shipping ?? false
+                  const isPremium   = item.listing_type_id === 'gold_pro'
+                  return (
+                    <tr key={item.id}
+                      className={`hover:bg-white/[0.02] transition-colors group ${isSelected ? 'bg-purple-500/[0.04]' : ''}`}
+                      onClick={() => toggleOne(item.id)}
+                    >
+                      <td className="py-3 px-3 cursor-pointer" onClick={e => { e.stopPropagation(); toggleOne(item.id) }}>
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleOne(item.id)}
+                          className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" onClick={e => e.stopPropagation()} />
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-3">
+                          {/* Thumbnail */}
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-dark-700 shrink-0">
+                            {item.thumbnail
+                              ? <img src={item.thumbnail.replace('http://', 'https://')} alt="" className="w-full h-full object-cover"
+                                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                              : <ImageOff className="w-4 h-4 text-slate-700 m-auto mt-3" />}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              {isPremium   && <span title="Premium"     className="text-purple-400 text-[10px]">⭐</span>}
+                              {isFreeShip  && <span title="Frete grátis" className="text-green-400 text-[10px]">🚚</span>}
+                              {isFlex      && <span title="Flex ativo"   className="text-amber-400 text-[10px]">⚡</span>}
+                              <p className="text-white font-semibold leading-snug truncate max-w-[200px]">{item.title}</p>
+                            </div>
+                            <p className="text-[10px] text-slate-600 font-mono">{item.id}</p>
+                            <div className="flex gap-1 mt-0.5 flex-wrap">
+                              {item.available_quantity === 0 && (
+                                <span className="text-[9px] font-bold bg-red-400/10 text-red-400 px-1.5 py-0.5 rounded-full">Sem estoque</span>
+                              )}
+                              {item.available_quantity > 0 && item.available_quantity <= 5 && (
+                                <span className="text-[9px] font-bold bg-amber-400/10 text-amber-400 px-1.5 py-0.5 rounded-full">Estoque baixo</span>
+                              )}
+                              {item.status === 'under_review' && (
+                                <span className="text-[9px] font-bold bg-blue-400/10 text-blue-400 px-1.5 py-0.5 rounded-full">Em revisão</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-white font-semibold leading-snug truncate max-w-[220px]">{item.title}</p>
-                          <p className="text-[10px] text-slate-600 font-mono">{item.id}</p>
-                          {/* Stock badges */}
-                          {item.available_quantity === 0 && (
-                            <span className="text-[9px] font-bold bg-red-400/10 text-red-400 px-1.5 py-0.5 rounded-full ml-0">Sem estoque</span>
-                          )}
-                          {item.available_quantity > 0 && item.available_quantity <= 5 && (
-                            <span className="text-[9px] font-bold bg-amber-400/10 text-amber-400 px-1.5 py-0.5 rounded-full">Estoque baixo</span>
-                          )}
-                          {item.status === 'under_review' && (
-                            <span className="text-[9px] font-bold bg-blue-400/10 text-blue-400 px-1.5 py-0.5 rounded-full ml-1">Em revisão</span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <InlineEdit
-                        itemId={item.id} field="price"
-                        displayValue={<span className="text-white font-bold">{fmtBRL(item.price)}</span>}
-                        inputValue={item.price}
-                        onSaved={v => updateItem(item.id, { price: v })}
-                      />
-                    </td>
-                    <td className="py-3 px-3">
-                      <InlineEdit
-                        itemId={item.id} field="stock"
-                        displayValue={
-                          <span className={`font-bold ${item.available_quantity === 0 ? 'text-red-400' : item.available_quantity <= 5 ? 'text-amber-400' : 'text-white'}`}>
-                            {item.available_quantity}
-                          </span>
-                        }
-                        inputValue={item.available_quantity}
-                        onSaved={v => updateItem(item.id, { available_quantity: v })}
-                      />
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="text-slate-400">{item.sold_quantity}</span>
-                    </td>
-                    <td className="py-3 px-3"><StatusBadgeML s={item.status} /></td>
-                    <td className="py-3 px-3">
-                      <span className="text-[9px] font-semibold text-slate-400">{listingLabel(item.listing_type_id)}</span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditPage(item.id)}
-                          className="p-1.5 rounded-lg text-slate-600 hover:text-purple-400 hover:bg-purple-400/10 transition-all"
-                          title="Editar anúncio completo">
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <RowActions
-                          item={item}
-                          onEdit={() => openEditPage(item.id)}
-                          onStatusChange={s => updateItem(item.id, { status: s })}
-                          onRefresh={() => setRefreshKey(k => k + 1)}
+                      </td>
+
+                      <td className="py-3 px-3" onClick={e => e.stopPropagation()}>
+                        <InlineEdit
+                          itemId={item.id} field="price"
+                          displayValue={<span className="text-white font-bold">{fmtBRL(item.price)}</span>}
+                          inputValue={item.price}
+                          onSaved={v => updateItem(item.id, { price: v })}
                         />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td className="py-3 px-3" onClick={e => e.stopPropagation()}>
+                        <InlineEdit
+                          itemId={item.id} field="stock"
+                          displayValue={
+                            <span className={`font-bold ${item.available_quantity === 0 ? 'text-red-400' : item.available_quantity <= 5 ? 'text-amber-400' : 'text-white'}`}>
+                              {item.available_quantity}
+                            </span>
+                          }
+                          inputValue={item.available_quantity}
+                          onSaved={v => updateItem(item.id, { available_quantity: v })}
+                        />
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span className="text-slate-400">{item.sold_quantity}</span>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <StatusBadgeML s={item.status} />
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${listingBadgeCls(item.listing_type_id)}`}>
+                          {listingLabel(item.listing_type_id)}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openEditPage(item.id)}
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-purple-400 hover:bg-purple-400/10 transition-all"
+                            title="Editar anúncio completo">
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <RowActions
+                            item={item}
+                            onEdit={() => openEditPage(item.id)}
+                            onStatusChange={s => updateItem(item.id, { status: s })}
+                            onRefresh={() => setRefreshKey(k => k + 1)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -989,11 +1334,11 @@ function MLProductsTab() {
               </span>
               <div className="flex gap-2">
                 <button onClick={() => setOffset(Math.max(0, offset - 50))} disabled={offset === 0}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
                   ← Anterior
                 </button>
                 <button onClick={() => setOffset(offset + 50)} disabled={offset + 50 >= paging.total}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
                   Próxima →
                 </button>
               </div>
@@ -1002,7 +1347,14 @@ function MLProductsTab() {
         </>
       )}
 
-      {/* Edit: opens dedicated page in new tab via openEditPage() */}
+      {/* Bulk price modal */}
+      {showBulkPrice && (
+        <BulkPriceModal
+          items={selectedItems}
+          onClose={() => setShowBulkPrice(false)}
+          onDone={() => { setShowBulkPrice(false); setSelectedIds([]); setRefreshKey(k => k + 1) }}
+        />
+      )}
     </div>
   )
 }
