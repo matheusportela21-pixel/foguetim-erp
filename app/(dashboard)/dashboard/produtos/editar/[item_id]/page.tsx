@@ -765,7 +765,7 @@ export default function EditarAnuncioPage() {
 
       // Build initial attr edits from item's attribute values
       const attrs: Record<string, string> = {}
-      for (const a of d.attributes) {
+      for (const a of (Array.isArray(d.attributes) ? d.attributes : [])) {
         attrs[a.id] = a.value_name ?? ''
       }
       setAttrEdits(attrs)
@@ -776,7 +776,9 @@ export default function EditarAnuncioPage() {
         setAttrsLoading(true)
         fetch(`/api/mercadolivre/categories/${d.category_id}/attributes`)
           .then(r => r.json())
-          .then((schemaAttrs: CategoryAttribute[]) => {
+          .then((raw: unknown) => {
+            // Route always returns [] on error, but guard defensively
+            const schemaAttrs: CategoryAttribute[] = Array.isArray(raw) ? (raw as CategoryAttribute[]) : []
             setCategoryAttrs(schemaAttrs)
             // Seed any missing attr edits with empty string
             setAttrEdits(prev => {

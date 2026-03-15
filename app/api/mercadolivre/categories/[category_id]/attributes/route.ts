@@ -2,6 +2,7 @@
  * GET /api/mercadolivre/categories/[category_id]/attributes
  * Busca atributos da categoria no ML (API pública, sem auth necessária)
  * Retorna apenas atributos relevantes: obrigatórios, de variação ou com relevância definida
+ * Em caso de erro sempre retorna [] para degradação graciosa
  */
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -10,10 +11,11 @@ type Params = { params: { category_id: string } }
 interface MLRawAttribute {
   id:                string
   name:              string
-  type:              string
-  tags:              string[]
+  type?:             string
+  value_type?:       string  // ML uses value_type in some API versions
+  tags:              string[] | null
   relevance?:        number
-  values?:           { id: string; name: string }[]
+  values?:           { id: string; name: string }[] | null
   value_max_length?: number
   hint?:             string
   hints?:            string[]
@@ -34,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { category_id } = params
 
   if (!category_id || !category_id.startsWith('MLB')) {
-    return NextResponse.json({ error: 'Categoria inválida' }, { status: 400 })
+    return NextResponse.json([])
   }
 
   try {
@@ -45,14 +47,22 @@ export async function GET(_req: NextRequest, { params }: Params) {
     )
 
     if (!res.ok) {
-      throw new Error(`ML API ${res.status} em /categories/${category_id}/attributes`)
+      console.warn('[category attributes GET] ML returned', res.status, 'for', category_id)
+      return NextResponse.json([])
     }
 
-    const raw: MLRawAttribute[] = await res.json()
+    const raw: unknown = await res.json()
+
+    // Guard: ML must return an array
+    if (!Array.isArray(raw)) {
+      console.warn('[category attributes GET] Non-array response for', category_id)
+      return NextResponse.json([])
+    }
 
     // Filter to only relevant attributes
-    const relevant = raw.filter(a => {
-      const tags = a.tags ?? []
+    const relevant = (raw as MLRawAttribute[]).filter(a => {
+      if (!a || typeof a !== 'object') return false
+      const tags = Array.isArray(a.tags) ? a.tags : []
       if (tags.includes('required'))            return true
       if (tags.includes('variation_attribute')) return true
       if (a.relevance != null)                  return true
@@ -60,20 +70,20 @@ export async function GET(_req: NextRequest, { params }: Params) {
     })
 
     const result: CategoryAttribute[] = relevant.map(a => {
-      const tags = a.tags ?? []
-      const typeRaw = (a.type ?? 'string').toLowerCase()
-      // Normalise ML types to our 4 types
-      const type = typeRaw === 'list'    ? 'list'
-                 : typeRaw === 'number' ? 'number'
-                 : typeRaw === 'boolean'? 'boolean'
-                 : 'string'
+      const tags    = Array.isArray(a.tags) ? a.tags : []
+      // ML uses both `value_type` and `type` depending on API version
+      const typeRaw = (a.value_type ?? a.type ?? 'string').toLowerCase()
+      const type    = typeRaw === 'list'    ? 'list'
+                    : typeRaw === 'number'  ? 'number'
+                    : typeRaw === 'boolean' ? 'boolean'
+                    : 'string'
       return {
-        id:               a.id,
-        name:             a.name,
+        id:               a.id ?? '',
+        name:             a.name ?? '',
         type,
         required:         tags.includes('required'),
         isVariation:      tags.includes('variation_attribute'),
-        values:           a.values?.map(v => ({ id: v.id, name: v.name })),
+        values:           Array.isArray(a.values) ? a.values.map(v => ({ id: v.id, name: v.name })) : undefined,
         hint:             a.hint ?? a.hints?.[0],
         value_max_length: a.value_max_length,
       }
@@ -81,8 +91,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
     // Sort: required first, then variation, then alphabetical
     result.sort((a, b) => {
-      if (a.required && !b.required)     return -1
-      if (!a.required && b.required)     return  1
+      if (a.required && !b.required)       return -1
+      if (!a.required && b.required)       return  1
       if (a.isVariation && !b.isVariation) return -1
       if (!a.isVariation && b.isVariation) return  1
       return a.name.localeCompare(b.name, 'pt-BR')
@@ -92,6 +102,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[category attributes GET]', msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Always return empty array — never 500 — so the page degrades gracefully
+    return NextResponse.json([])
   }
 }
