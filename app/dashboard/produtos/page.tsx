@@ -766,7 +766,10 @@ function MLProductsTab() {
   const [offset, setOffset]             = useState(0)
   const [paging, setPaging]             = useState({ total: 0, offset: 0, limit: 50 })
   const [refreshKey, setRefreshKey]     = useState(0)
-  const [editItem, setEditItem]         = useState<MLItem | null>(null)
+
+  function openEditPage(itemId: string) {
+    window.open(`/dashboard/produtos/editar/${itemId}`, '_blank')
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -959,14 +962,14 @@ function MLProductsTab() {
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setEditItem(item)}
+                        <button onClick={() => openEditPage(item.id)}
                           className="p-1.5 rounded-lg text-slate-600 hover:text-purple-400 hover:bg-purple-400/10 transition-all"
-                          title="Editar anúncio">
+                          title="Editar anúncio completo">
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <RowActions
                           item={item}
-                          onEdit={() => setEditItem(item)}
+                          onEdit={() => openEditPage(item.id)}
                           onStatusChange={s => updateItem(item.id, { status: s })}
                           onRefresh={() => setRefreshKey(k => k + 1)}
                         />
@@ -999,14 +1002,7 @@ function MLProductsTab() {
         </>
       )}
 
-      {/* Edit drawer */}
-      {editItem && (
-        <EditDrawer
-          item={editItem}
-          onClose={() => setEditItem(null)}
-          onSaved={patch => { updateItem(editItem.id, patch); }}
-        />
-      )}
+      {/* Edit: opens dedicated page in new tab via openEditPage() */}
     </div>
   )
 }
