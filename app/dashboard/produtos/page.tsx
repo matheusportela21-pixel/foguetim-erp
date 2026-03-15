@@ -229,25 +229,550 @@ interface MLItem {
   condition: string
   date_created: string
   last_updated: string
+  description_text?: string
+}
+
+interface MLItemDetail extends MLItem {
+  description_text: string
+}
+
+type PatchField = 'title' | 'price' | 'stock' | 'status' | 'description'
+
+interface Change {
+  field: PatchField
+  label: string
+  from:  string
+  to:    string
+  value: unknown
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtBRL(v: number) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function listingLabel(lt: string) {
+  if (lt?.includes('gold_special') || lt?.includes('gold_pro')) return 'Premium'
+  if (lt?.includes('gold_pro_extra'))  return 'Gold Extra'
+  if (lt?.includes('gold'))  return 'Clássico'
+  if (lt?.includes('silver')) return 'Gratuita'
+  return lt ?? '—'
+}
+
+function StatusBadgeML({ s }: { s: string }) {
+  const map: Record<string, string> = {
+    active:       'bg-green-400/10 text-green-400',
+    paused:       'bg-amber-400/10 text-amber-400',
+    closed:       'bg-red-400/10 text-red-400',
+    under_review: 'bg-blue-400/10 text-blue-400',
+  }
+  const label: Record<string, string> = { active: 'Ativo', paused: 'Pausado', closed: 'Encerrado', under_review: 'Em revisão' }
+  return (
+    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${map[s] ?? 'bg-slate-700 text-slate-400'}`}>
+      {label[s] ?? s}
+    </span>
+  )
+}
+
+// ─── Inline edit cell ─────────────────────────────────────────────────────────
+
+function InlineEdit({
+  itemId, field, displayValue, inputValue, onSaved,
+}: {
+  itemId: string; field: 'price' | 'stock'; displayValue: React.ReactNode
+  inputValue: number; onSaved: (newVal: number) => void
+}) {
+  const [editing, setEditing]   = useState(false)
+  const [val, setVal]           = useState(String(inputValue))
+  const [confirm, setConfirm]   = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
+
+  function startEdit() { setVal(String(inputValue)); setEditing(true); setErr('') }
+  function cancel()    { setEditing(false); setConfirm(false); setErr('') }
+
+  async function doSave() {
+    const num = field === 'price' ? parseFloat(val) : parseInt(val, 10)
+    if (isNaN(num) || (field === 'price' && num <= 0) || (field === 'stock' && num < 0)) {
+      setErr('Valor inválido'); return
+    }
+    setSaving(true)
+    const res = await fetch(`/api/mercadolivre/items/${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, value: num }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (res.ok) {
+      setEditing(false); setConfirm(false)
+      onSaved(num)
+    } else {
+      setErr(data.error ?? 'Erro ao salvar')
+      setConfirm(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <button onClick={startEdit} className="group/inline flex items-center gap-1 hover:text-yellow-400 transition-colors">
+        {displayValue}
+        <Edit3 className="w-2.5 h-2.5 opacity-0 group-hover/inline:opacity-100 transition-opacity text-yellow-500" />
+      </button>
+    )
+  }
+
+  if (confirm) {
+    const num = field === 'price' ? parseFloat(val) : parseInt(val, 10)
+    return (
+      <div className="flex flex-col gap-1 min-w-[160px]">
+        <p className="text-[10px] text-slate-400">
+          {field === 'price' ? `${fmtBRL(inputValue)} → ${fmtBRL(num)}` : `${inputValue} → ${num}`}
+        </p>
+        {err && <p className="text-[10px] text-red-400">{err}</p>}
+        <div className="flex gap-1">
+          <button onClick={cancel} className="px-2 py-0.5 text-[10px] text-slate-500 bg-dark-700 rounded">Cancelar</button>
+          <button onClick={doSave} disabled={saving}
+            className="px-2 py-0.5 text-[10px] text-white bg-purple-600 hover:bg-purple-700 rounded disabled:opacity-50">
+            {saving ? '...' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <input
+          type="number" value={val} onChange={e => setVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') setConfirm(true); if (e.key === 'Escape') cancel() }}
+          autoFocus
+          className="w-24 px-2 py-0.5 text-xs bg-dark-700 border border-yellow-400/40 rounded text-white focus:outline-none focus:ring-1 focus:ring-yellow-400/40"
+          min={field === 'stock' ? 0 : 0.01} step={field === 'price' ? 0.01 : 1}
+        />
+        <button onClick={() => setConfirm(true)} className="p-0.5 text-green-400 hover:text-green-300"><CheckCircle2 className="w-3.5 h-3.5" /></button>
+        <button onClick={cancel} className="p-0.5 text-slate-500 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
+      </div>
+      {err && <p className="text-[10px] text-red-400">{err}</p>}
+    </div>
+  )
+}
+
+// ─── Edit Drawer ──────────────────────────────────────────────────────────────
+
+function EditDrawer({
+  item, onClose, onSaved,
+}: {
+  item: MLItem; onClose: () => void; onSaved: (updated: Partial<MLItem>) => void
+}) {
+  const [detail, setDetail]         = useState<MLItemDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(true)
+
+  // Form fields
+  const [title, setTitle]           = useState(item.title)
+  const [price, setPrice]           = useState(item.price)
+  const [stock, setStock]           = useState(item.available_quantity)
+  const [status, setStatus]         = useState(item.status)
+  const [description, setDescription] = useState('')
+
+  // UI state
+  const [showConfirm, setShowConfirm]   = useState(false)
+  const [confirmed, setConfirmed]       = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [result, setResult]             = useState<{ ok: boolean; msg: string } | null>(null)
+  const [pauseConfirm, setPauseConfirm] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      setLoadingDetail(true)
+      const res = await fetch(`/api/mercadolivre/items/${item.id}`)
+      if (res.ok) {
+        const d: MLItemDetail = await res.json()
+        setDetail(d)
+        setTitle(d.title)
+        setPrice(d.price)
+        setStock(d.available_quantity)
+        setStatus(d.status)
+        setDescription(d.description_text ?? '')
+      }
+      setLoadingDetail(false)
+    }
+    load()
+  }, [item.id])
+
+  // Compute changes
+  const changes: Change[] = []
+  if (detail) {
+    if (title.trim() !== detail.title)
+      changes.push({ field: 'title', label: 'Título', from: detail.title, to: title.trim(), value: title.trim() })
+    if (price !== detail.price)
+      changes.push({ field: 'price', label: 'Preço', from: fmtBRL(detail.price), to: fmtBRL(price), value: price })
+    if (stock !== detail.available_quantity)
+      changes.push({ field: 'stock', label: 'Estoque', from: String(detail.available_quantity), to: String(stock), value: stock })
+    if (status !== detail.status)
+      changes.push({ field: 'status', label: 'Status', from: detail.status, to: status, value: status })
+    if (description !== (detail.description_text ?? ''))
+      changes.push({ field: 'description', label: 'Descrição', from: '(texto anterior)', to: '(novo texto)', value: description })
+  }
+
+  async function handleSave() {
+    if (changes.length === 0) { onClose(); return }
+    setSaving(true)
+    setResult(null)
+    const errors: string[] = []
+
+    for (const change of changes) {
+      const res = await fetch(`/api/mercadolivre/items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: change.field, value: change.value }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        errors.push(`${change.label}: ${d.error ?? 'Erro desconhecido'}`)
+      }
+    }
+
+    setSaving(false)
+    if (errors.length === 0) {
+      setResult({ ok: true, msg: '✅ Anúncio atualizado com sucesso!' })
+      onSaved({
+        title:              title.trim(),
+        price,
+        available_quantity: stock,
+        status,
+      })
+      setTimeout(() => onClose(), 2500)
+    } else {
+      setResult({ ok: false, msg: `❌ ${errors.join(' | ')}` })
+    }
+  }
+
+  const isChanged = (field: string) => changes.some(c => c.field === field)
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="w-[500px] bg-[#080b10] border-l border-white/[0.08] flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
+          <div>
+            <p className="text-sm font-bold text-white">Editar Anúncio</p>
+            <p className="text-[10px] text-slate-600 font-mono mt-0.5">{item.id}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-slate-200 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingDetail ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {result && (
+              <div className={`px-3 py-2.5 rounded-xl text-xs font-semibold border ${result.ok ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                {result.msg}
+              </div>
+            )}
+
+            {/* Título */}
+            <section className="space-y-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Informações Básicas</p>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-400">Título *</label>
+                  <span className={`text-[10px] ${title.length > 60 ? 'text-amber-400' : 'text-slate-600'}`}>{title.length}/60</span>
+                </div>
+                {detail && detail.sold_quantity > 0 && (
+                  <div className="flex items-start gap-1.5 mb-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-amber-400">Este anúncio já tem {detail.sold_quantity} venda(s). O ML pode não permitir alterar o título.</p>
+                  </div>
+                )}
+                <input value={title} onChange={e => setTitle(e.target.value)} maxLength={60}
+                  className={`w-full px-3 py-2 text-sm rounded-lg bg-dark-700 border text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-colors ${isChanged('title') ? 'border-yellow-400/40' : 'border-white/[0.08]'}`}
+                />
+              </div>
+
+              {/* Preço */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-400">Preço *</label>
+                  {detail && price !== detail.price && (
+                    <span className={`text-[10px] font-bold ${price > detail.price ? 'text-green-400' : 'text-red-400'}`}>
+                      {price > detail.price ? '▲' : '▼'} {fmtBRL(Math.abs(price - detail.price))}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">R$</span>
+                  <input
+                    type="number" value={price} onChange={e => setPrice(parseFloat(e.target.value) || 0)}
+                    min={0.01} step={0.01}
+                    className={`w-full pl-8 pr-3 py-2 text-sm rounded-lg bg-dark-700 border text-white focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-colors ${isChanged('price') ? 'border-yellow-400/40' : 'border-white/[0.08]'}`}
+                  />
+                </div>
+                {detail && <p className="text-[10px] text-slate-600 mt-1">Atual: {fmtBRL(detail.price)}</p>}
+              </div>
+            </section>
+
+            {/* Estoque */}
+            <section className="space-y-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estoque</p>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Quantidade disponível</label>
+                <input
+                  type="number" value={stock} onChange={e => setStock(Math.max(0, parseInt(e.target.value) || 0))}
+                  min={0} step={1}
+                  className={`w-full px-3 py-2 text-sm rounded-lg bg-dark-700 border text-white focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-colors ${isChanged('stock') ? 'border-yellow-400/40' : 'border-white/[0.08]'}`}
+                />
+                {detail && <p className="text-[10px] text-slate-600 mt-1">Atual: {detail.available_quantity} unidades</p>}
+              </div>
+            </section>
+
+            {/* Status */}
+            <section className="space-y-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</p>
+              <div className="flex gap-2">
+                {[
+                  { v: 'active', label: 'Ativo',   cls: 'border-green-500/30 text-green-400' },
+                  { v: 'paused', label: 'Pausado', cls: 'border-amber-500/30 text-amber-400' },
+                ].map(opt => (
+                  <button key={opt.v}
+                    onClick={() => {
+                      if (opt.v === 'paused' && status === 'active') setPauseConfirm(true)
+                      else setStatus(opt.v)
+                    }}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${status === opt.v ? `bg-white/[0.06] ${opt.cls}` : 'border-white/[0.06] text-slate-600 hover:text-slate-300 hover:border-white/[0.12]'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {pauseConfirm && (
+                <div className="px-3 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400">
+                  <p className="font-semibold mb-2">Tem certeza? O anúncio ficará invisível para compradores.</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setPauseConfirm(false)} className="px-3 py-1 rounded-lg bg-white/[0.06] text-slate-300 text-[11px]">Cancelar</button>
+                    <button onClick={() => { setStatus('paused'); setPauseConfirm(false) }} className="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-400 text-[11px] font-bold">Pausar</button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Descrição */}
+            <section className="space-y-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Descrição</p>
+              <div className="flex items-start gap-1.5 px-3 py-2 bg-blue-500/[0.08] border border-blue-500/[0.15] rounded-lg">
+                <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-blue-300">Apenas texto simples. Sem HTML, negrito ou formatação especial.</p>
+              </div>
+              <div className="flex justify-end">
+                <span className="text-[10px] text-slate-600">{description.length} caracteres</span>
+              </div>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={6}
+                placeholder="Descreva o produto em texto simples..."
+                className={`w-full px-3 py-2 text-sm rounded-lg bg-dark-700 border text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 resize-none transition-colors ${isChanged('description') ? 'border-yellow-400/40' : 'border-white/[0.08]'}`}
+              />
+            </section>
+
+            {/* Preview das alterações */}
+            {changes.length > 0 && (
+              <section className="space-y-2">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Alterações pendentes</p>
+                <div className="space-y-1.5">
+                  {changes.map(c => (
+                    <div key={c.field} className="flex items-start gap-2 px-3 py-2 bg-yellow-400/[0.06] border border-yellow-400/[0.15] rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-yellow-400">{c.label}</p>
+                        {c.field !== 'description' && (
+                          <p className="text-[11px] text-slate-400 truncate">
+                            <span className="line-through text-slate-600">{c.from}</span>
+                            {' → '}
+                            <span className="text-green-400">{c.to}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="p-4 border-t border-white/[0.06] flex gap-3 shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 text-sm text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.07] transition-all">
+            Cancelar
+          </button>
+          <button
+            onClick={() => { if (changes.length > 0) setShowConfirm(true) }}
+            disabled={loadingDetail || changes.length === 0}
+            className="flex-1 py-2.5 text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-all disabled:opacity-40"
+          >
+            {changes.length === 0 ? 'Sem alterações' : `Salvar ${changes.length} alteração(ões)`}
+          </button>
+        </div>
+
+        {/* Confirmation modal */}
+        {showConfirm && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20 p-6">
+            <div className="bg-[#111318] border border-white/[0.1] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+              <p className="text-sm font-bold text-white">Confirmar alterações no ML</p>
+              <div className="space-y-2">
+                {changes.map(c => (
+                  <div key={c.field} className="flex flex-col text-xs">
+                    <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider">{c.label}</span>
+                    {c.field !== 'description' ? (
+                      <span className="text-slate-300">
+                        <span className="line-through text-slate-600">{c.from}</span> → <span className="text-green-400">{c.to}</span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">Texto atualizado</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="px-3 py-2.5 bg-blue-500/[0.08] border border-blue-500/[0.15] rounded-xl text-[11px] text-blue-300">
+                Estas alterações serão aplicadas diretamente na sua conta do Mercado Livre e poderão levar alguns minutos para aparecer.
+              </div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
+                  className="mt-0.5 w-3.5 h-3.5 accent-purple-500" />
+                <span className="text-[11px] text-slate-400">Confirmo que revisei as alterações acima</span>
+              </label>
+              {result && !result.ok && (
+                <p className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{result.msg}</p>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => { setShowConfirm(false); setConfirmed(false) }}
+                  className="flex-1 py-2.5 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.07] transition-all">
+                  Cancelar
+                </button>
+                <button onClick={() => { setShowConfirm(false); handleSave() }} disabled={!confirmed || saving}
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+                  {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Salvando...</> : 'Confirmar e salvar no ML'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Row action menu ──────────────────────────────────────────────────────────
+
+function RowActions({
+  item, onEdit, onStatusChange, onRefresh,
+}: {
+  item: MLItem
+  onEdit: () => void
+  onStatusChange: (newStatus: 'active' | 'paused') => void
+  onRefresh: () => void
+}) {
+  const [open, setOpen]         = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [saving, setSaving]     = useState(false)
+
+  async function quickStatus(newStatus: 'active' | 'paused') {
+    setSaving(true)
+    const res = await fetch(`/api/mercadolivre/items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field: 'status', value: newStatus }),
+    })
+    setSaving(false)
+    if (res.ok) { onStatusChange(newStatus); onRefresh() }
+    setOpen(false); setConfirming(false)
+  }
+
+  return (
+    <div className="relative">
+      <button onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/[0.06] transition-all">
+        <ChevronDown className="w-3.5 h-3.5" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-8 z-40 w-44 bg-dark-800 border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden py-1">
+            <button onClick={() => { onEdit(); setOpen(false) }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.05] transition-colors">
+              <Edit3 className="w-3.5 h-3.5 text-purple-400" /> Editar anúncio
+            </button>
+            {item.status === 'active' && !confirming && (
+              <button onClick={() => setConfirming(true)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.05] transition-colors">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400" /> Pausar anúncio
+              </button>
+            )}
+            {item.status === 'active' && confirming && (
+              <div className="px-3 py-2 space-y-1.5">
+                <p className="text-[10px] text-amber-400">Confirmar pausa?</p>
+                <div className="flex gap-1.5">
+                  <button onClick={() => setConfirming(false)}
+                    className="flex-1 py-1 text-[10px] bg-white/[0.06] text-slate-400 rounded">Não</button>
+                  <button onClick={() => quickStatus('paused')} disabled={saving}
+                    className="flex-1 py-1 text-[10px] bg-amber-500/20 text-amber-400 rounded font-bold disabled:opacity-50">
+                    {saving ? '...' : 'Pausar'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {item.status === 'paused' && (
+              <button onClick={() => quickStatus('active')} disabled={saving}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.05] transition-colors">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                {saving ? 'Reativando...' : 'Reativar anúncio'}
+              </button>
+            )}
+            <div className="border-t border-white/[0.06] my-1" />
+            <a href={item.permalink} target="_blank" rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.05] transition-colors">
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" /> Ver no ML
+            </a>
+            <button
+              onClick={() => { navigator.clipboard.writeText(item.permalink); setOpen(false) }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.05] transition-colors">
+              <Copy className="w-3.5 h-3.5 text-slate-500" /> Copiar link
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 // ─── ML Products Tab ──────────────────────────────────────────────────────────
 
 function MLProductsTab() {
-  const [items, setItems]           = useState<MLItem[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState<string | null>(null)
+  const [items, setItems]               = useState<MLItem[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
   const [notConnected, setNotConnected] = useState(false)
-  const [search, setSearch]         = useState('')
-  const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'all'>('active')
-  const [offset, setOffset]         = useState(0)
-  const [paging, setPaging]         = useState({ total: 0, offset: 0, limit: 50 })
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [search, setSearch]             = useState('')
+  const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
+  const [listingFilter, setListingFilter] = useState<'all' | 'gold' | 'gold_special' | 'silver'>('all')
+  const [stockFilter, setStockFilter]   = useState<'all' | 'low' | 'zero'>('all')
+  const [offset, setOffset]             = useState(0)
+  const [paging, setPaging]             = useState({ total: 0, offset: 0, limit: 50 })
+  const [refreshKey, setRefreshKey]     = useState(0)
+  const [editItem, setEditItem]         = useState<MLItem | null>(null)
 
   useEffect(() => {
     setLoading(true)
     setError(null)
-    fetch(`/api/mercadolivre/products?offset=${offset}&limit=50&status=${statusFilter}`)
+    const apiStatus = statusFilter === 'all' ? 'all' : statusFilter
+    fetch(`/api/mercadolivre/products?offset=${offset}&limit=50&status=${apiStatus}`)
       .then(r => r.json())
       .then(d => {
         if (d.notConnected) { setNotConnected(true); return }
@@ -259,31 +784,21 @@ function MLProductsTab() {
       .finally(() => setLoading(false))
   }, [offset, statusFilter, refreshKey])
 
-  const listingLabel = (lt: string) => {
-    if (lt?.includes('gold_special') || lt?.includes('gold_pro')) return 'Premium'
-    if (lt?.includes('gold'))  return 'Clássico'
-    if (lt?.includes('silver')) return 'Gratuita'
-    return lt ?? '—'
+  function updateItem(id: string, patch: Partial<MLItem>) {
+    setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it))
   }
 
-  const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-      active:       'bg-green-400/10 text-green-400',
-      paused:       'bg-amber-400/10 text-amber-400',
-      closed:       'bg-red-400/10 text-red-400',
-      under_review: 'bg-slate-400/10 text-slate-400',
+  const filtered = items.filter(i => {
+    if (search && !i.title.toLowerCase().includes(search.toLowerCase())) return false
+    if (listingFilter !== 'all') {
+      if (listingFilter === 'gold_special' && !i.listing_type_id?.includes('gold_special') && !i.listing_type_id?.includes('gold_pro')) return false
+      if (listingFilter === 'gold' && !i.listing_type_id?.includes('gold')) return false
+      if (listingFilter === 'silver' && !i.listing_type_id?.includes('silver')) return false
     }
-    const label: Record<string, string> = { active: 'Ativo', paused: 'Pausado', closed: 'Encerrado', under_review: 'Em revisão' }
-    return (
-      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${map[s] ?? 'bg-slate-700 text-slate-400'}`}>
-        {label[s] ?? s}
-      </span>
-    )
-  }
-
-  const filtered = search
-    ? items.filter(i => i.title.toLowerCase().includes(search.toLowerCase()))
-    : items
+    if (stockFilter === 'zero' && i.available_quantity !== 0) return false
+    if (stockFilter === 'low'  && (i.available_quantity === 0 || i.available_quantity > 5)) return false
+    return true
+  })
 
   if (notConnected) return (
     <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -329,14 +844,37 @@ function MLProductsTab() {
             className="pl-9 pr-4 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-52" />
         </div>
 
+        {/* Status filter */}
         <div className="flex items-center gap-1">
-          {(['active', 'paused', 'all'] as const).map(s => (
-            <button key={s} onClick={() => { setStatusFilter(s); setOffset(0) }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
-              {{ active: 'Ativos', paused: 'Pausados', all: 'Todos' }[s]}
+          {([
+            { v: 'active', label: 'Ativos' },
+            { v: 'paused', label: 'Pausados' },
+            { v: 'under_review', label: 'Em revisão' },
+            { v: 'all', label: 'Todos' },
+          ] as const).map(s => (
+            <button key={s.v} onClick={() => { setStatusFilter(s.v); setOffset(0) }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.v ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
+              {s.label}
             </button>
           ))}
         </div>
+
+        {/* Listing type filter */}
+        <select value={listingFilter} onChange={e => setListingFilter(e.target.value as typeof listingFilter)}
+          className="px-3 py-1.5 rounded-lg text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
+          <option value="all">Todos os tipos</option>
+          <option value="gold_special">Premium</option>
+          <option value="gold">Clássico</option>
+          <option value="silver">Gratuita</option>
+        </select>
+
+        {/* Stock filter */}
+        <select value={stockFilter} onChange={e => setStockFilter(e.target.value as typeof stockFilter)}
+          className="px-3 py-1.5 rounded-lg text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
+          <option value="all">Todo estoque</option>
+          <option value="low">Baixo (&lt; 5)</option>
+          <option value="zero">Sem estoque</option>
+        </select>
 
         <button onClick={() => setRefreshKey(k => k + 1)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-auto">
@@ -344,7 +882,8 @@ function MLProductsTab() {
         </button>
 
         <span className="text-xs text-slate-600">
-          <span className="text-white font-bold">{paging.total}</span> anúncios no ML
+          <span className="text-white font-bold">{paging.total}</span> anúncios
+          {filtered.length !== items.length && <span className="text-yellow-400"> · {filtered.length} filtrado(s)</span>}
         </span>
       </div>
 
@@ -360,7 +899,7 @@ function MLProductsTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  {['Anúncio', 'Preço', 'Qtd', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
+                  {['Anúncio', 'Preço ML', 'Estoque', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
                     <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -376,34 +915,62 @@ function MLProductsTab() {
                             : <ImageOff className="w-4 h-4 text-slate-700 m-auto mt-3" />}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-white font-semibold leading-snug truncate max-w-[260px]">{item.title}</p>
+                          <p className="text-white font-semibold leading-snug truncate max-w-[220px]">{item.title}</p>
                           <p className="text-[10px] text-slate-600 font-mono">{item.id}</p>
+                          {/* Stock badges */}
+                          {item.available_quantity === 0 && (
+                            <span className="text-[9px] font-bold bg-red-400/10 text-red-400 px-1.5 py-0.5 rounded-full ml-0">Sem estoque</span>
+                          )}
+                          {item.available_quantity > 0 && item.available_quantity <= 5 && (
+                            <span className="text-[9px] font-bold bg-amber-400/10 text-amber-400 px-1.5 py-0.5 rounded-full">Estoque baixo</span>
+                          )}
+                          {item.status === 'under_review' && (
+                            <span className="text-[9px] font-bold bg-blue-400/10 text-blue-400 px-1.5 py-0.5 rounded-full ml-1">Em revisão</span>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="text-white font-bold">
-                        {item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </span>
+                      <InlineEdit
+                        itemId={item.id} field="price"
+                        displayValue={<span className="text-white font-bold">{fmtBRL(item.price)}</span>}
+                        inputValue={item.price}
+                        onSaved={v => updateItem(item.id, { price: v })}
+                      />
                     </td>
                     <td className="py-3 px-3">
-                      <span className={`font-bold ${item.available_quantity === 0 ? 'text-red-400' : item.available_quantity <= 5 ? 'text-amber-400' : 'text-white'}`}>
-                        {item.available_quantity}
-                      </span>
+                      <InlineEdit
+                        itemId={item.id} field="stock"
+                        displayValue={
+                          <span className={`font-bold ${item.available_quantity === 0 ? 'text-red-400' : item.available_quantity <= 5 ? 'text-amber-400' : 'text-white'}`}>
+                            {item.available_quantity}
+                          </span>
+                        }
+                        inputValue={item.available_quantity}
+                        onSaved={v => updateItem(item.id, { available_quantity: v })}
+                      />
                     </td>
                     <td className="py-3 px-3">
                       <span className="text-slate-400">{item.sold_quantity}</span>
                     </td>
-                    <td className="py-3 px-3">{statusBadge(item.status)}</td>
+                    <td className="py-3 px-3"><StatusBadgeML s={item.status} /></td>
                     <td className="py-3 px-3">
                       <span className="text-[9px] font-semibold text-slate-400">{listingLabel(item.listing_type_id)}</span>
                     </td>
                     <td className="py-3 px-3">
-                      <a href={item.permalink} target="_blank" rel="noopener noreferrer"
-                        className="p-1.5 rounded-lg text-slate-600 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all inline-flex"
-                        title="Ver no Mercado Livre">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setEditItem(item)}
+                          className="p-1.5 rounded-lg text-slate-600 hover:text-purple-400 hover:bg-purple-400/10 transition-all"
+                          title="Editar anúncio">
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <RowActions
+                          item={item}
+                          onEdit={() => setEditItem(item)}
+                          onStatusChange={s => updateItem(item.id, { status: s })}
+                          onRefresh={() => setRefreshKey(k => k + 1)}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -430,6 +997,15 @@ function MLProductsTab() {
             </div>
           )}
         </>
+      )}
+
+      {/* Edit drawer */}
+      {editItem && (
+        <EditDrawer
+          item={editItem}
+          onClose={() => setEditItem(null)}
+          onSaved={patch => { updateItem(editItem.id, patch); }}
+        />
       )}
     </div>
   )
