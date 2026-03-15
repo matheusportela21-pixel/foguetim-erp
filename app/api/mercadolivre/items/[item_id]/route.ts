@@ -68,6 +68,8 @@ type PatchField =
   | 'flex_shipping'
   | 'local_pick_up'
   | 'attributes'
+  | 'warranty'
+  | 'pictures'
 
 interface PatchBody {
   field: PatchField
@@ -78,6 +80,7 @@ const VALID_FIELDS: PatchField[] = [
   'title', 'price', 'stock', 'status', 'description',
   'listing_type_id', 'condition', 'seller_custom_field',
   'free_shipping', 'flex_shipping', 'local_pick_up', 'attributes',
+  'warranty', 'pictures',
 ]
 
 const ALLOWED_LISTING_TYPES = ['gold_pro', 'gold_special', 'free']
@@ -133,6 +136,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (field === 'attributes') {
     if (!Array.isArray(value))
       return NextResponse.json({ error: 'Atributos devem ser um array' }, { status: 400 })
+  }
+  if (field === 'pictures') {
+    if (!Array.isArray(value))
+      return NextResponse.json({ error: 'pictures deve ser um array de URLs' }, { status: 400 })
   }
 
   await enforceRateLimit(user.id)
@@ -202,6 +209,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         body: JSON.stringify({ attributes: value }),
       })
 
+    } else if (field === 'warranty') {
+      // Update WARRANTY_TYPE in sale_terms
+      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          sale_terms: [{ id: 'WARRANTY_TYPE', value_name: value ? String(value) : null }],
+        }),
+      })
+
+    } else if (field === 'pictures') {
+      // Replace entire pictures array
+      const urls = value as string[]
+      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          pictures: urls.map((url: string) => ({ source: url })),
+        }),
+      })
+
     } else {
       // Generic fields: title, price, stock, status, condition, seller_custom_field
       const payload: Record<string, unknown> = {}
@@ -229,6 +255,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       flex_shipping:       'Envio Flex',
       local_pick_up:       'retirada pessoal',
       attributes:          'atributos',
+      warranty:            'garantia',
+      pictures:            'imagens',
     }
     await supabaseAdmin()
       .from('activity_logs')
