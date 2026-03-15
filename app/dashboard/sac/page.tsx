@@ -7,6 +7,7 @@ import {
   AlertTriangle, Search, X, Zap, ExternalLink, Bell,
   HelpCircle, MessageCircle, ThumbsUp, Package, BarChart2,
   Clock, ChevronRight, ArrowLeft, Loader2, RefreshCw, Link2,
+  Sparkles,
 } from 'lucide-react'
 import { SAC_ITEMS, SAC_TEMPLATES, type SACItem, type SACTipo, type SACStatus, type MKTPedido } from './_data'
 
@@ -35,6 +36,29 @@ function MLQuestionsTab() {
   const [offset, setOffset]         = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selected, setSelected]     = useState<MLQuestion | null>(null)
+  const [aiSuggesting, setAiSuggesting] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
+
+  async function suggestSACResponse() {
+    if (!selected) return
+    setAiSuggesting(true)
+    setAiSuggestion(null)
+    try {
+      const r = await fetch('/api/ai/suggest-sac-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: selected.text,
+          product_title: selected.item?.title ?? '',
+        }),
+      })
+      if (r.ok) {
+        const j = await r.json() as { response?: string }
+        if (j.response) setAiSuggestion(j.response)
+      }
+    } catch { /* non-fatal */ }
+    setAiSuggesting(false)
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -203,6 +227,32 @@ function MLQuestionsTab() {
                       <p className="text-xs font-semibold text-white">Responder esta pergunta</p>
                       <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">Em breve</span>
                     </div>
+                    <button
+                      onClick={suggestSACResponse}
+                      disabled={aiSuggesting}
+                      className="mb-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      {aiSuggesting ? <><span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin inline-block" /> Gerando...</> : <><Sparkles className="w-3 h-3" /> Sugerir resposta com IA</>}
+                    </button>
+                    {aiSuggestion && (
+                      <div className="mb-3 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-3 h-3 text-violet-400" />
+                          <span className="text-[10px] font-semibold text-violet-300">Sugestão da IA — copie e responda diretamente no ML</span>
+                        </div>
+                        <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">{aiSuggestion}</p>
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(aiSuggestion) }}
+                            className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-violet-600 hover:bg-violet-500 text-white transition-colors"
+                          >Copiar</button>
+                          <button
+                            onClick={() => setAiSuggestion(null)}
+                            className="px-2.5 py-1 rounded-lg text-[10px] text-slate-400 hover:text-slate-300 bg-white/[0.04] border border-white/[0.06] transition-colors"
+                          >Descartar</button>
+                        </div>
+                      </div>
+                    )}
                     <textarea disabled
                       placeholder="Funcionalidade de resposta estará disponível em breve..."
                       className="w-full bg-dark-800/50 border border-white/[0.06] rounded-xl p-3 text-xs text-slate-500 resize-none h-20 cursor-not-allowed opacity-50" />
@@ -335,8 +385,30 @@ export default function SACPage() {
   const [avalReplying, setAvalReplying]   = useState<number | null>(null)
   const [avalReply, setAvalReply]         = useState('')
   const messagesEnd = useRef<HTMLDivElement>(null)
+  const [sacAiSuggesting, setSacAiSuggesting] = useState(false)
 
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [selectedItem, localMsgs])
+
+  async function suggestLocalSACResponse() {
+    if (!selectedItem) return
+    setSacAiSuggesting(true)
+    try {
+      const lastQuestion = [...selectedItem.mensagens].reverse().find(m => m.de === 'cliente')?.texto ?? ''
+      const r = await fetch('/api/ai/suggest-sac-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: lastQuestion || (selectedItem.mensagens[0]?.texto ?? ''),
+          product_title: selectedItem.produto,
+        }),
+      })
+      if (r.ok) {
+        const j = await r.json() as { response?: string }
+        if (j.response) setReply(j.response)
+      }
+    } catch { /* non-fatal */ }
+    setSacAiSuggesting(false)
+  }
 
   const counts = useMemo(() => ({
     todos:     SAC_ITEMS.length,
@@ -785,6 +857,14 @@ export default function SACPage() {
                     rows={3}
                   />
                   <div className="flex flex-col gap-2">
+                    <button
+                      onClick={suggestLocalSACResponse}
+                      disabled={sacAiSuggesting}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      {sacAiSuggesting ? <span className="w-3.5 h-3.5 border border-white/40 border-t-white rounded-full animate-spin inline-block" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      IA
+                    </button>
                     <button onClick={() => setShowTemplates(v => !v)}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
                         showTemplates

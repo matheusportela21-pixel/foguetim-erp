@@ -6,7 +6,7 @@ import {
   ArrowLeft, ArrowRight, Check, Search, Loader2, AlertCircle,
   Tag, DollarSign, FileText, ImageIcon, Truck, Eye,
   X, ChevronRight, Info, ExternalLink, ChevronLeft, Home,
-  Grid3X3, Package, MapPin, Upload, Star,
+  Grid3X3, Package, MapPin, Upload, Star, Sparkles,
 } from 'lucide-react'
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -18,6 +18,9 @@ interface CategorySuggestion {
   category_name: string
   domain_name:   string
   breadcrumb:    string
+  aiSuggested?:  boolean
+  reason?:       string
+  confidence?:   number
 }
 
 interface ChildCategory {
@@ -330,11 +333,13 @@ function CategoryTreeModal({
 }
 
 function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
-  const [suggestions, setSuggestions] = useState<CategorySuggestion[]>([])
-  const [sugLoading, setSugLoading]   = useState(false)
-  const [sugFetched, setSugFetched]   = useState(false)
-  const [showTree, setShowTree]       = useState(false)
-  const debounceRef                   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [suggestions, setSuggestions]     = useState<CategorySuggestion[]>([])
+  const [sugLoading, setSugLoading]       = useState(false)
+  const [sugFetched, setSugFetched]       = useState(false)
+  const [showTree, setShowTree]           = useState(false)
+  const debounceRef                       = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [titleImproving, setTitleImproving] = useState(false)
+  const [titleSuggestion, setTitleSuggestion] = useState<{ improved_title: string; explanation: string; chars: number } | null>(null)
 
   const titleLen = data.title.length
   const charCls  = titleLen === 0  ? 'text-slate-600'
@@ -351,20 +356,46 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
     setSugLoading(true)
     setSugFetched(true)
     try {
+      // 1st attempt: ML domain_discovery (requires auth)
       const res = await fetch(`/api/mercadolivre/categories/suggest?q=${encodeURIComponent(query)}`)
       if (res.ok) {
         const json: unknown = await res.json()
         const list = Array.isArray(json) ? (json as CategorySuggestion[]) : []
-        setSuggestions(list)
-        // Auto-select first suggestion if no category selected yet
-        if (list.length > 0 && !currentData.category_id) {
-          const first = list[0]
-          setData({
-            ...currentData,
-            category_id:   first.category_id,
-            category_name: first.breadcrumb || first.category_name,
-          })
+        if (list.length > 0) {
+          setSuggestions(list)
+          if (!currentData.category_id) {
+            const first = list[0]
+            setData({ ...currentData, category_id: first.category_id, category_name: first.breadcrumb || first.category_name })
+          }
+          setSugLoading(false)
+          return
         }
+      }
+
+      // 2nd attempt: AI fallback via GPT-4o-mini
+      const aiRes = await fetch('/api/ai/suggest-category', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title: query }),
+      })
+      if (aiRes.ok) {
+        const aiJson = await aiRes.json() as { suggestions?: { category_id: string; category_name: string; reason: string; confidence: number }[] }
+        const aiList: CategorySuggestion[] = (aiJson.suggestions ?? []).map(s => ({
+          category_id:   s.category_id,
+          category_name: s.category_name,
+          domain_name:   '',
+          breadcrumb:    s.category_name,
+          aiSuggested:   true,
+          reason:        s.reason,
+          confidence:    s.confidence,
+        }))
+        setSuggestions(aiList)
+        if (aiList.length > 0 && !currentData.category_id) {
+          const first = aiList[0]
+          setData({ ...currentData, category_id: first.category_id, category_name: first.category_name })
+        }
+      } else {
+        setSuggestions([])
       }
     } catch {
       setSuggestions([])
@@ -393,6 +424,29 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
     setShowTree(false)
   }
 
+  async function improveTitle() {
+    if (data.title.trim().length < 10 || titleImproving) return
+    setTitleImproving(true)
+    setTitleSuggestion(null)
+    try {
+      const res = await fetch('/api/ai/improve-title', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title: data.title, category: data.category_name }),
+      })
+      if (res.ok) {
+        const json = await res.json() as { improved_title?: string; explanation?: string; chars?: number }
+        if (json.improved_title) {
+          setTitleSuggestion({ improved_title: json.improved_title, explanation: json.explanation ?? '', chars: json.chars ?? json.improved_title.length })
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setTitleImproving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* ── Título ── */}
@@ -418,6 +472,52 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
             <AlertCircle className="w-3 h-3 shrink-0" />
             Digite mais {10 - titleLen} caractere(s) para buscar categorias automaticamente.
           </p>
+        )}
+
+        {/* ── AI Title Improve ── */}
+        {titleLen >= 10 && (
+          <div className="mt-2">
+            <button
+              onClick={improveTitle}
+              disabled={titleImproving}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all disabled:opacity-60"
+            >
+              {titleImproving
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando IA...</>
+                : <><Sparkles className="w-3.5 h-3.5" /> Melhorar título com IA</>}
+            </button>
+
+            {titleSuggestion && (
+              <div className="mt-2 p-3 rounded-xl border border-violet-500/30 bg-violet-500/[0.06] space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wide">Sugestão de IA</span>
+                </div>
+                <p className="text-sm text-white font-medium">&ldquo;{titleSuggestion.improved_title}&rdquo;</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-slate-500">{titleSuggestion.explanation}</p>
+                  <span className="text-[10px] text-slate-500 shrink-0 ml-2">{titleSuggestion.chars}/60</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      handleTitleChange(titleSuggestion.improved_title)
+                      setTitleSuggestion(null)
+                    }}
+                    className="px-3 py-1 rounded-lg text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-all"
+                  >
+                    Usar este título
+                  </button>
+                  <button
+                    onClick={() => setTitleSuggestion(null)}
+                    className="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -474,13 +574,21 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-white font-medium">{s.category_name}</span>
-                      {idx === 0 && (
+                      {idx === 0 && !s.aiSuggested && (
                         <span className="text-[9px] font-bold bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full shrink-0">
                           Mais relevante
                         </span>
                       )}
+                      {s.aiSuggested && (
+                        <span className="text-[9px] font-bold bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded-full shrink-0 flex items-center gap-0.5">
+                          <Sparkles className="w-2.5 h-2.5" /> Sugerido por IA
+                        </span>
+                      )}
                     </div>
-                    {s.breadcrumb && s.breadcrumb !== s.category_name && (
+                    {s.aiSuggested && s.reason && (
+                      <p className="text-[10px] text-violet-400/70 mt-0.5">{s.reason}</p>
+                    )}
+                    {!s.aiSuggested && s.breadcrumb && s.breadcrumb !== s.category_name && (
                       <p className="text-[10px] text-slate-500 mt-0.5 truncate">{s.breadcrumb}</p>
                     )}
                   </div>
@@ -967,8 +1075,34 @@ function Step4MediaDescription({
   setData:    (d: WizardData) => void
   imageFiles: React.MutableRefObject<File[]>
 }) {
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragOver, setDragOver]         = useState(false)
+  const fileInputRef                    = useRef<HTMLInputElement>(null)
+  const [descGenerating, setDescGenerating] = useState(false)
+  const [descAiBadge, setDescAiBadge]   = useState(false)
+
+  async function generateDescription() {
+    if (descGenerating) return
+    setDescGenerating(true)
+    setDescAiBadge(false)
+    try {
+      const res = await fetch('/api/ai/generate-description', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title: data.title, category: data.category_name, attributes: data.attributes }),
+      })
+      if (res.ok) {
+        const json = await res.json() as { description?: string }
+        if (json.description) {
+          setData({ ...data, description: json.description })
+          setDescAiBadge(true)
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setDescGenerating(false)
+    }
+  }
 
   function addFiles(files: FileList | null) {
     if (!files) return
@@ -1085,7 +1219,24 @@ function Step4MediaDescription({
 
       {/* ── Descrição ── */}
       <div>
-        <Label>Descrição do Produto</Label>
+        <div className="flex items-center justify-between mb-1.5">
+          <Label>Descrição do Produto</Label>
+          <button
+            onClick={generateDescription}
+            disabled={descGenerating}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all disabled:opacity-60"
+          >
+            {descGenerating
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando IA...</>
+              : <><Sparkles className="w-3.5 h-3.5" /> Gerar com IA</>}
+          </button>
+        </div>
+        {descAiBadge && (
+          <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20 w-fit">
+            <Sparkles className="w-3 h-3 text-violet-400" />
+            <span className="text-[10px] text-violet-400">Gerado por IA — revise antes de publicar</span>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 mb-2">
           {['Material e composição', 'Dimensões reais', 'Modo de uso', 'Compatibilidade', 'Conteúdo da embalagem'].map(tip => (
             <span key={tip} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-slate-500">

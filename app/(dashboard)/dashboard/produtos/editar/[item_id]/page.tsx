@@ -6,8 +6,9 @@ import {
   ArrowLeft, Save, AlertCircle, X, Plus, Info, Loader2, ExternalLink,
   ChevronRight, Zap, CheckCircle2, XCircle, AlertTriangle,
   Image as ImageIcon, UploadCloud, Copy, Eye, EyeOff, Package,
-  Tag, FileText, Truck, BarChart2, Settings, List, ShoppingBag,
+  Tag, FileText, Truck, BarChart2, Settings, List, ShoppingBag, Sparkles,
 } from 'lucide-react'
+import { usePlan } from '@/context/PlanContext'
 import { uploadImageToML } from '@/lib/ml-image-upload'
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -451,6 +452,13 @@ export default function EditarAnuncioPage() {
   const params  = useParams<{ item_id: string }>()
   const router  = useRouter()
   const item_id = params.item_id
+  const { isPlanAtLeast } = usePlan()
+
+  /* ── AI state ─────────────────────────────────────────────────────────── */
+  const [titleImproving, setTitleImproving]   = useState(false)
+  const [titleSuggestion, setTitleSuggestion] = useState<{ improved_title: string; explanation: string; chars: number } | null>(null)
+  const [descGenerating, setDescGenerating]   = useState<Record<string, boolean>>({})
+  const [descAiBadge, setDescAiBadge]         = useState<Record<string, boolean>>({})
 
   /* ── data loading ─────────────────────────────────────────────────────── */
   const [data, setData]               = useState<SiblingsData | null>(null)
@@ -1016,6 +1024,51 @@ export default function EditarAnuncioPage() {
 
   const hiddenAttrsCount = categoryAttrs.length - shownAttrs.length
 
+  /* ── AI handlers ──────────────────────────────────────────────────────── */
+  async function improveTitle() {
+    if (!data || !shared.title.trim()) return
+    setTitleImproving(true)
+    setTitleSuggestion(null)
+    try {
+      const r = await fetch('/api/ai/improve-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: shared.title, category: categoryName || data.category_id }),
+      })
+      if (r.ok) {
+        const j = await r.json() as { improved_title?: string; explanation?: string; chars?: number }
+        if (j.improved_title) {
+          setTitleSuggestion({ improved_title: j.improved_title, explanation: j.explanation ?? '', chars: j.chars ?? j.improved_title.length })
+        }
+      }
+    } catch { /* non-fatal */ }
+    setTitleImproving(false)
+  }
+
+  async function generateDescription(planId: string) {
+    if (!data) return
+    setDescGenerating(prev => ({ ...prev, [planId]: true }))
+    try {
+      const attrs = Object.entries(attrEdits)
+        .filter(([, v]) => v.trim())
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ')
+      const r = await fetch('/api/ai/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: shared.title, category: categoryName || data.category_id, attributes: attrs || undefined }),
+      })
+      if (r.ok) {
+        const j = await r.json() as { description?: string }
+        if (j.description) {
+          setPlanEdits(prev => ({ ...prev, [planId]: { ...prev[planId], description: j.description! } }))
+          setDescAiBadge(prev => ({ ...prev, [planId]: true }))
+        }
+      }
+    } catch { /* non-fatal */ }
+    setDescGenerating(prev => ({ ...prev, [planId]: false }))
+  }
+
   /* ── render ───────────────────────────────────────────────────────────── */
   return (
     <div className="min-h-screen bg-dark-950">
@@ -1114,6 +1167,40 @@ export default function EditarAnuncioPage() {
                       readOnly={isCatalog}
                       className={inputCls + (isCatalog ? ' opacity-50 cursor-not-allowed' : '')}
                     />
+                    {!isCatalog && (
+                      <div className="mt-2">
+                        <button
+                          onClick={improveTitle}
+                          disabled={titleImproving || !shared.title.trim() || !isPlanAtLeast('piloto')}
+                          title={!isPlanAtLeast('piloto') ? 'Disponível no plano Piloto ou superior' : ''}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          {titleImproving ? <><span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin inline-block" /> Melhorando...</> : <><Sparkles className="w-3 h-3" /> Melhorar com IA</>}
+                          {!isPlanAtLeast('piloto') && <span className="ml-1 text-[9px] opacity-70">Piloto+</span>}
+                        </button>
+                        {titleSuggestion && (
+                          <div className="mt-2 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl space-y-2">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <Sparkles className="w-3 h-3 text-violet-400" />
+                              <span className="text-[10px] font-semibold text-violet-300">Sugestão da IA</span>
+                              <span className="text-[9px] text-slate-500 ml-auto">{titleSuggestion.chars}/60</span>
+                            </div>
+                            <p className="text-xs text-white font-medium">{titleSuggestion.improved_title}</p>
+                            {titleSuggestion.explanation && <p className="text-[10px] text-slate-400">{titleSuggestion.explanation}</p>}
+                            <div className="flex gap-2 pt-1">
+                              <button
+                                onClick={() => { setShared(s => ({ ...s, title: titleSuggestion.improved_title })); setTitleSuggestion(null) }}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-violet-600 hover:bg-violet-500 text-white transition-colors"
+                              >Usar este título</button>
+                              <button
+                                onClick={() => setTitleSuggestion(null)}
+                                className="px-2.5 py-1 rounded-lg text-[10px] text-slate-400 hover:text-slate-300 bg-white/[0.04] border border-white/[0.06] transition-colors"
+                              >Descartar</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </FieldRow>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1496,13 +1583,31 @@ export default function EditarAnuncioPage() {
                             <span className="text-[10px] text-slate-600">{e.description.length}/5000</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <Info className="w-3 h-3 text-blue-400 shrink-0" />
-                          <span className="text-[10px] text-blue-300">Apenas texto simples. Sem HTML.</span>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <Info className="w-3 h-3 text-blue-400 shrink-0" />
+                            <span className="text-[10px] text-blue-300">Apenas texto simples. Sem HTML.</span>
+                          </div>
+                          <button
+                            onClick={() => generateDescription(plan.id)}
+                            disabled={descGenerating[plan.id] || !isPlanAtLeast('comandante')}
+                            title={!isPlanAtLeast('comandante') ? 'Disponível no plano Comandante ou superior' : ''}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0"
+                          >
+                            {descGenerating[plan.id] ? <><span className="w-2.5 h-2.5 border border-white/40 border-t-white rounded-full animate-spin inline-block" /> Gerando...</> : <><Sparkles className="w-2.5 h-2.5" /> Gerar com IA</>}
+                            {!isPlanAtLeast('comandante') && <span className="opacity-70">Comandante+</span>}
+                          </button>
                         </div>
+                        {descAiBadge[plan.id] && (
+                          <div className="flex items-center gap-1.5 mb-1.5 px-2.5 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+                            <Sparkles className="w-3 h-3 text-violet-400 shrink-0" />
+                            <span className="text-[10px] text-violet-300">Gerado por IA — revise antes de salvar</span>
+                            <button onClick={() => setDescAiBadge(prev => ({ ...prev, [plan.id]: false }))} className="ml-auto text-slate-500 hover:text-slate-300 text-[10px]">✕</button>
+                          </div>
+                        )}
                         <textarea
                           value={e.description} rows={5} maxLength={5000}
-                          onChange={ev => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], description: ev.target.value } }))}
+                          onChange={ev => { setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], description: ev.target.value } })); setDescAiBadge(prev => ({ ...prev, [plan.id]: false })) }}
                           placeholder="Descreva o produto detalhadamente..."
                           className={inputCls + ' resize-none'}
                         />
