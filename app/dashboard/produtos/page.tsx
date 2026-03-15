@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
@@ -780,6 +780,15 @@ function RowActions({
 function TitleCopyTooltip({ item }: { item: MLItem }) {
   const [visible, setVisible] = useState(false)
   const [copied, setCopied]   = useState<string | null>(null)
+  const hideTimer             = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function showTooltip()  {
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    setVisible(true)
+  }
+  function hideTooltip()  {
+    hideTimer.current = setTimeout(() => setVisible(false), 80)
+  }
 
   function copy(text: string, label: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -792,10 +801,14 @@ function TitleCopyTooltip({ item }: { item: MLItem }) {
   const sku = item.seller_custom_field ?? null
 
   return (
-    <div className="relative flex-1 min-w-0" onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)}>
+    <div className="relative flex-1 min-w-0" onMouseEnter={showTooltip} onMouseLeave={hideTooltip}>
       <p className="text-white font-semibold leading-snug truncate max-w-[200px] cursor-default">{item.title}</p>
       {visible && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-72 bg-gray-900 border border-white/[0.12] rounded-xl shadow-2xl p-3 space-y-2">
+        <div
+          className="absolute left-0 top-full mt-1 z-50 w-72 bg-gray-900 border border-white/[0.12] rounded-xl shadow-2xl p-3 space-y-2"
+          onMouseEnter={showTooltip}
+          onMouseLeave={hideTooltip}
+        >
           <p className="text-[10px] text-slate-300 leading-snug break-words">{item.title}</p>
           <div className="space-y-1">
             <button onClick={() => copy(item.title, 'título')}
@@ -1070,12 +1083,13 @@ function MLProductsTab() {
   const [statusFilter, setStatusFilter]       = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
   const [listingFilter, setListingFilter]     = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
   const [stockFilter, setStockFilter]         = useState<'all' | 'low' | 'zero'>('all')
-  const [catalogTab, setCatalogTab]           = useState<'all' | 'user' | 'catalog'>('all')
+  const [catalogTab, setCatalogTab]           = useState<'all' | 'user' | 'catalog'>('user')
   const [freeShippingF, setFreeShippingF]     = useState(false)
   const [flexF, setFlexF]                     = useState(false)
   const [sortBy, setSortBy]                   = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('default')
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const [offset, setOffset]                   = useState(0)
+  const [limit, setLimit]                     = useState(50)
   const [paging, setPaging]                   = useState({ total: 0, offset: 0, limit: 50 })
 
   // Bulk actions
@@ -1092,7 +1106,7 @@ function MLProductsTab() {
     setError(null)
     setSelectedIds([])
     const apiStatus = statusFilter === 'all' ? 'all' : statusFilter
-    fetch(`/api/mercadolivre/products?offset=${offset}&limit=50&status=${apiStatus}`)
+    fetch(`/api/mercadolivre/products?offset=${offset}&limit=${limit}&status=${apiStatus}`)
       .then(r => r.json())
       .then(d => {
         if (d.notConnected) { setNotConnected(true); return }
@@ -1102,7 +1116,7 @@ function MLProductsTab() {
       })
       .catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false))
-  }, [offset, statusFilter, refreshKey])
+  }, [offset, limit, statusFilter, refreshKey])
 
   function updateItem(id: string, patch: Partial<MLItem>) {
     setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it))
@@ -1404,9 +1418,57 @@ function MLProductsTab() {
                     <input type="checkbox" checked={allSelected} onChange={toggleAll}
                       className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" />
                   </th>
-                  {['Anúncio', 'Preço ML', 'Desconto', 'Estoque', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
-                    <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
-                  ))}
+                  {/* Sortable: Anúncio (title) */}
+                  <th className="text-left py-2.5 px-3">
+                    <button
+                      onClick={() => setSortBy(sb => sb === 'title_asc' ? 'title_desc' : 'title_asc')}
+                      className="flex items-center gap-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider hover:text-slate-300 transition-colors"
+                    >
+                      Anúncio
+                      {sortBy === 'title_asc' ? <ArrowUp className="w-2.5 h-2.5 text-yellow-400" />
+                        : sortBy === 'title_desc' ? <ArrowDown className="w-2.5 h-2.5 text-yellow-400" />
+                        : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
+                    </button>
+                  </th>
+                  {/* Sortable: Preço */}
+                  <th className="text-left py-2.5 px-3">
+                    <button
+                      onClick={() => setSortBy(sb => sb === 'price_asc' ? 'price_desc' : 'price_asc')}
+                      className="flex items-center gap-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider hover:text-slate-300 transition-colors"
+                    >
+                      Preço ML
+                      {sortBy === 'price_asc' ? <ArrowUp className="w-2.5 h-2.5 text-yellow-400" />
+                        : sortBy === 'price_desc' ? <ArrowDown className="w-2.5 h-2.5 text-yellow-400" />
+                        : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
+                    </button>
+                  </th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">Desconto</th>
+                  {/* Sortable: Estoque */}
+                  <th className="text-left py-2.5 px-3">
+                    <button
+                      onClick={() => setSortBy(sb => sb === 'stock_asc' ? 'stock_desc' : 'stock_asc')}
+                      className="flex items-center gap-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider hover:text-slate-300 transition-colors"
+                    >
+                      Estoque
+                      {sortBy === 'stock_asc' ? <ArrowUp className="w-2.5 h-2.5 text-yellow-400" />
+                        : sortBy === 'stock_desc' ? <ArrowDown className="w-2.5 h-2.5 text-yellow-400" />
+                        : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
+                    </button>
+                  </th>
+                  {/* Sortable: Vendidos */}
+                  <th className="text-left py-2.5 px-3">
+                    <button
+                      onClick={() => setSortBy(sb => sb === 'sold_desc' ? 'default' : 'sold_desc')}
+                      className="flex items-center gap-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider hover:text-slate-300 transition-colors"
+                    >
+                      Vendidos
+                      {sortBy === 'sold_desc' ? <ArrowDown className="w-2.5 h-2.5 text-yellow-400" />
+                        : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
+                    </button>
+                  </th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">Status</th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                  <th className="py-2.5 px-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
@@ -1527,21 +1589,90 @@ function MLProductsTab() {
           </div>
 
           {/* Pagination */}
-          {paging.total > 50 && (
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-600">
-                Mostrando {offset + 1}–{Math.min(offset + 50, paging.total)} de {paging.total}
-              </span>
-              <div className="flex gap-2">
-                <button onClick={() => setOffset(Math.max(0, offset - 50))} disabled={offset === 0}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
-                  ← Anterior
-                </button>
-                <button onClick={() => setOffset(offset + 50)} disabled={offset + 50 >= paging.total}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
-                  Próxima →
-                </button>
+          {paging.total > 0 && (
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {/* Info + limit selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">
+                  {offset + 1}–{Math.min(offset + limit, paging.total)} de {paging.total}
+                </span>
+                <select
+                  value={limit}
+                  onChange={e => { setLimit(Number(e.target.value)); setOffset(0) }}
+                  className="px-2 py-1 rounded-lg text-[10px] bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none"
+                >
+                  <option value={20}>20/pág</option>
+                  <option value={50}>50/pág</option>
+                  <option value={100}>100/pág</option>
+                  <option value={200}>200/pág</option>
+                </select>
               </div>
+
+              {/* Page buttons */}
+              {paging.total > limit && (() => {
+                const totalPages = Math.ceil(paging.total / limit)
+                const currentPage = Math.floor(offset / limit)
+                const pages: (number | '…')[] = []
+                let prev = -1
+                Array.from({ length: totalPages }, (_, i) => i)
+                  .filter(i => i === 0 || i === totalPages - 1 || Math.abs(i - currentPage) <= 2)
+                  .forEach(i => {
+                    if (i - prev > 1) pages.push('…')
+                    pages.push(i)
+                    prev = i
+                  })
+                return (
+                  <div className="flex items-center gap-1 ml-auto">
+                    <button
+                      onClick={() => setOffset(0)}
+                      disabled={offset === 0}
+                      className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
+                      title="Primeira página"
+                    >
+                      «
+                    </button>
+                    <button
+                      onClick={() => setOffset(Math.max(0, offset - limit))}
+                      disabled={offset === 0}
+                      className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
+                    >
+                      ‹
+                    </button>
+                    {pages.map((p, i) =>
+                      p === '…' ? (
+                        <span key={`ellipsis-${i}`} className="px-1 text-xs text-slate-600">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setOffset((p as number) * limit)}
+                          className={`min-w-[28px] h-7 px-1 rounded-lg text-xs font-semibold transition-all ${
+                            p === currentPage
+                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                              : 'bg-dark-700 text-slate-400 hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          {(p as number) + 1}
+                        </button>
+                      )
+                    )}
+                    <button
+                      onClick={() => setOffset(offset + limit)}
+                      disabled={offset + limit >= paging.total}
+                      className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
+                    >
+                      ›
+                    </button>
+                    <button
+                      onClick={() => setOffset((Math.ceil(paging.total / limit) - 1) * limit)}
+                      disabled={offset + limit >= paging.total}
+                      className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
+                      title="Última página"
+                    >
+                      »
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </>

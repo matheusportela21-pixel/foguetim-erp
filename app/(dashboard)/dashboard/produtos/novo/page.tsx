@@ -1,27 +1,28 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter }      from 'next/navigation'
 import {
   ArrowLeft, ArrowRight, Check, Search, Loader2, AlertCircle,
   Tag, DollarSign, FileText, ImageIcon, Truck, Eye,
-  X, ChevronRight, Info, ExternalLink,
+  X, ChevronRight, Info, ExternalLink, ChevronLeft, Home,
+  Grid3X3,
 } from 'lucide-react'
 
 /* ══════════════════════════════════════════════════════════════════════════
    TYPES
 ══════════════════════════════════════════════════════════════════════════ */
 
-interface MLCategory {
-  id:   string
-  name: string
-}
-
-// ML domain_discovery response shape
-interface MLDomainResult {
+interface CategorySuggestion {
   category_id:   string
   category_name: string
-  domain_id?:    string
+  domain_name:   string
+  breadcrumb:    string
+}
+
+interface ChildCategory {
+  id:   string
+  name: string
 }
 
 interface CategoryAttribute {
@@ -141,41 +142,215 @@ function Hint({ children }: { children: React.ReactNode }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   STEP 1 — CATEGORY SEARCH
+   STEP 1 — CATEGORY SEARCH + TREE BROWSER
 ══════════════════════════════════════════════════════════════════════════ */
 
-function Step1Category({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
-  const [q, setQ]             = useState('')
-  const [results, setResults] = useState<MLCategory[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
+/** Tree browser modal — navigable category tree */
+function CategoryTreeModal({
+  onSelect, onClose,
+}: {
+  onSelect: (id: string, name: string) => void
+  onClose:  () => void
+}) {
+  const [stack, setStack] = useState<{ id: string; name: string }[]>([])
+  const [children, setChildren] = useState<ChildCategory[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [pathFromRoot, setPathFromRoot] = useState<ChildCategory[]>([])
 
+  const currentId = stack.length > 0 ? stack[stack.length - 1].id : null
+
+  useEffect(() => {
+    setLoading(true)
+    const url = currentId
+      ? `/api/mercadolivre/categories/${currentId}/children`
+      : '/api/mercadolivre/categories/root'
+
+    if (!currentId) {
+      // root level
+      fetch(url)
+        .then(r => r.json() as Promise<ChildCategory[]>)
+        .then(list => {
+          setChildren(Array.isArray(list) ? list : [])
+          setPathFromRoot([])
+        })
+        .catch(() => setChildren([]))
+        .finally(() => setLoading(false))
+    } else {
+      fetch(url)
+        .then(r => r.json() as Promise<{ children: ChildCategory[]; path_from_root: ChildCategory[]; name: string }>)
+        .then(d => {
+          setChildren(Array.isArray(d.children) ? d.children : [])
+          setPathFromRoot(Array.isArray(d.path_from_root) ? d.path_from_root : [])
+        })
+        .catch(() => setChildren([]))
+        .finally(() => setLoading(false))
+    }
+  }, [currentId])
+
+  function navigate(child: ChildCategory) {
+    setStack(prev => [...prev, { id: child.id, name: child.name }])
+  }
+
+  function goBack() {
+    setStack(prev => prev.slice(0, -1))
+  }
+
+  function goRoot() {
+    setStack([])
+  }
+
+  function handleSelect(cat: ChildCategory) {
+    const breadcrumb = pathFromRoot.length > 0
+      ? [...pathFromRoot.map(p => p.name), cat.name].join(' > ')
+      : cat.name
+    onSelect(cat.id, breadcrumb)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-[#0a0d13] border border-white/[0.1] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
+          <p className="text-sm font-bold text-white">Navegar por categorias</p>
+          <button onClick={onClose} className="p-1 text-slate-500 hover:text-slate-300 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1 px-4 py-2 border-b border-white/[0.04] shrink-0 flex-wrap">
+          <button onClick={goRoot} className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-white transition-colors">
+            <Home className="w-3 h-3" /> Início
+          </button>
+          {stack.map((s, i) => (
+            <div key={s.id} className="flex items-center gap-1">
+              <ChevronRight className="w-3 h-3 text-slate-700" />
+              <button
+                onClick={() => setStack(prev => prev.slice(0, i + 1))}
+                className="text-[10px] text-slate-400 hover:text-white transition-colors truncate max-w-[120px]"
+              >
+                {s.name}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Back button */}
+        {stack.length > 0 && (
+          <button onClick={goBack}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs text-slate-500 hover:text-slate-300 border-b border-white/[0.04] shrink-0 transition-colors">
+            <ChevronLeft className="w-3.5 h-3.5" /> Voltar
+          </button>
+        )}
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {loading ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-slate-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-xs">Carregando...</span>
+            </div>
+          ) : children.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-xs text-slate-500">Nenhuma subcategoria encontrada.</p>
+              {currentId && (
+                <button
+                  onClick={() => {
+                    const cur = stack[stack.length - 1]
+                    if (cur) {
+                      const breadcrumb = pathFromRoot.map(p => p.name).join(' > ') || cur.name
+                      onSelect(cur.id, breadcrumb)
+                      onClose()
+                    }
+                  }}
+                  className="mt-3 px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-all"
+                >
+                  Selecionar esta categoria
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {/* Select current (if inside a category) */}
+              {currentId && (
+                <button
+                  onClick={() => {
+                    const cur = stack[stack.length - 1]
+                    if (cur) {
+                      const breadcrumb = pathFromRoot.map(p => p.name).join(' > ') || cur.name
+                      onSelect(cur.id, breadcrumb)
+                      onClose()
+                    }
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-purple-500/20 bg-purple-500/5 text-xs text-purple-300 hover:bg-purple-500/10 transition-colors mb-1"
+                >
+                  <Check className="w-3 h-3 shrink-0" />
+                  Selecionar &ldquo;{stack[stack.length - 1]?.name}&rdquo;
+                </button>
+              )}
+              {children.map(child => (
+                <div key={child.id} className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleSelect(child)}
+                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/[0.04] hover:border-white/[0.12] hover:bg-white/[0.03] text-left transition-all"
+                  >
+                    <span className="text-sm text-white flex-1">{child.name}</span>
+                    <span className="text-[10px] text-slate-600 font-mono shrink-0">{child.id}</span>
+                  </button>
+                  <button
+                    onClick={() => navigate(child)}
+                    className="p-2 rounded-xl text-slate-600 hover:text-white hover:bg-white/[0.06] transition-all shrink-0"
+                    title="Ver subcategorias"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Step1Category({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+  const [q, setQ]                       = useState('')
+  const [suggestions, setSuggestions]   = useState<CategorySuggestion[]>([])
+  const [loading, setLoading]           = useState(false)
+  const [searched, setSearched]         = useState(false)
+  const [showTree, setShowTree]         = useState(false)
+  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Auto-search on input change (debounced)
   const search = useCallback(async (query: string) => {
-    if (!query.trim()) return
+    if (!query.trim()) { setSuggestions([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
     try {
-      const res = await fetch(`/api/mercadolivre/categories?q=${encodeURIComponent(query)}`)
+      const res = await fetch(`/api/mercadolivre/categories/suggest?q=${encodeURIComponent(query)}`)
       if (res.ok) {
         const json: unknown = await res.json()
-        const raw = Array.isArray(json) ? (json as MLDomainResult[]) : []
-        // ML domain_discovery returns { category_id, category_name, ... }
-        const cats: MLCategory[] = raw
-          .filter(r => r.category_id && r.category_name)
-          .map(r => ({ id: r.category_id, name: r.category_name }))
-          // Deduplicate by category_id
-          .filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i)
-        setResults(cats.slice(0, 20))
+        setSuggestions(Array.isArray(json) ? (json as CategorySuggestion[]) : [])
       }
     } catch {
-      setResults([])
+      setSuggestions([])
     } finally {
       setLoading(false)
     }
   }, [])
 
-  function select(cat: MLCategory) {
-    setData({ ...data, category_id: cat.id, category_name: cat.name })
+  function handleInput(value: string) {
+    setQ(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => search(value), 500)
+  }
+
+  function select(id: string, name: string) {
+    setData({ ...data, category_id: id, category_name: name })
+    setSuggestions([])
+    setSearched(false)
   }
 
   return (
@@ -183,62 +358,95 @@ function Step1Category({ data, setData }: { data: WizardData; setData: (d: Wizar
       <div>
         <Label required>Categoria do Produto</Label>
         <div className="flex gap-2">
-          <input
-            type="text" value={q} onChange={e => setQ(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && search(q)}
-            placeholder="Ex: Camisetas, Celulares, Tênis..."
-            className={inputCls + ' flex-1'}
-          />
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+            <input
+              type="text" value={q}
+              onChange={e => handleInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && search(q)}
+              placeholder="Ex: Camiseta masculina, iPhone 14, Tênis Nike..."
+              className={inputCls + ' pl-10'}
+            />
+            {loading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 animate-spin" />
+            )}
+          </div>
           <button
-            onClick={() => search(q)}
-            disabled={loading || !q.trim()}
-            className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 disabled:opacity-40 transition-all flex items-center gap-2"
+            onClick={() => setShowTree(true)}
+            className="px-3 py-2 rounded-xl bg-dark-700 border border-white/[0.08] text-slate-400 text-xs font-bold hover:text-white hover:border-white/20 transition-all flex items-center gap-1.5 shrink-0"
+            title="Navegar por árvore de categorias"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Buscar
+            <Grid3X3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Navegar</span>
           </button>
         </div>
-        <Hint>Digite o nome do produto ou categoria e pressione Enter para buscar no ML.</Hint>
+        <Hint>Digite o nome do produto e selecione a categoria. Ou clique em &ldquo;Navegar&rdquo; para explorar a árvore de categorias.</Hint>
       </div>
 
+      {/* Selected category */}
       {data.category_id && (
         <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
           <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
           <span className="text-xs text-green-300 font-semibold">Categoria selecionada:</span>
-          <span className="text-xs text-white">{data.category_name}</span>
-          <span className="text-[10px] text-slate-500 ml-1 font-mono">({data.category_id})</span>
+          <span className="text-xs text-white flex-1 min-w-0 truncate">{data.category_name}</span>
+          <span className="text-[10px] text-slate-500 font-mono shrink-0">({data.category_id})</span>
           <button
             onClick={() => setData({ ...data, category_id: '', category_name: '' })}
-            className="ml-auto p-0.5 text-slate-500 hover:text-red-400 transition-colors"
+            className="ml-1 p-0.5 text-slate-500 hover:text-red-400 transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {searched && results.length > 0 && (
+      {/* Suggestions */}
+      {searched && suggestions.length > 0 && (
         <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
           <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest mb-2">
-            {results.length} resultado(s) — clique para selecionar
+            {suggestions.length} sugestão(ões) — clique para selecionar
           </p>
-          {results.map(cat => (
+          {suggestions.map(s => (
             <button
-              key={cat.id}
-              onClick={() => select(cat)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all text-left
-                ${data.category_id === cat.id
+              key={s.category_id}
+              onClick={() => select(s.category_id, s.breadcrumb || s.category_name)}
+              className={`w-full flex flex-col px-3 py-2.5 rounded-xl border transition-all text-left
+                ${data.category_id === s.category_id
                   ? 'border-purple-500/40 bg-purple-500/10'
                   : 'border-white/[0.06] hover:border-white/20 hover:bg-white/[0.03]'}`}
             >
-              <span className="text-sm text-white">{cat.name}</span>
-              <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-2">{cat.id}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-white font-medium">{s.category_name}</span>
+                <span className="text-[10px] text-slate-500 font-mono shrink-0">{s.category_id}</span>
+              </div>
+              {s.breadcrumb && s.breadcrumb !== s.category_name && (
+                <span className="text-[10px] text-slate-500 mt-0.5 truncate">{s.breadcrumb}</span>
+              )}
+              {s.domain_name && (
+                <span className="text-[9px] text-slate-600 mt-0.5">{s.domain_name}</span>
+              )}
             </button>
           ))}
         </div>
       )}
 
-      {searched && results.length === 0 && !loading && (
-        <p className="text-sm text-slate-500 text-center py-4">Nenhuma categoria encontrada. Tente termos diferentes.</p>
+      {searched && suggestions.length === 0 && !loading && (
+        <div className="text-center py-4">
+          <p className="text-sm text-slate-500">Nenhuma sugestão encontrada.</p>
+          <button
+            onClick={() => setShowTree(true)}
+            className="mt-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            Tente navegar pela árvore de categorias →
+          </button>
+        </div>
+      )}
+
+      {/* Tree modal */}
+      {showTree && (
+        <CategoryTreeModal
+          onSelect={select}
+          onClose={() => setShowTree(false)}
+        />
       )}
     </div>
   )
