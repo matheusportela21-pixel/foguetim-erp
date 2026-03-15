@@ -60,12 +60,34 @@ export async function GET(_req: NextRequest, { params }: Params) {
       return NextResponse.json([])
     }
 
-    // Only exclude attributes that are managed by dedicated fields in the UI
+    // Attributes managed by dedicated UI fields or irrelevant for sellers
     const ROUTE_EXCLUDED = new Set([
-      'ITEM_CONDITION',   // managed via Condição field
-      'LISTING_TYPE_ID',  // managed via Tipo field
-      'PACKAGE_LENGTH', 'PACKAGE_WIDTH',
-      'PACKAGE_HEIGHT', 'PACKAGE_WEIGHT', // managed in Pacote section
+      // Plataforma ML — internos
+      'ITEM_CONDITION', 'LISTING_TYPE_ID',
+
+      // Logísticos — gerenciados na seção Pacote
+      'PACKAGE_LENGTH', 'PACKAGE_WIDTH', 'PACKAGE_HEIGHT', 'PACKAGE_WEIGHT',
+      'WEIGHT', 'LENGTH', 'WIDTH', 'HEIGHT',
+
+      // Identificação — gerenciados em campos dedicados
+      'SELLER_SKU', 'GTIN', 'EAN',
+
+      // Fiscais — configurados em outro lugar
+      'NCM', 'CUSTOMS_CLASSIFICATION', 'IMPORT_TAX',
+      'TAX_CATEGORY_ID', 'CUSTOMS_FEE',
+
+      // Bateria/energia — raramente relevante para o criador do anúncio
+      'BATTERY_INDEPENDENCE', 'WITH_BATTERY', 'BATTERY_TYPE',
+      'BATTERY_CAPACITY',
+
+      // Compatibilidade — muito específico, só mostrar se obrigatório
+      'COMPATIBLE_BRAND', 'COMPATIBLE_MODEL', 'COMPATIBLE_YEAR',
+
+      // Tensão
+      'VOLTAGE',
+
+      // Montagem
+      'IS_ASSEMBLED', 'ASSEMBLING_TIME',
     ])
 
     const relevant = (raw as MLRawAttribute[]).filter(a => {
@@ -74,6 +96,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
       const tags = Array.isArray(a.tags) ? a.tags : []
       if (tags.includes('hidden'))         return false
       if (tags.includes('read_only_api'))  return false
+      if (tags.includes('read_only'))      return false
+      if (tags.includes('fixed'))          return false
       return true
     })
 

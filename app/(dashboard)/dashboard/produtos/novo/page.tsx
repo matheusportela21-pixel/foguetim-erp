@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter }      from 'next/navigation'
+import { usePlan }        from '@/context/PlanContext'
 import {
   ArrowLeft, ArrowRight, Check, Search, Loader2, AlertCircle,
   Tag, DollarSign, FileText, ImageIcon, Truck, Eye,
@@ -40,8 +41,12 @@ interface CategoryAttribute {
 }
 
 interface ShippingLocation {
-  id:   string
-  name: string
+  id:           string
+  name:         string
+  address_line?: string
+  city?:        string
+  state?:       string
+  zip_code?:    string
 }
 
 interface PlanConfig {
@@ -63,6 +68,9 @@ interface WizardData {
   ean:                 string
   no_ean:              boolean
   attributes:          Record<string, string>
+  // Recondicionado extras
+  grading:             string   // 'excellent' | 'good' | 'acceptable'
+  warranty_time:       number   // dias (mín 90 para recondicionado)
 
   // Step 3 — Preço e Logística
   plans: {
@@ -98,6 +106,8 @@ const INITIAL: WizardData = {
   ean:                  '',
   no_ean:               false,
   attributes:           {},
+  grading:              '',
+  warranty_time:        90,
   plans: {
     classico: { enabled: true,  listing_type_id: 'gold_special', price: 0, quantity: 1 },
     premium:  { enabled: false, listing_type_id: 'gold_pro',     price: 0, quantity: 1 },
@@ -332,7 +342,7 @@ function CategoryTreeModal({
   )
 }
 
-function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+function Step1TitleCategory({ data, setData, isPlanAtLeast }: { data: WizardData; setData: (d: WizardData) => void; isPlanAtLeast: (p: string) => boolean }) {
   const [suggestions, setSuggestions]     = useState<CategorySuggestion[]>([])
   const [sugLoading, setSugLoading]       = useState(false)
   const [sugFetched, setSugFetched]       = useState(false)
@@ -372,19 +382,19 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
         }
       }
 
-      // 2nd attempt: AI fallback via GPT-4o-mini
+      // 2nd attempt: AI via GPT-4o-mini + ML tree navigation
       const aiRes = await fetch('/api/ai/suggest-category', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ title: query }),
       })
       if (aiRes.ok) {
-        const aiJson = await aiRes.json() as { suggestions?: { category_id: string; category_name: string; reason: string; confidence: number }[] }
+        const aiJson = await aiRes.json() as { suggestions?: { category_id: string; category_name: string; breadcrumb: string; reason: string; confidence: number }[] }
         const aiList: CategorySuggestion[] = (aiJson.suggestions ?? []).map(s => ({
           category_id:   s.category_id,
           category_name: s.category_name,
           domain_name:   '',
-          breadcrumb:    s.category_name,
+          breadcrumb:    s.breadcrumb || s.category_name,
           aiSuggested:   true,
           reason:        s.reason,
           confidence:    s.confidence,
@@ -392,7 +402,7 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
         setSuggestions(aiList)
         if (aiList.length > 0 && !currentData.category_id) {
           const first = aiList[0]
-          setData({ ...currentData, category_id: first.category_id, category_name: first.category_name })
+          setData({ ...currentData, category_id: first.category_id, category_name: first.breadcrumb || first.category_name })
         }
       } else {
         setSuggestions([])
@@ -458,7 +468,7 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
             value={data.title}
             maxLength={60}
             onChange={e => handleTitleChange(e.target.value)}
-            placeholder="Ex: Gel Massageador Sebo de Carneiro Aroeira 220g Corpo"
+            placeholder="Ex: Tênis Masculino Marca XLS 42 Branco Esportivo"
             className={inputCls}
             autoFocus
           />
@@ -478,13 +488,18 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
         {titleLen >= 10 && (
           <div className="mt-2">
             <button
-              onClick={improveTitle}
-              disabled={titleImproving}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all disabled:opacity-60"
+              onClick={isPlanAtLeast('almirante') ? improveTitle : undefined}
+              disabled={titleImproving || !isPlanAtLeast('almirante')}
+              title={!isPlanAtLeast('almirante') ? 'Disponível no plano Almirante ou superior' : ''}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                isPlanAtLeast('almirante')
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 disabled:opacity-60'
+                  : 'bg-dark-700 border border-white/[0.08] text-slate-500 cursor-not-allowed'
+              }`}
             >
               {titleImproving
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando IA...</>
-                : <><Sparkles className="w-3.5 h-3.5" /> Melhorar título com IA</>}
+                : <><Sparkles className="w-3.5 h-3.5" /> Melhorar título com IA{!isPlanAtLeast('almirante') && <span className="ml-1 text-[9px] opacity-70">🔒 Almirante+</span>}</>}
             </button>
 
             {titleSuggestion && (
@@ -752,6 +767,71 @@ function Step2Basic({ data, setData }: { data: WizardData; setData: (d: WizardDa
         </div>
       </div>
 
+      {/* ── Aviso: Produto Usado ── */}
+      {data.condition === 'used' && (
+        <div className="px-4 py-3 bg-blue-500/[0.06] border border-blue-500/20 rounded-xl space-y-1.5">
+          <p className="text-xs font-semibold text-blue-300 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 shrink-0" />
+            Produto Usado — Regras do Mercado Livre
+          </p>
+          <ul className="text-[11px] text-slate-400 space-y-1 pl-5 list-disc">
+            <li>Descreva detalhadamente o estado real do produto na descrição</li>
+            <li>Informe defeitos, desgastes ou problemas se houver</li>
+            <li>Fotos do produto real são obrigatórias (sem fotos genéricas)</li>
+            <li>Não inclua a palavra "usado" no título</li>
+          </ul>
+        </div>
+      )}
+
+      {/* ── Aviso + campos: Recondicionado ── */}
+      {data.condition === 'not_specified' && (
+        <div className="space-y-4">
+          <div className="px-4 py-3 bg-blue-500/[0.06] border border-blue-500/20 rounded-xl space-y-1.5">
+            <p className="text-xs font-semibold text-blue-300 flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 shrink-0" />
+              Produto Recondicionado — Campos obrigatórios
+            </p>
+            <ul className="text-[11px] text-slate-400 space-y-1 pl-5 list-disc">
+              <li>Garantia mínima de 90 dias (obrigatório por lei)</li>
+              <li>Grau do produto (obrigatório pelo ML)</li>
+            </ul>
+          </div>
+
+          {/* Grau */}
+          <div>
+            <Label required>Grau do Produto</Label>
+            <select
+              value={data.grading}
+              onChange={e => setData({ ...data, grading: e.target.value })}
+              className={selectCls}
+            >
+              <option value="">Selecione o grau *</option>
+              <option value="excellent">Excelente — Como novo, sem sinais de uso</option>
+              <option value="good">Bom — Funcionando perfeitamente, sinais leves de uso</option>
+              <option value="acceptable">Aceitável — Funcionando, sinais visíveis de uso</option>
+            </select>
+            {!data.grading && <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0" />Grau é obrigatório para produtos recondicionados.</p>}
+          </div>
+
+          {/* Garantia */}
+          <div>
+            <Label required>Tempo de Garantia (dias)</Label>
+            <input
+              type="number"
+              min={90}
+              value={data.warranty_time || ''}
+              onChange={e => setData({ ...data, warranty_time: Math.max(0, parseInt(e.target.value) || 0) })}
+              placeholder="Mínimo 90 dias *"
+              className={inputCls}
+            />
+            {data.warranty_time > 0 && data.warranty_time < 90 && (
+              <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3 shrink-0" />Garantia mínima de 90 dias para recondicionados.</p>
+            )}
+            <Hint>Exigido por lei para produtos recondicionados. Mínimo 90 dias.</Hint>
+          </div>
+        </div>
+      )}
+
       {/* SKU */}
       <div>
         <Label>SKU Interno</Label>
@@ -971,6 +1051,13 @@ function Step3PriceLogistics({ data, setData }: { data: WizardData; setData: (d:
   const anyPlanValid  = (data.plans.classico.enabled && data.plans.classico.price > 0 && data.plans.classico.quantity > 0)
                      || (data.plans.premium.enabled  && data.plans.premium.price  > 0 && data.plans.premium.quantity  > 0)
 
+  // Lowest active price for free-shipping rules
+  const activePrices = [
+    data.plans.classico.enabled ? data.plans.classico.price : 0,
+    data.plans.premium.enabled  ? data.plans.premium.price  : 0,
+  ].filter(p => p > 0)
+  const lowestPrice = activePrices.length > 0 ? Math.min(...activePrices) : 0
+
   return (
     <div className="space-y-6">
       {/* ── Embalagem ── */}
@@ -1034,12 +1121,44 @@ function Step3PriceLogistics({ data, setData }: { data: WizardData; setData: (d:
       <div>
         <p className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-3">Opções de Envio</p>
         <div className="space-y-2">
-          <ShippingToggle
-            label="Frete Grátis"
-            desc="O frete é por sua conta — aumenta conversão mas reduz margem."
-            value={data.free_shipping}
-            onChange={v => setData({ ...data, free_shipping: v })}
-          />
+          {/* Free shipping with ML 2025 rules */}
+          <div>
+            <ShippingToggle
+              label="Frete Grátis"
+              desc={
+                lowestPrice > 79  ? 'Obrigatório para este preço — ML pode exigir.' :
+                lowestPrice >= 19 ? 'ML banca o custo do frete para você nesta faixa.' :
+                lowestPrice > 0   ? 'Você arcará com o custo do frete para este preço.' :
+                'O frete é por sua conta — aumenta conversão mas reduz margem.'
+              }
+              value={data.free_shipping}
+              onChange={v => setData({ ...data, free_shipping: v })}
+            />
+            {/* Contextual alerts */}
+            {lowestPrice > 79 && !data.free_shipping && (
+              <div className="mt-1.5 flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <p className="text-[11px] text-amber-300">⚠️ Frete grátis obrigatório para produtos acima de R$79. O ML pode exigir na publicação.</p>
+              </div>
+            )}
+            {lowestPrice > 0 && lowestPrice < 19 && data.free_shipping && (
+              <div className="mt-1.5 flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <p className="text-[11px] text-amber-300">⚠️ Para preços abaixo de R$19, você arcará com o custo do frete grátis.</p>
+              </div>
+            )}
+            {/* ML rules info */}
+            <details className="mt-1.5">
+              <summary className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer flex items-center gap-1">
+                <Info className="w-3 h-3" /> Regras de Frete Grátis ML 2025
+              </summary>
+              <div className="mt-1.5 px-3 py-2 bg-blue-500/[0.06] border border-blue-500/20 rounded-xl space-y-1">
+                <p className="text-[10px] text-slate-400">• Produtos <span className="text-white font-semibold">&gt; R$79</span>: frete grátis obrigatório (ML pode exigir)</p>
+                <p className="text-[10px] text-slate-400">• Produtos <span className="text-white font-semibold">R$19–R$79</span>: ML banca o custo do frete grátis</p>
+                <p className="text-[10px] text-slate-400">• Produtos <span className="text-white font-semibold">&lt; R$19</span>: você arca com o custo do frete grátis</p>
+              </div>
+            </details>
+          </div>
           <ShippingToggle
             label="⚡ Envio Flex"
             desc="Entrega no mesmo dia — Mercado Envios Flex."
@@ -1069,11 +1188,12 @@ function Step3PriceLogistics({ data, setData }: { data: WizardData; setData: (d:
 ══════════════════════════════════════════════════════════════════════════ */
 
 function Step4MediaDescription({
-  data, setData, imageFiles,
+  data, setData, imageFiles, isPlanAtLeast,
 }: {
-  data:       WizardData
-  setData:    (d: WizardData) => void
-  imageFiles: React.MutableRefObject<File[]>
+  data:           WizardData
+  setData:        (d: WizardData) => void
+  imageFiles:     React.MutableRefObject<File[]>
+  isPlanAtLeast:  (p: string) => boolean
 }) {
   const [dragOver, setDragOver]         = useState(false)
   const fileInputRef                    = useRef<HTMLInputElement>(null)
@@ -1222,19 +1342,29 @@ function Step4MediaDescription({
         <div className="flex items-center justify-between mb-1.5">
           <Label>Descrição do Produto</Label>
           <button
-            onClick={generateDescription}
-            disabled={descGenerating}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 transition-all disabled:opacity-60"
+            onClick={isPlanAtLeast('almirante') ? generateDescription : undefined}
+            disabled={descGenerating || !isPlanAtLeast('almirante')}
+            title={!isPlanAtLeast('almirante') ? 'Disponível no plano Almirante ou superior' : ''}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isPlanAtLeast('almirante')
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 disabled:opacity-60'
+                : 'bg-dark-700 border border-white/[0.08] text-slate-500 cursor-not-allowed'
+            }`}
           >
             {descGenerating
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Consultando IA...</>
-              : <><Sparkles className="w-3.5 h-3.5" /> Gerar com IA</>}
+              : <><Sparkles className="w-3.5 h-3.5" /> Gerar com IA{!isPlanAtLeast('almirante') && <span className="ml-1 text-[9px] opacity-70">🔒 Almirante+</span>}</>}
           </button>
         </div>
         {descAiBadge && (
-          <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20 w-fit">
-            <Sparkles className="w-3 h-3 text-violet-400" />
-            <span className="text-[10px] text-violet-400">Gerado por IA — revise antes de publicar</span>
+          <div className="mb-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="text-xs font-semibold text-amber-300">Conteúdo gerado por IA</span>
+            </div>
+            <p className="text-[10px] text-amber-400/80 leading-relaxed">
+              Sempre revise antes de publicar. As informações geradas podem não ser precisas. Verifique se correspondem ao seu produto real antes de publicar no ML.
+            </p>
           </div>
         )}
         <div className="flex flex-wrap gap-2 mb-2">
@@ -1311,12 +1441,12 @@ function Step5ShippingLocation({ data, setData }: { data: WizardData; setData: (
           <div>
             <p className="text-sm text-amber-300 font-semibold">Nenhum local de expedição encontrado</p>
             <p className="text-xs text-slate-500 mt-1">
-              Configure seus locais de expedição diretamente no Mercado Livre.
+              Configure seu endereço de expedição nas configurações do Mercado Livre.
             </p>
           </div>
         </div>
         <a
-          href="https://www.mercadolivre.com.br/configuracoes/envios"
+          href="https://www.mercadolivre.com.br/perfil/configuracoes"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.1] text-xs text-blue-400 hover:border-blue-400/30 hover:bg-blue-400/[0.04] transition-all w-fit"
@@ -1331,24 +1461,29 @@ function Step5ShippingLocation({ data, setData }: { data: WizardData; setData: (
 
   if (locations.length === 1) {
     const loc = locations[0]
+    const addressDetail = [loc.address_line, loc.city, loc.state].filter(Boolean).join(', ')
     return (
       <div className="space-y-4">
-        <p className="text-xs text-slate-500">Local de expedição identificado na sua conta:</p>
-        <div className="flex items-center gap-3 px-4 py-3.5 bg-green-500/[0.06] border border-green-500/20 rounded-xl">
-          <Check className="w-4 h-4 text-green-400 shrink-0" />
+        <p className="text-xs text-slate-500">Local de expedição padrão da sua conta:</p>
+        <div className="flex items-start gap-3 px-4 py-3.5 bg-green-500/[0.06] border border-green-500/20 rounded-xl">
+          <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-white">{loc.name}</p>
-            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{loc.id}</p>
+            {addressDetail && <p className="text-[11px] text-slate-400 mt-0.5">{addressDetail}</p>}
+            {loc.zip_code && <p className="text-[10px] text-slate-600 mt-0.5">CEP: {loc.zip_code}</p>}
           </div>
         </div>
+        <div className="px-3 py-2 bg-dark-700/50 rounded-xl border border-white/[0.05]">
+          <p className="text-[11px] text-slate-500">Este é seu endereço cadastrado no ML. Para alterar, acesse suas configurações no Mercado Livre.</p>
+        </div>
         <a
-          href="https://www.mercadolivre.com.br/configuracoes/envios"
+          href="https://www.mercadolivre.com.br/perfil/configuracoes"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
-          Gerenciar no Mercado Livre
+          Configurar no Mercado Livre
         </a>
       </div>
     )
@@ -1357,27 +1492,30 @@ function Step5ShippingLocation({ data, setData }: { data: WizardData; setData: (
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-500">Selecione de qual endereço este produto será expedido:</p>
-      {locations.map(loc => (
-        <button
-          key={loc.id}
-          onClick={() => setData({ ...data, shipping_location_id: loc.id })}
-          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all ${
-            data.shipping_location_id === loc.id
-              ? 'border-purple-500/40 bg-purple-500/[0.08]'
-              : 'border-white/[0.06] hover:border-white/[0.15]'
-          }`}
-        >
-          <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center ${
-            data.shipping_location_id === loc.id ? 'border-purple-500 bg-purple-500' : 'border-slate-600'
-          }`}>
-            {data.shipping_location_id === loc.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-white">{loc.name}</p>
-            <p className="text-[10px] text-slate-500 font-mono">{loc.id}</p>
-          </div>
-        </button>
-      ))}
+      {locations.map(loc => {
+        const addressDetail = [loc.address_line, loc.city, loc.state].filter(Boolean).join(', ')
+        return (
+          <button
+            key={loc.id}
+            onClick={() => setData({ ...data, shipping_location_id: loc.id })}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all ${
+              data.shipping_location_id === loc.id
+                ? 'border-purple-500/40 bg-purple-500/[0.08]'
+                : 'border-white/[0.06] hover:border-white/[0.15]'
+            }`}
+          >
+            <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center ${
+              data.shipping_location_id === loc.id ? 'border-purple-500 bg-purple-500' : 'border-slate-600'
+            }`}>
+              {data.shipping_location_id === loc.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">{loc.name}</p>
+              {addressDetail && <p className="text-[11px] text-slate-400 mt-0.5">{addressDetail}</p>}
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -1583,6 +1721,7 @@ function Step6Review({ data, onBack }: { data: WizardData; onBack: () => void })
 
 export default function NovoAnuncioPage() {
   const router  = useRouter()
+  const { isPlanAtLeast } = usePlan()
   const [step, setStep]     = useState(0)
   const [data, setData]     = useState<WizardData>(INITIAL)
   const [publishing, setPublishing] = useState(false)
@@ -1598,9 +1737,11 @@ export default function NovoAnuncioPage() {
       case 0:
         return data.title.trim().length >= 10 && !!data.category_id
       case 1: {
-        const condOk = !!data.condition
-        const eanOk  = data.no_ean || data.ean.length >= 8
-        return condOk && eanOk
+        const condOk    = !!data.condition
+        const eanOk     = data.no_ean || data.ean.length >= 8
+        const gradingOk = data.condition !== 'not_specified' || !!data.grading
+        const warrantyOk = data.condition !== 'not_specified' || data.warranty_time >= 90
+        return condOk && eanOk && gradingOk && warrantyOk
       }
       case 2: {
         const planValid = (data.plans.classico.enabled && data.plans.classico.price > 0 && data.plans.classico.quantity > 0)
@@ -1695,9 +1836,24 @@ export default function NovoAnuncioPage() {
           package_length:      data.package_length || undefined,
           package_width:       data.package_width  || undefined,
           package_height:      data.package_height || undefined,
-          attributes:          Object.entries(data.attributes)
-            .filter(([, v]) => v && v !== 'N/A')
-            .map(([id, value]) => ({ id, value_name: value })),
+          attributes: (() => {
+            const attrs: { id: string; value_name: string }[] = Object.entries(data.attributes)
+              .filter(([, v]) => v && v !== 'N/A')
+              .map(([id, value]) => ({ id, value_name: value }))
+            if (data.condition === 'not_specified') {
+              attrs.push({ id: 'ITEM_CONDITION', value_name: 'Recondicionado' })
+              if (data.grading) {
+                const gradingLabel = data.grading === 'excellent' ? 'Excelente'
+                                   : data.grading === 'good' ? 'Bom' : 'Aceitável'
+                attrs.push({ id: 'GRADING', value_name: gradingLabel })
+              }
+            }
+            return attrs
+          })(),
+          sale_terms: data.condition === 'not_specified' ? [
+            { id: 'WARRANTY_TYPE', value_name: 'Garantia do vendedor' },
+            { id: 'WARRANTY_TIME', value_name: `${data.warranty_time} dias` },
+          ] : undefined,
         }),
       })
 
@@ -1791,10 +1947,10 @@ export default function NovoAnuncioPage() {
             </p>
           </div>
           <div className="p-5">
-            {step === 0 && <Step1TitleCategory     data={data} setData={setData} />}
+            {step === 0 && <Step1TitleCategory     data={data} setData={setData} isPlanAtLeast={isPlanAtLeast} />}
             {step === 1 && <Step2Basic             data={data} setData={setData} />}
             {step === 2 && <Step3PriceLogistics    data={data} setData={setData} />}
-            {step === 3 && <Step4MediaDescription  data={data} setData={setData} imageFiles={imageFiles} />}
+            {step === 3 && <Step4MediaDescription  data={data} setData={setData} imageFiles={imageFiles} isPlanAtLeast={isPlanAtLeast} />}
             {step === 4 && <Step5ShippingLocation  data={data} setData={setData} />}
             {step === 5 && <Step6Review            data={data} onBack={() => setStep(s => s - 1)} />}
           </div>
