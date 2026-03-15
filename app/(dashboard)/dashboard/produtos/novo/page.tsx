@@ -18,10 +18,12 @@ interface CategorySuggestion {
   category_id:   string
   category_name: string
   domain_name:   string
+  domain_id?:    string
   breadcrumb:    string
   aiSuggested?:  boolean
   reason?:       string
   confidence?:   number
+  is_leaf?:      boolean
 }
 
 interface ChildCategory {
@@ -382,22 +384,35 @@ function Step1TitleCategory({ data, setData, isPlanAtLeast }: { data: WizardData
         }
       }
 
-      // 2nd attempt: AI via GPT-4o-mini + ML tree navigation
+      // 2nd attempt: AI via GPT-4o-mini + domain_discovery
       const aiRes = await fetch('/api/ai/suggest-category', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ title: query }),
       })
       if (aiRes.ok) {
-        const aiJson = await aiRes.json() as { suggestions?: { category_id: string; category_name: string; breadcrumb: string; reason: string; confidence: number }[] }
+        const aiJson = await aiRes.json() as {
+          suggestions?: {
+            category_id:   string
+            category_name: string
+            domain_id?:    string
+            breadcrumb:    string
+            reason:        string
+            confidence:    number
+            is_leaf?:      boolean
+            source?:       string
+          }[]
+        }
         const aiList: CategorySuggestion[] = (aiJson.suggestions ?? []).map(s => ({
           category_id:   s.category_id,
           category_name: s.category_name,
           domain_name:   '',
+          domain_id:     s.domain_id ?? '',
           breadcrumb:    s.breadcrumb || s.category_name,
           aiSuggested:   true,
           reason:        s.reason,
           confidence:    s.confidence,
+          is_leaf:       s.is_leaf,
         }))
         setSuggestions(aiList)
         if (aiList.length > 0 && !currentData.category_id) {
@@ -596,15 +611,29 @@ function Step1TitleCategory({ data, setData, isPlanAtLeast }: { data: WizardData
                       )}
                       {s.aiSuggested && (
                         <span className="text-[9px] font-bold bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded-full shrink-0 flex items-center gap-0.5">
-                          <Sparkles className="w-2.5 h-2.5" /> Sugerido por IA
+                          <Sparkles className="w-2.5 h-2.5" /> Categoria identificada por IA
+                        </span>
+                      )}
+                      {s.aiSuggested && s.is_leaf === true && (
+                        <span className="text-[9px] font-bold bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full shrink-0">
+                          Categoria específica ✓
                         </span>
                       )}
                     </div>
+                    {/* Breadcrumb — always shown for AI suggestions */}
+                    {s.breadcrumb && s.breadcrumb !== s.category_name && (
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate" title={s.breadcrumb}>{s.breadcrumb}</p>
+                    )}
+                    {/* AI decision summary */}
                     {s.aiSuggested && s.reason && (
                       <p className="text-[10px] text-violet-400/70 mt-0.5">{s.reason}</p>
                     )}
-                    {!s.aiSuggested && s.breadcrumb && s.breadcrumb !== s.category_name && (
-                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">{s.breadcrumb}</p>
+                    {/* Generic category warning */}
+                    {s.aiSuggested && s.is_leaf === false && (
+                      <p className="text-[10px] text-amber-400/80 mt-0.5 flex items-center gap-1">
+                        <AlertCircle className="w-2.5 h-2.5 shrink-0" />
+                        Categoria genérica — considere navegar para uma mais específica
+                      </p>
                     )}
                   </div>
 
