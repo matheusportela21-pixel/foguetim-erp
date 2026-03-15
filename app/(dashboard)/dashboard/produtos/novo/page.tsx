@@ -97,12 +97,12 @@ const INITIAL: WizardData = {
 }
 
 const STEPS = [
-  { icon: Search,      label: 'Categoria'  },
-  { icon: Tag,         label: 'Básico'     },
-  { icon: DollarSign,  label: 'Preço'      },
-  { icon: FileText,    label: 'Descrição'  },
-  { icon: Truck,       label: 'Envio'      },
-  { icon: Eye,         label: 'Revisão'    },
+  { icon: Tag,         label: 'Título e Categoria' },
+  { icon: Search,      label: 'Básico'             },
+  { icon: DollarSign,  label: 'Preço'              },
+  { icon: FileText,    label: 'Descrição'           },
+  { icon: Truck,       label: 'Envio'               },
+  { icon: Eye,         label: 'Revisão'             },
 ]
 
 const ML_COMMISSION: Record<string, number> = {
@@ -315,136 +315,202 @@ function CategoryTreeModal({
   )
 }
 
-function Step1Category({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
-  const [q, setQ]                       = useState('')
-  const [suggestions, setSuggestions]   = useState<CategorySuggestion[]>([])
-  const [loading, setLoading]           = useState(false)
-  const [searched, setSearched]         = useState(false)
-  const [showTree, setShowTree]         = useState(false)
-  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
+function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+  const [suggestions, setSuggestions] = useState<CategorySuggestion[]>([])
+  const [sugLoading, setSugLoading]   = useState(false)
+  const [sugFetched, setSugFetched]   = useState(false)
+  const [showTree, setShowTree]       = useState(false)
+  const debounceRef                   = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Auto-search on input change (debounced)
-  const search = useCallback(async (query: string) => {
-    if (!query.trim()) { setSuggestions([]); setSearched(false); return }
-    setLoading(true)
-    setSearched(true)
+  const titleLen = data.title.length
+  const charCls  = titleLen === 0  ? 'text-slate-600'
+                 : titleLen < 10   ? 'text-amber-400'
+                 : titleLen > 55   ? 'text-amber-400'
+                 : 'text-green-400'
+
+  const fetchSuggestions = useCallback(async (query: string, currentData: WizardData) => {
+    if (query.trim().length < 10) {
+      setSuggestions([])
+      setSugFetched(false)
+      return
+    }
+    setSugLoading(true)
+    setSugFetched(true)
     try {
       const res = await fetch(`/api/mercadolivre/categories/suggest?q=${encodeURIComponent(query)}`)
       if (res.ok) {
         const json: unknown = await res.json()
-        setSuggestions(Array.isArray(json) ? (json as CategorySuggestion[]) : [])
+        const list = Array.isArray(json) ? (json as CategorySuggestion[]) : []
+        setSuggestions(list)
+        // Auto-select first suggestion if no category selected yet
+        if (list.length > 0 && !currentData.category_id) {
+          const first = list[0]
+          setData({
+            ...currentData,
+            category_id:   first.category_id,
+            category_name: first.breadcrumb || first.category_name,
+          })
+        }
       }
     } catch {
       setSuggestions([])
     } finally {
-      setLoading(false)
+      setSugLoading(false)
     }
-  }, [])
+  }, [setData])
 
-  function handleInput(value: string) {
-    setQ(value)
+  function handleTitleChange(value: string) {
+    const next: WizardData = { ...data, title: value, category_id: '', category_name: '' }
+    setData(next)
+    setSuggestions([])
+    setSugFetched(false)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => search(value), 500)
+    if (value.trim().length >= 10) {
+      debounceRef.current = setTimeout(() => fetchSuggestions(value, next), 600)
+    }
   }
 
-  function select(id: string, name: string) {
+  function selectCategory(id: string, name: string) {
     setData({ ...data, category_id: id, category_name: name })
-    setSuggestions([])
-    setSearched(false)
+  }
+
+  function handleTreeSelect(id: string, name: string) {
+    setData({ ...data, category_id: id, category_name: name })
+    setShowTree(false)
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* ── Título ── */}
       <div>
-        <Label required>Categoria do Produto</Label>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-            <input
-              type="text" value={q}
-              onChange={e => handleInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && search(q)}
-              placeholder="Ex: Camiseta masculina, iPhone 14, Tênis Nike..."
-              className={inputCls + ' pl-10'}
-            />
-            {loading && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 animate-spin" />
-            )}
-          </div>
-          <button
-            onClick={() => setShowTree(true)}
-            className="px-3 py-2 rounded-xl bg-dark-700 border border-white/[0.08] text-slate-400 text-xs font-bold hover:text-white hover:border-white/20 transition-all flex items-center gap-1.5 shrink-0"
-            title="Navegar por árvore de categorias"
-          >
-            <Grid3X3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Navegar</span>
-          </button>
+        <Label required>Título do Anúncio</Label>
+        <div className="relative">
+          <input
+            type="text"
+            value={data.title}
+            maxLength={60}
+            onChange={e => handleTitleChange(e.target.value)}
+            placeholder="Ex: Gel Massageador Sebo de Carneiro Aroeira 220g Corpo"
+            className={inputCls}
+            autoFocus
+          />
         </div>
-        <Hint>Digite o nome do produto e selecione a categoria. Ou clique em &ldquo;Navegar&rdquo; para explorar a árvore de categorias.</Hint>
+        <div className="flex items-center justify-between mt-1">
+          <Hint>Produto + Marca + Modelo + Especificações. Mínimo 10 caracteres.</Hint>
+          <span className={`text-[10px] font-bold tabular-nums ${charCls}`}>{titleLen}/60</span>
+        </div>
+        {titleLen > 0 && titleLen < 10 && (
+          <p className="text-[10px] text-amber-400 mt-1 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3 shrink-0" />
+            Digite mais {10 - titleLen} caractere(s) para buscar categorias automaticamente.
+          </p>
+        )}
       </div>
 
-      {/* Selected category */}
-      {data.category_id && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
-          <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
-          <span className="text-xs text-green-300 font-semibold">Categoria selecionada:</span>
-          <span className="text-xs text-white flex-1 min-w-0 truncate">{data.category_name}</span>
-          <span className="text-[10px] text-slate-500 font-mono shrink-0">({data.category_id})</span>
-          <button
-            onClick={() => setData({ ...data, category_id: '', category_name: '' })}
-            className="ml-1 p-0.5 text-slate-500 hover:text-red-400 transition-colors shrink-0"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* Suggestions */}
-      {searched && suggestions.length > 0 && (
-        <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
-          <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest mb-2">
-            {suggestions.length} sugestão(ões) — clique para selecionar
-          </p>
-          {suggestions.map(s => (
-            <button
-              key={s.category_id}
-              onClick={() => select(s.category_id, s.breadcrumb || s.category_name)}
-              className={`w-full flex flex-col px-3 py-2.5 rounded-xl border transition-all text-left
-                ${data.category_id === s.category_id
-                  ? 'border-purple-500/40 bg-purple-500/10'
-                  : 'border-white/[0.06] hover:border-white/20 hover:bg-white/[0.03]'}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-white font-medium">{s.category_name}</span>
-                <span className="text-[10px] text-slate-500 font-mono shrink-0">{s.category_id}</span>
-              </div>
-              {s.breadcrumb && s.breadcrumb !== s.category_name && (
-                <span className="text-[10px] text-slate-500 mt-0.5 truncate">{s.breadcrumb}</span>
-              )}
-              {s.domain_name && (
-                <span className="text-[9px] text-slate-600 mt-0.5">{s.domain_name}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {searched && suggestions.length === 0 && !loading && (
-        <div className="text-center py-4">
-          <p className="text-sm text-slate-500">Nenhuma sugestão encontrada.</p>
+      {/* ── Categorias sugeridas ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label required>Categoria</Label>
           <button
             onClick={() => setShowTree(true)}
-            className="mt-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-300 transition-colors"
           >
-            Tente navegar pela árvore de categorias →
+            <Grid3X3 className="w-3 h-3" />
+            Navegar por todas
           </button>
         </div>
-      )}
+
+        {/* Status / spinner */}
+        {titleLen < 10 && !data.category_id && (
+          <div className="flex items-center gap-2 px-3 py-3 rounded-xl bg-dark-700 border border-white/[0.06] text-slate-600">
+            <Search className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-xs">Aguardando título para sugerir categorias...</span>
+          </div>
+        )}
+
+        {sugLoading && (
+          <div className="flex items-center gap-2 px-3 py-3 rounded-xl bg-dark-700 border border-white/[0.06] text-slate-500">
+            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+            <span className="text-xs">Buscando categorias...</span>
+          </div>
+        )}
+
+        {/* Suggestion radio list */}
+        {!sugLoading && sugFetched && suggestions.length > 0 && (
+          <div className="space-y-1.5">
+            {suggestions.map((s, idx) => {
+              const isSelected = data.category_id === s.category_id
+              return (
+                <button
+                  key={s.category_id}
+                  onClick={() => selectCategory(s.category_id, s.breadcrumb || s.category_name)}
+                  className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
+                    isSelected
+                      ? 'border-purple-500/40 bg-purple-500/[0.08]'
+                      : 'border-white/[0.06] hover:border-white/[0.15] hover:bg-white/[0.03]'
+                  }`}
+                >
+                  {/* Radio dot */}
+                  <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                    isSelected ? 'border-purple-500 bg-purple-500' : 'border-slate-600'
+                  }`}>
+                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-white font-medium">{s.category_name}</span>
+                      {idx === 0 && (
+                        <span className="text-[9px] font-bold bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full shrink-0">
+                          Mais relevante
+                        </span>
+                      )}
+                    </div>
+                    {s.breadcrumb && s.breadcrumb !== s.category_name && (
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">{s.breadcrumb}</p>
+                    )}
+                  </div>
+
+                  <span className="text-[10px] text-slate-600 font-mono shrink-0 mt-0.5">{s.category_id}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {!sugLoading && sugFetched && suggestions.length === 0 && (
+          <div className="text-center py-4">
+            <p className="text-xs text-slate-500 mb-2">Nenhuma sugestão encontrada para este título.</p>
+            <button
+              onClick={() => setShowTree(true)}
+              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Navegar pela árvore de categorias →
+            </button>
+          </div>
+        )}
+
+        {/* Selected category pill (when selected via tree or after suggestions) */}
+        {data.category_id && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-xl mt-2">
+            <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
+            <span className="text-xs text-green-300 font-semibold shrink-0">Selecionada:</span>
+            <span className="text-xs text-white flex-1 min-w-0 truncate">{data.category_name}</span>
+            <span className="text-[10px] text-slate-500 font-mono shrink-0">({data.category_id})</span>
+            <button
+              onClick={() => setData({ ...data, category_id: '', category_name: '' })}
+              className="p-0.5 text-slate-500 hover:text-red-400 transition-colors shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Tree modal */}
       {showTree && (
         <CategoryTreeModal
-          onSelect={select}
+          onSelect={handleTreeSelect}
           onClose={() => setShowTree(false)}
         />
       )}
@@ -856,14 +922,21 @@ export default function NovoAnuncioPage() {
 
   function canAdvance(): boolean {
     switch (step) {
-      case 0: return !!data.category_id
-      case 1: return data.title.trim().length >= 3
+      case 0: return data.title.trim().length >= 10 && !!data.category_id
+      case 1: return data.title.trim().length >= 10
       case 2: return data.plans.classico.enabled || data.plans.premium.enabled
       case 3: return true
       case 4: return true
       case 5: return true
       default: return false
     }
+  }
+
+  function navError(): string | null {
+    if (step !== 0) return null
+    if (data.title.trim().length < 10) return 'Digite um título com pelo menos 10 caracteres'
+    if (!data.category_id)             return 'Selecione uma categoria para continuar'
+    return null
   }
 
   async function publish() {
@@ -990,7 +1063,7 @@ export default function NovoAnuncioPage() {
             </p>
           </div>
           <div className="p-5">
-            {step === 0 && <Step1Category data={data} setData={setData} />}
+            {step === 0 && <Step1TitleCategory data={data} setData={setData} />}
             {step === 1 && <Step2Basic    data={data} setData={setData} />}
             {step === 2 && <Step3Price    data={data} setData={setData} />}
             {step === 3 && <Step4Description data={data} setData={setData} />}
@@ -1048,35 +1121,43 @@ export default function NovoAnuncioPage() {
 
         {/* Navigation */}
         {!publishResult && (
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => step > 0 ? setStep(step - 1) : router.push('/dashboard/produtos')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] transition-all"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              {step === 0 ? 'Cancelar' : 'Anterior'}
-            </button>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => step > 0 ? setStep(step - 1) : router.push('/dashboard/produtos')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] transition-all"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                {step === 0 ? 'Cancelar' : 'Anterior'}
+              </button>
 
-            {isLast ? (
-              <button
-                onClick={publish}
-                disabled={publishing}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 transition-all"
-              >
-                {publishing ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Publicando...</>
-                ) : (
-                  <><Check className="w-3.5 h-3.5" /> Publicar no Mercado Livre</>
-                )}
-              </button>
-            ) : (
-              <button
-                onClick={() => canAdvance() && setStep(step + 1)}
-                disabled={!canAdvance()}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                Próximo <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              {isLast ? (
+                <button
+                  onClick={publish}
+                  disabled={publishing}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 transition-all"
+                >
+                  {publishing ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Publicando...</>
+                  ) : (
+                    <><Check className="w-3.5 h-3.5" /> Publicar no Mercado Livre</>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={() => canAdvance() && setStep(step + 1)}
+                  disabled={!canAdvance()}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Próximo <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {navError() && (
+              <p className="text-[11px] text-amber-400 text-right flex items-center justify-end gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                {navError()}
+              </p>
             )}
           </div>
         )}
