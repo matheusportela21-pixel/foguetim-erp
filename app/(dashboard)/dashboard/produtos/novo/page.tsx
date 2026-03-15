@@ -6,7 +6,7 @@ import {
   ArrowLeft, ArrowRight, Check, Search, Loader2, AlertCircle,
   Tag, DollarSign, FileText, ImageIcon, Truck, Eye,
   X, ChevronRight, Info, ExternalLink, ChevronLeft, Home,
-  Grid3X3,
+  Grid3X3, Package, MapPin, Upload, Star,
 } from 'lucide-react'
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -36,6 +36,11 @@ interface CategoryAttribute {
   value_max_length?: number
 }
 
+interface ShippingLocation {
+  id:   string
+  name: string
+}
+
 interface PlanConfig {
   enabled:         boolean
   listing_type_id: string
@@ -44,33 +49,37 @@ interface PlanConfig {
 }
 
 interface WizardData {
-  // Step 1 — Categoria
+  // Step 1 — Título e Categoria
   category_id:   string
   category_name: string
+  title:         string
 
-  // Step 2 — Informações básicas
-  title:               string
+  // Step 2 — Informações Básicas
   condition:           string
   seller_custom_field: string
   ean:                 string
+  no_ean:              boolean
+  attributes:          Record<string, string>
 
-  // Step 3 — Preço & Estoque por plano
+  // Step 3 — Preço e Logística
   plans: {
     classico: PlanConfig
     premium:  PlanConfig
   }
+  package_weight: number   // grams
+  package_length: number   // cm
+  package_width:  number   // cm
+  package_height: number   // cm
+  free_shipping:  boolean
+  local_pick_up:  boolean
+  flex_shipping:  boolean
 
-  // Step 4 — Descrição & Imagens
+  // Step 4 — Mídia e Descrição
   description: string
-  images:      string[]  // public URLs (after upload)
+  images:      string[]   // object URLs (blob:) or public https: URLs
 
-  // Step 5 — Envio
-  free_shipping: boolean
-  local_pick_up: boolean
-  flex_shipping: boolean
-
-  // Step 6 — Atributos
-  attributes: Record<string, string>
+  // Step 5 — Local de Expedição
+  shipping_location_id: string
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -78,31 +87,37 @@ interface WizardData {
 ══════════════════════════════════════════════════════════════════════════ */
 
 const INITIAL: WizardData = {
-  category_id:         '',
-  category_name:       '',
-  title:               '',
-  condition:           'new',
-  seller_custom_field: '',
-  ean:                 '',
+  category_id:          '',
+  category_name:        '',
+  title:                '',
+  condition:            'new',
+  seller_custom_field:  '',
+  ean:                  '',
+  no_ean:               false,
+  attributes:           {},
   plans: {
     classico: { enabled: true,  listing_type_id: 'gold_special', price: 0, quantity: 1 },
     premium:  { enabled: false, listing_type_id: 'gold_pro',     price: 0, quantity: 1 },
   },
-  description:  '',
-  images:       [],
-  free_shipping: false,
-  local_pick_up: false,
-  flex_shipping: false,
-  attributes:   {},
+  package_weight: 0,
+  package_length: 0,
+  package_width:  0,
+  package_height: 0,
+  free_shipping:  false,
+  local_pick_up:  false,
+  flex_shipping:  false,
+  description:    '',
+  images:         [],
+  shipping_location_id: '',
 }
 
 const STEPS = [
-  { icon: Tag,         label: 'Título e Categoria' },
-  { icon: Search,      label: 'Básico'             },
-  { icon: DollarSign,  label: 'Preço'              },
-  { icon: FileText,    label: 'Descrição'           },
-  { icon: Truck,       label: 'Envio'               },
-  { icon: Eye,         label: 'Revisão'             },
+  { icon: Tag,       label: 'Título e Categoria'    },
+  { icon: Search,    label: 'Informações Básicas'   },
+  { icon: DollarSign,label: 'Preço e Logística'     },
+  { icon: ImageIcon, label: 'Mídia e Descrição'     },
+  { icon: MapPin,    label: 'Local de Expedição'    },
+  { icon: Eye,       label: 'Revisão'               },
 ]
 
 const ML_COMMISSION: Record<string, number> = {
@@ -166,7 +181,6 @@ function CategoryTreeModal({
       : '/api/mercadolivre/categories/root'
 
     if (!currentId) {
-      // root level
       fetch(url)
         .then(r => r.json() as Promise<ChildCategory[]>)
         .then(list => {
@@ -519,69 +533,213 @@ function Step1TitleCategory({ data, setData }: { data: WizardData; setData: (d: 
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   STEP 2 — BASIC INFO
+   STEP 2 — INFORMAÇÕES BÁSICAS
 ══════════════════════════════════════════════════════════════════════════ */
 
+const CONDITIONS = [
+  { value: 'new',           label: 'Novo',           desc: 'Produto sem uso, na embalagem original.' },
+  { value: 'used',          label: 'Usado',          desc: 'Produto já utilizado pelo vendedor.'      },
+  { value: 'not_specified', label: 'Recondicionado', desc: 'Produto restaurado ou reformado.'         },
+]
+
 function Step2Basic({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+  const [attrs, setAttrs]         = useState<CategoryAttribute[]>([])
+  const [attrsLoading, setAttrsLoading] = useState(false)
+  const [showOptional, setShowOptional] = useState(false)
+
+  useEffect(() => {
+    if (!data.category_id) { setAttrs([]); return }
+    setAttrsLoading(true)
+    fetch(`/api/mercadolivre/categories/${data.category_id}/attributes`)
+      .then(r => r.json() as Promise<CategoryAttribute[]>)
+      .then(list => setAttrs(Array.isArray(list) ? list : []))
+      .catch(() => setAttrs([]))
+      .finally(() => setAttrsLoading(false))
+  }, [data.category_id])
+
+  const requiredAttrs = attrs.filter(a => a.required)
+  const optionalAttrs = attrs.filter(a => !a.required)
+
+  function setAttr(id: string, value: string) {
+    setData({ ...data, attributes: { ...data.attributes, [id]: value } })
+  }
+
+  function renderAttrField(attr: CategoryAttribute, isRequired: boolean) {
+    const val = data.attributes[attr.id] ?? ''
+    if (attr.values && attr.values.length > 0) {
+      return (
+        <div key={attr.id}>
+          <Label required={isRequired}>{attr.name}</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {!isRequired && (
+              <button
+                onClick={() => setAttr(attr.id, 'N/A')}
+                className={`px-2.5 py-1 rounded-lg text-xs border transition-all ${val === 'N/A' ? 'border-slate-500 bg-slate-700 text-slate-300' : 'border-white/[0.06] text-slate-600 hover:border-white/[0.15]'}`}
+              >
+                N/A
+              </button>
+            )}
+            {attr.values.map(v => (
+              <button
+                key={v.id}
+                onClick={() => setAttr(attr.id, v.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs border transition-all ${val === v.id ? 'border-purple-500/40 bg-purple-500/[0.12] text-purple-300' : 'border-white/[0.06] text-slate-400 hover:border-white/[0.2] hover:text-white'}`}
+              >
+                {v.name}
+              </button>
+            ))}
+          </div>
+          {attr.hint && <Hint>{attr.hint}</Hint>}
+        </div>
+      )
+    }
+    return (
+      <div key={attr.id}>
+        <Label required={isRequired}>{attr.name}</Label>
+        <div className="flex gap-2">
+          {!isRequired && (
+            <button
+              onClick={() => setAttr(attr.id, val === 'N/A' ? '' : 'N/A')}
+              className={`px-2.5 py-2 rounded-xl text-xs border shrink-0 transition-all ${val === 'N/A' ? 'border-slate-500 bg-slate-700 text-slate-300' : 'border-white/[0.06] text-slate-600 hover:border-white/[0.15]'}`}
+            >
+              N/A
+            </button>
+          )}
+          <input
+            type={attr.type === 'number' ? 'number' : 'text'}
+            value={val === 'N/A' ? '' : val}
+            maxLength={attr.value_max_length}
+            disabled={val === 'N/A'}
+            onChange={e => setAttr(attr.id, e.target.value)}
+            placeholder={attr.hint ?? attr.name}
+            className={inputCls + (val === 'N/A' ? ' opacity-40' : '')}
+          />
+        </div>
+        {attr.hint && <Hint>{attr.hint}</Hint>}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
+      {/* Condição */}
       <div>
-        <Label required>Título do Anúncio</Label>
-        <input
-          type="text" value={data.title} maxLength={60}
-          onChange={e => setData({ ...data, title: e.target.value })}
-          placeholder="Ex: Camiseta Básica Premium 100% Algodão Masculina"
-          className={inputCls}
-        />
-        <div className="flex justify-between mt-1">
-          <Hint>Máximo 60 caracteres. Use palavras-chave relevantes.</Hint>
-          <span className="text-[10px] text-slate-600">{data.title.length}/60</span>
+        <Label required>Condição</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {CONDITIONS.map(c => (
+            <button
+              key={c.value}
+              onClick={() => setData({ ...data, condition: c.value })}
+              className={`flex flex-col gap-1 px-3 py-2.5 rounded-xl border text-left transition-all ${data.condition === c.value ? 'border-purple-500/40 bg-purple-500/[0.08]' : 'border-white/[0.06] hover:border-white/[0.15]'}`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full border-2 shrink-0 flex items-center justify-center ${data.condition === c.value ? 'border-purple-500 bg-purple-500' : 'border-slate-600'}`}>
+                  {data.condition === c.value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+                <span className="text-xs font-semibold text-white">{c.label}</span>
+              </div>
+              <span className="text-[10px] text-slate-500 leading-tight">{c.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label required>Condição</Label>
-          <select
-            value={data.condition}
-            onChange={e => setData({ ...data, condition: e.target.value })}
-            className={selectCls}
-          >
-            <option value="new">Novo</option>
-            <option value="used">Usado</option>
-            <option value="not_specified">Não especificado</option>
-          </select>
-        </div>
+      {/* SKU */}
+      <div>
+        <Label>SKU Interno</Label>
+        <input
+          type="text"
+          value={data.seller_custom_field}
+          onChange={e => setData({ ...data, seller_custom_field: e.target.value })}
+          placeholder="Código interno do produto"
+          className={inputCls}
+        />
+        <Hint>Opcional — apenas para seu controle interno.</Hint>
+      </div>
 
-        <div>
-          <Label>SKU Interno</Label>
+      {/* EAN */}
+      <div>
+        <Label required={!data.no_ean}>EAN / GTIN (código de barras)</Label>
+        <div className="flex items-center gap-2 mb-2">
           <input
-            type="text" value={data.seller_custom_field}
-            onChange={e => setData({ ...data, seller_custom_field: e.target.value })}
-            placeholder="Código interno do produto"
-            className={inputCls}
+            type="checkbox"
+            id="no_ean"
+            checked={data.no_ean}
+            onChange={e => setData({ ...data, no_ean: e.target.checked, ean: '' })}
+            className="w-4 h-4 rounded border-white/[0.2] bg-dark-700 accent-purple-500"
           />
-          <Hint>Opcional — apenas para seu controle interno.</Hint>
+          <label htmlFor="no_ean" className="text-xs text-slate-400 cursor-pointer">Não tenho código de barras</label>
         </div>
+        {!data.no_ean && (
+          <>
+            <input
+              type="text"
+              value={data.ean}
+              onChange={e => setData({ ...data, ean: e.target.value.replace(/\D/g, '') })}
+              placeholder="7891000000000"
+              maxLength={14}
+              className={inputCls}
+            />
+            <Hint>8, 12, 13 ou 14 dígitos. Melhora significativamente a indexação do anúncio.</Hint>
+            {data.ean.length > 0 && data.ean.length < 8 && (
+              <p className="text-[10px] text-amber-400 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                EAN deve ter pelo menos 8 dígitos.
+              </p>
+            )}
+          </>
+        )}
       </div>
 
-      <div>
-        <Label>EAN / GTIN (código de barras)</Label>
-        <input
-          type="text" value={data.ean}
-          onChange={e => setData({ ...data, ean: e.target.value.replace(/\D/g, '') })}
-          placeholder="7891000000000"
-          maxLength={14}
-          className={inputCls}
-        />
-        <Hint>Opcional — 8, 12, 13 ou 14 dígitos. Melhora a indexação do anúncio.</Hint>
-      </div>
+      {/* Dynamic attributes */}
+      {data.category_id && (
+        <div className="space-y-4">
+          {attrsLoading ? (
+            <div className="flex items-center gap-2 text-slate-500 py-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+              <span className="text-xs">Carregando atributos da categoria...</span>
+            </div>
+          ) : (
+            <>
+              {/* Required attrs */}
+              {requiredAttrs.length > 0 && (
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atributos Obrigatórios</p>
+                  {requiredAttrs.map(a => renderAttrField(a, true))}
+                </div>
+              )}
+
+              {/* Optional attrs toggle */}
+              {optionalAttrs.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowOptional(v => !v)}
+                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showOptional ? 'rotate-90' : ''}`} />
+                    {showOptional ? 'Ocultar' : 'Ver'} atributos opcionais ({optionalAttrs.length})
+                  </button>
+                  {showOptional && (
+                    <div className="space-y-4 mt-4 pl-4 border-l border-white/[0.06]">
+                      {optionalAttrs.map(a => renderAttrField(a, false))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {requiredAttrs.length === 0 && optionalAttrs.length === 0 && (
+                <p className="text-xs text-slate-600">Nenhum atributo adicional para esta categoria.</p>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   STEP 3 — PRICE & STOCK
+   STEP 3 — PREÇO E LOGÍSTICA
 ══════════════════════════════════════════════════════════════════════════ */
 
 function PlanPriceCard({
@@ -594,9 +752,11 @@ function PlanPriceCard({
 }) {
   const net      = calcNet(config.price, config.listing_type_id)
   const commRate = (ML_COMMISSION[config.listing_type_id] ?? 0) * 100
+  // type is used for future extensibility
+  void type
 
   return (
-    <div className={`rounded-2xl border p-5 space-y-4 transition-all ${config.enabled ? 'border-purple-500/30 bg-purple-500/[0.04]' : 'border-white/[0.06] bg-white/[0.01] opacity-60'}`}>
+    <div className={`rounded-2xl border p-4 space-y-4 transition-all ${config.enabled ? 'border-purple-500/30 bg-purple-500/[0.04]' : 'border-white/[0.06] bg-white/[0.01] opacity-60'}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-bold text-white">{label}</p>
@@ -652,177 +812,142 @@ function PlanPriceCard({
   )
 }
 
-function Step3Price({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+function DimInput({ label, value, unit, onChange }: { label: string; value: number; unit: string; onChange: (v: number) => void }) {
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-slate-500">
-        Ative os planos desejados e configure preço e estoque para cada um. Você pode ter anúncio Clássico e Premium para o mesmo produto.
-      </p>
-      <PlanPriceCard
-        label="Plano Clássico"
-        type="classico"
-        config={data.plans.classico}
-        onChange={c => setData({ ...data, plans: { ...data.plans, classico: c } })}
-      />
-      <PlanPriceCard
-        label="Plano Premium"
-        type="premium"
-        config={data.plans.premium}
-        onChange={c => setData({ ...data, plans: { ...data.plans, premium: c } })}
-      />
-      {!data.plans.classico.enabled && !data.plans.premium.enabled && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <p className="text-xs text-amber-300">Ative ao menos um plano para continuar.</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   STEP 4 — DESCRIPTION & IMAGES
-══════════════════════════════════════════════════════════════════════════ */
-
-
-function Step4Description({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
-  function addImageUrl() {
-    setData({ ...data, images: [...data.images, ''] })
-  }
-
-  function setUrl(idx: number, url: string) {
-    const imgs = [...data.images]
-    imgs[idx] = url
-    setData({ ...data, images: imgs })
-  }
-
-  function removeImage(idx: number) {
-    setData({ ...data, images: data.images.filter((_, i) => i !== idx) })
-  }
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <Label>Descrição do Produto</Label>
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <Info className="w-3 h-3 text-blue-400 shrink-0" />
-          <span className="text-[10px] text-blue-300">Apenas texto simples. Sem HTML.</span>
-          <span className="text-[10px] text-slate-600 ml-auto">{data.description.length} chars</span>
-        </div>
-        <textarea
-          value={data.description}
-          onChange={e => setData({ ...data, description: e.target.value })}
-          rows={6}
-          placeholder="Descreva o produto detalhadamente: material, tamanho, cor, especificações técnicas..."
-          className={inputCls + ' resize-none'}
+    <div>
+      <Label>{label}</Label>
+      <div className="relative">
+        <input
+          type="number" min={0} step={unit === 'g' ? 1 : 0.1}
+          value={value || ''}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          className={inputCls + ' pr-10'}
+          placeholder="0"
         />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label>Imagens</Label>
-          {data.images.length < 12 && (
-            <button
-              onClick={addImageUrl}
-              className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              + Adicionar URL de imagem
-            </button>
-          )}
-        </div>
-        <Hint>Mínimo 500×500px, fundo branco, JPG ou PNG. Máx 12 imagens.</Hint>
-
-        {/* URL inputs for images */}
-        <div className="space-y-2 mt-2">
-          {data.images.map((url, idx) => (
-            <div key={idx} className="flex gap-2">
-              <input
-                type="url" value={url}
-                onChange={e => setUrl(idx, e.target.value)}
-                placeholder={`https://... (URL pública da imagem ${idx + 1})`}
-                className={inputCls + ' flex-1 text-xs'}
-              />
-              {url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.08] shrink-0" />
-              )}
-              <button
-                onClick={() => removeImage(idx)}
-                className="p-2 rounded-xl text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-all shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-          {data.images.length === 0 && (
-            <button
-              onClick={addImageUrl}
-              className="w-full py-6 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-white/20 text-slate-600 hover:text-slate-400 text-xs transition-all flex flex-col items-center gap-1.5"
-            >
-              <ImageIcon className="w-5 h-5" />
-              Clique para adicionar URLs de imagens
-            </button>
-          )}
-        </div>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">{unit}</span>
       </div>
     </div>
   )
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   STEP 5 — SHIPPING
-══════════════════════════════════════════════════════════════════════════ */
-
-function ShippingToggle({ label, desc, value, onChange }: {
+function ShippingToggle({ label, desc, value, color = 'green', onChange }: {
   label:    string
   desc:     string
   value:    boolean
+  color?:   string
   onChange: (v: boolean) => void
 }) {
+  const activeCls = color === 'amber'
+    ? 'border-amber-500/30 bg-amber-500/[0.04]'
+    : 'border-green-500/30 bg-green-500/[0.04]'
+  const toggleCls = color === 'amber' ? (value ? 'bg-amber-500' : '') : (value ? 'bg-green-500' : '')
+
   return (
     <div
-      className={`flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all cursor-pointer ${value ? 'border-green-500/30 bg-green-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}
+      className={`flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all cursor-pointer ${value ? activeCls : 'border-white/[0.06] bg-white/[0.02]'}`}
       onClick={() => onChange(!value)}
     >
       <div>
         <p className="text-sm font-semibold text-white">{label}</p>
         <p className="text-[10px] text-slate-500 mt-0.5">{desc}</p>
       </div>
-      <div className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${value ? 'bg-green-500' : 'bg-dark-700 border border-white/[0.1]'}`}>
+      <div className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${toggleCls || 'bg-dark-700 border border-white/[0.1]'}`}>
         <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
       </div>
     </div>
   )
 }
 
-function Step5Shipping({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+function Step3PriceLogistics({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+  const anyPlanActive = data.plans.classico.enabled || data.plans.premium.enabled
+  const anyPlanValid  = (data.plans.classico.enabled && data.plans.classico.price > 0 && data.plans.classico.quantity > 0)
+                     || (data.plans.premium.enabled  && data.plans.premium.price  > 0 && data.plans.premium.quantity  > 0)
+
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-slate-500 mb-4">Configure as opções de envio para seus anúncios.</p>
-      <ShippingToggle
-        label="Frete Grátis"
-        desc="O frete é por sua conta — aumenta conversão mas reduz margem."
-        value={data.free_shipping}
-        onChange={v => setData({ ...data, free_shipping: v })}
-      />
-      <ShippingToggle
-        label="Retirada Pessoal"
-        desc="Permite que o comprador retire o produto fisicamente."
-        value={data.local_pick_up}
-        onChange={v => setData({ ...data, local_pick_up: v })}
-      />
-      <div className={`px-4 py-3.5 rounded-xl border transition-all ${data.flex_shipping ? 'border-amber-500/30 bg-amber-500/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-        <div className="flex items-center justify-between cursor-pointer" onClick={() => setData({ ...data, flex_shipping: !data.flex_shipping })}>
-          <div>
-            <p className="text-sm font-semibold text-white">⚡ Envio Flex</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Entrega no mesmo dia — Mercado Envios Flex.</p>
+    <div className="space-y-6">
+      {/* ── Embalagem ── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Package className="w-4 h-4 text-slate-400" />
+          <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Dimensões da Embalagem</p>
+        </div>
+        <div className="px-3 py-2 bg-blue-500/[0.06] border border-blue-500/20 rounded-xl mb-3 flex items-start gap-2">
+          <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-blue-300">Peso máximo: 30 kg. Soma das dimensões: máx. 200 cm. Necessário para cálculo de frete.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <DimInput label="Peso" value={data.package_weight} unit="g"  onChange={v => setData({ ...data, package_weight: v })} />
+          <DimInput label="Comprimento" value={data.package_length} unit="cm" onChange={v => setData({ ...data, package_length: v })} />
+          <DimInput label="Largura"  value={data.package_width}  unit="cm" onChange={v => setData({ ...data, package_width:  v })} />
+          <DimInput label="Altura"   value={data.package_height} unit="cm" onChange={v => setData({ ...data, package_height: v })} />
+        </div>
+        {(data.package_weight === 0) && (
+          <p className="text-[10px] text-amber-400 mt-2 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3 shrink-0" />
+            Peso é obrigatório para calcular o frete.
+          </p>
+        )}
+      </div>
+
+      {/* ── Planos ── */}
+      <div>
+        <p className="text-xs text-slate-500 mb-3">
+          Ative os planos desejados e configure preço e estoque para cada um.
+        </p>
+        <div className="space-y-3">
+          <PlanPriceCard
+            label="Plano Clássico"
+            type="classico"
+            config={data.plans.classico}
+            onChange={c => setData({ ...data, plans: { ...data.plans, classico: c } })}
+          />
+          <PlanPriceCard
+            label="Plano Premium"
+            type="premium"
+            config={data.plans.premium}
+            onChange={c => setData({ ...data, plans: { ...data.plans, premium: c } })}
+          />
+        </div>
+        {!anyPlanActive && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mt-2">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-300">Ative ao menos um plano para continuar.</p>
           </div>
-          <div className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${data.flex_shipping ? 'bg-amber-500' : 'bg-dark-700 border border-white/[0.1]'}`}>
-            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${data.flex_shipping ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        )}
+        {anyPlanActive && !anyPlanValid && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mt-2">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-300">Defina preço e estoque (mínimo 1) para o plano ativo.</p>
           </div>
+        )}
+      </div>
+
+      {/* ── Frete / envio ── */}
+      <div>
+        <p className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-3">Opções de Envio</p>
+        <div className="space-y-2">
+          <ShippingToggle
+            label="Frete Grátis"
+            desc="O frete é por sua conta — aumenta conversão mas reduz margem."
+            value={data.free_shipping}
+            onChange={v => setData({ ...data, free_shipping: v })}
+          />
+          <ShippingToggle
+            label="⚡ Envio Flex"
+            desc="Entrega no mesmo dia — Mercado Envios Flex."
+            value={data.flex_shipping}
+            color="amber"
+            onChange={v => setData({ ...data, flex_shipping: v })}
+          />
+          <ShippingToggle
+            label="Retirada Pessoal"
+            desc="Permite que o comprador retire o produto fisicamente."
+            value={data.local_pick_up}
+            onChange={v => setData({ ...data, local_pick_up: v })}
+          />
         </div>
         {data.flex_shipping && (
-          <div className="mt-3 px-3 py-2 bg-amber-500/[0.08] border border-amber-500/20 rounded-lg text-[11px] text-amber-300">
+          <div className="mt-2 px-3 py-2 bg-amber-500/[0.08] border border-amber-500/20 rounded-lg text-[11px] text-amber-300">
             ⚠️ O Flex exige que você prepare e envie o pedido no mesmo dia de compra.
           </div>
         )}
@@ -832,8 +957,343 @@ function Step5Shipping({ data, setData }: { data: WizardData; setData: (d: Wizar
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   STEP 6 — REVIEW & PUBLISH
+   STEP 4 — MÍDIA E DESCRIÇÃO
 ══════════════════════════════════════════════════════════════════════════ */
+
+function Step4MediaDescription({
+  data, setData, imageFiles,
+}: {
+  data:       WizardData
+  setData:    (d: WizardData) => void
+  imageFiles: React.MutableRefObject<File[]>
+}) {
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function addFiles(files: FileList | null) {
+    if (!files) return
+    const accepted = Array.from(files).filter(f => f.type.startsWith('image/'))
+    const remaining = 12 - data.images.length
+    const toAdd = accepted.slice(0, remaining)
+    if (toAdd.length === 0) return
+
+    const newUrls = toAdd.map(f => URL.createObjectURL(f))
+    imageFiles.current = [...imageFiles.current, ...toAdd]
+    setData({ ...data, images: [...data.images, ...newUrls] })
+  }
+
+  function removeImage(idx: number) {
+    const url = data.images[idx]
+    if (url && url.startsWith('blob:')) URL.revokeObjectURL(url)
+    imageFiles.current = imageFiles.current.filter((_, i) => {
+      // find corresponding file index
+      const blobUrls = data.images.filter(u => u.startsWith('blob:'))
+      const blobIdx  = blobUrls.indexOf(url)
+      return i !== blobIdx
+    })
+    setData({ ...data, images: data.images.filter((_, i) => i !== idx) })
+  }
+
+  const validImages = data.images.filter(Boolean)
+
+  return (
+    <div className="space-y-6">
+      {/* ── Imagens ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label required>Imagens do Produto</Label>
+          <span className="text-[10px] text-slate-500">{validImages.length}/12</span>
+        </div>
+
+        {/* Requirements */}
+        <div className="flex flex-wrap gap-3 mb-3">
+          {[
+            { ok: validImages.length >= 1,  txt: 'Mín. 1 imagem'    },
+            { ok: false,                     txt: 'JPG ou PNG'       },
+            { ok: false,                     txt: 'Mín. 500×500 px'  },
+            { ok: false,                     txt: 'Máx. 10 MB/foto'  },
+            { ok: validImages.length >= 3,  txt: 'Ideal: 3+'         },
+          ].map(r => (
+            <span key={r.txt} className={`flex items-center gap-1 text-[10px] ${r.ok ? 'text-green-400' : 'text-slate-600'}`}>
+              {r.ok ? <Check className="w-3 h-3" /> : <span className="w-3 h-3 flex items-center justify-center">·</span>}
+              {r.txt}
+            </span>
+          ))}
+        </div>
+
+        {/* Drop zone */}
+        {validImages.length < 12 && (
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files) }}
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-2 py-8 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
+              dragOver ? 'border-purple-500/60 bg-purple-500/[0.06] scale-[1.01]' : 'border-white/[0.1] hover:border-white/[0.25] hover:bg-white/[0.02]'
+            }`}
+          >
+            <Upload className={`w-6 h-6 ${dragOver ? 'text-purple-400' : 'text-slate-600'}`} />
+            <p className="text-xs text-slate-500">Arraste imagens aqui ou <span className="text-purple-400">clique para selecionar</span></p>
+            <p className="text-[10px] text-slate-700">Fundo branco na primeira imagem recomendado</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => addFiles(e.target.files)}
+            />
+          </div>
+        )}
+
+        {/* Previews */}
+        {validImages.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mt-3">
+            {data.images.map((url, idx) => (
+              url ? (
+                <div key={idx} className="relative group aspect-square">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Imagem ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-xl border border-white/[0.08]"
+                  />
+                  {idx === 0 && (
+                    <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/70 rounded-md">
+                      <span className="text-[9px] text-yellow-400 font-bold">CAPA</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 p-0.5 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : null
+            ))}
+          </div>
+        )}
+
+        {validImages.length === 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl mt-2">
+            <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <p className="text-xs text-red-300">Adicione pelo menos uma imagem para continuar.</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Descrição ── */}
+      <div>
+        <Label>Descrição do Produto</Label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {['Material e composição', 'Dimensões reais', 'Modo de uso', 'Compatibilidade', 'Conteúdo da embalagem'].map(tip => (
+            <span key={tip} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-slate-500">
+              💡 {tip}
+            </span>
+          ))}
+        </div>
+        <textarea
+          value={data.description}
+          onChange={e => setData({ ...data, description: e.target.value.slice(0, 5000) })}
+          rows={7}
+          placeholder="Descreva o produto detalhadamente: material, tamanho, cor, especificações técnicas, modo de uso..."
+          className={inputCls + ' resize-none'}
+        />
+        <div className="flex items-center justify-between mt-1">
+          <Hint>Apenas texto simples, sem HTML. Descrições completas vendem mais.</Hint>
+          <span className={`text-[10px] tabular-nums ${data.description.length >= 200 ? 'text-green-400' : 'text-slate-600'}`}>
+            {data.description.length}/5000
+          </span>
+        </div>
+        {data.description.length === 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl mt-2">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-300">Sem descrição. Anúncios com descrição detalhada vendem muito mais.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STEP 5 — LOCAL DE EXPEDIÇÃO
+══════════════════════════════════════════════════════════════════════════ */
+
+function Step5ShippingLocation({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+  const [locations, setLocations] = useState<ShippingLocation[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch('/api/mercadolivre/shipping-locations')
+      .then(r => r.json() as Promise<ShippingLocation[]>)
+      .then(list => {
+        const l = Array.isArray(list) ? list : []
+        setLocations(l)
+        // Auto-select if only one
+        if (l.length === 1 && !data.shipping_location_id) {
+          setData({ ...data, shipping_location_id: l[0].id })
+        }
+      })
+      .catch(() => { setError(true) })
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 gap-2 text-slate-500">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="text-xs">Carregando locais de expedição...</span>
+      </div>
+    )
+  }
+
+  if (error || locations.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 px-4 py-3.5 bg-amber-500/[0.06] border border-amber-500/20 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-amber-300 font-semibold">Nenhum local de expedição encontrado</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Configure seus locais de expedição diretamente no Mercado Livre.
+            </p>
+          </div>
+        </div>
+        <a
+          href="https://www.mercadolivre.com.br/configuracoes/envios"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.1] text-xs text-blue-400 hover:border-blue-400/30 hover:bg-blue-400/[0.04] transition-all w-fit"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          Configurar no Mercado Livre
+        </a>
+        <p className="text-[11px] text-slate-600">Você pode pular esta etapa e configurar o local de expedição depois.</p>
+      </div>
+    )
+  }
+
+  if (locations.length === 1) {
+    const loc = locations[0]
+    return (
+      <div className="space-y-4">
+        <p className="text-xs text-slate-500">Local de expedição identificado na sua conta:</p>
+        <div className="flex items-center gap-3 px-4 py-3.5 bg-green-500/[0.06] border border-green-500/20 rounded-xl">
+          <Check className="w-4 h-4 text-green-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-white">{loc.name}</p>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{loc.id}</p>
+          </div>
+        </div>
+        <a
+          href="https://www.mercadolivre.com.br/configuracoes/envios"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          <ExternalLink className="w-3 h-3" />
+          Gerenciar no Mercado Livre
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">Selecione de qual endereço este produto será expedido:</p>
+      {locations.map(loc => (
+        <button
+          key={loc.id}
+          onClick={() => setData({ ...data, shipping_location_id: loc.id })}
+          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all ${
+            data.shipping_location_id === loc.id
+              ? 'border-purple-500/40 bg-purple-500/[0.08]'
+              : 'border-white/[0.06] hover:border-white/[0.15]'
+          }`}
+        >
+          <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center ${
+            data.shipping_location_id === loc.id ? 'border-purple-500 bg-purple-500' : 'border-slate-600'
+          }`}>
+            {data.shipping_location_id === loc.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-white">{loc.name}</p>
+            <p className="text-[10px] text-slate-500 font-mono">{loc.id}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STEP 6 — REVISÃO + SAÚDE DO ANÚNCIO
+══════════════════════════════════════════════════════════════════════════ */
+
+function calcHealthScore(data: WizardData): { score: number; checks: { label: string; pts: number; ok: boolean; warn: boolean }[] } {
+  const imgs = data.images.filter(Boolean)
+  const requiredAttrsFilled = Object.values(data.attributes).filter(Boolean).length > 0
+
+  const checks = [
+    {
+      label: 'Título entre 40 e 60 caracteres',
+      pts:   15,
+      ok:    data.title.length >= 40 && data.title.length <= 60,
+      warn:  data.title.length >= 10 && (data.title.length < 40 || data.title.length > 60),
+    },
+    {
+      label: 'Categoria selecionada',
+      pts:   10,
+      ok:    !!data.category_id,
+      warn:  false,
+    },
+    {
+      label: imgs.length >= 3 ? '3 ou mais imagens' : imgs.length >= 1 ? 'Pelo menos 1 imagem' : 'Nenhuma imagem',
+      pts:   imgs.length >= 3 ? 20 : imgs.length >= 1 ? 10 : 0,
+      ok:    imgs.length >= 3,
+      warn:  imgs.length >= 1 && imgs.length < 3,
+    },
+    {
+      label: 'Descrição com 200+ caracteres',
+      pts:   15,
+      ok:    data.description.length >= 200,
+      warn:  data.description.length > 0 && data.description.length < 200,
+    },
+    {
+      label: 'EAN / código de barras',
+      pts:   10,
+      ok:    data.ean.length >= 8,
+      warn:  data.no_ean,
+    },
+    {
+      label: 'Atributos obrigatórios preenchidos',
+      pts:   10,
+      ok:    requiredAttrsFilled,
+      warn:  false,
+    },
+    {
+      label: 'Peso e dimensões informados',
+      pts:   10,
+      ok:    data.package_weight > 0 && (data.package_length > 0 || data.package_width > 0 || data.package_height > 0),
+      warn:  data.package_weight > 0 && data.package_length === 0 && data.package_width === 0 && data.package_height === 0,
+    },
+    {
+      label: 'Plano com preço definido',
+      pts:   10,
+      ok:    (data.plans.classico.enabled && data.plans.classico.price > 0)
+          || (data.plans.premium.enabled  && data.plans.premium.price  > 0),
+      warn:  false,
+    },
+  ]
+
+  const score = checks.reduce((acc, c) => acc + (c.ok ? c.pts : 0), 0)
+  return { score, checks }
+}
 
 function ReviewRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -844,16 +1304,75 @@ function ReviewRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function Step6Review({ data }: { data: WizardData }) {
+function Step6Review({ data, onBack }: { data: WizardData; onBack: () => void }) {
+  const { score, checks } = calcHealthScore(data)
   const activePlans = [
     data.plans.classico.enabled && { name: 'Clássico', config: data.plans.classico },
     data.plans.premium.enabled  && { name: 'Premium',  config: data.plans.premium  },
   ].filter(Boolean) as { name: string; config: PlanConfig }[]
 
-  const COND: Record<string, string> = { new: 'Novo', used: 'Usado', not_specified: 'Não especificado' }
+  const COND: Record<string, string> = { new: 'Novo', used: 'Usado', not_specified: 'Recondicionado' }
+
+  const scoreColor = score >= 80 ? 'text-green-400'
+                   : score >= 50 ? 'text-amber-400'
+                   : 'text-red-400'
+  const barColor   = score >= 80 ? 'bg-green-500'
+                   : score >= 50 ? 'bg-amber-500'
+                   : 'bg-red-500'
+  const scoreLabel = score >= 80 ? 'Ótimo' : score >= 50 ? 'Regular' : 'Fraco'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* ── Health Score ── */}
+      <div className="bg-dark-800 border border-white/[0.06] rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Star className="w-4 h-4 text-yellow-400" />
+            <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Saúde do Anúncio</p>
+          </div>
+          <div className="text-right">
+            <span className={`text-2xl font-black ${scoreColor}`}>{score}</span>
+            <span className="text-xs text-slate-600">/100</span>
+            <span className={`ml-2 text-xs font-bold ${scoreColor}`}>{scoreLabel}</span>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden mb-4">
+          <div
+            className={`h-full rounded-full transition-all ${barColor}`}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+
+        {/* Checks */}
+        <div className="space-y-1.5">
+          {checks.map(c => (
+            <div key={c.label} className="flex items-center gap-2.5">
+              <span className="text-base shrink-0 w-5 text-center">
+                {c.ok ? '✅' : c.warn ? '⚠️' : '❌'}
+              </span>
+              <span className={`text-xs flex-1 ${c.ok ? 'text-slate-300' : c.warn ? 'text-amber-400' : 'text-slate-500'}`}>
+                {c.label}
+              </span>
+              <span className={`text-[10px] font-bold tabular-nums ${c.ok ? 'text-green-400' : 'text-slate-700'}`}>
+                {c.ok ? `+${c.pts}` : `+0`}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {score < 80 && (
+          <button
+            onClick={onBack}
+            className="mt-4 w-full py-2 rounded-xl border border-amber-500/30 text-xs text-amber-400 hover:bg-amber-500/[0.06] transition-all"
+          >
+            ← Voltar e corrigir
+          </button>
+        )}
+      </div>
+
+      {/* ── Resumo ── */}
       <div className="bg-dark-800 border border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informações Básicas</p>
@@ -862,7 +1381,7 @@ function Step6Review({ data }: { data: WizardData }) {
           <ReviewRow label="Título"    value={data.title} />
           <ReviewRow label="Categoria" value={<span>{data.category_name} <span className="text-slate-500 font-mono text-[10px]">({data.category_id})</span></span>} />
           <ReviewRow label="Condição"  value={COND[data.condition] ?? data.condition} />
-          {data.seller_custom_field && <ReviewRow label="SKU" value={data.seller_custom_field} />}
+          {data.seller_custom_field && <ReviewRow label="SKU"  value={data.seller_custom_field} />}
           {data.ean && <ReviewRow label="EAN" value={data.ean} />}
         </div>
       </div>
@@ -891,14 +1410,16 @@ function Step6Review({ data }: { data: WizardData }) {
 
       <div className="bg-dark-800 border border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Envio & Imagens</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Embalagem & Envio</p>
         </div>
         <div className="px-4 py-2">
-          <ReviewRow label="Frete Grátis"  value={data.free_shipping  ? 'Sim' : 'Não'} />
-          <ReviewRow label="Retirada"      value={data.local_pick_up  ? 'Sim' : 'Não'} />
-          <ReviewRow label="Flex"          value={data.flex_shipping   ? '⚡ Ativo' : 'Inativo'} />
-          <ReviewRow label="Imagens"       value={data.images.filter(Boolean).length > 0 ? `${data.images.filter(Boolean).length} imagem(s)` : 'Nenhuma'} />
-          <ReviewRow label="Descrição"     value={data.description ? `${data.description.length} caracteres` : 'Sem descrição'} />
+          <ReviewRow label="Peso"         value={data.package_weight > 0 ? `${data.package_weight} g` : '—'} />
+          <ReviewRow label="Dimensões"    value={[data.package_length, data.package_width, data.package_height].some(Boolean) ? `${data.package_length}×${data.package_width}×${data.package_height} cm` : '—'} />
+          <ReviewRow label="Frete Grátis" value={data.free_shipping ? 'Sim' : 'Não'} />
+          <ReviewRow label="Flex"         value={data.flex_shipping  ? '⚡ Ativo' : 'Inativo'} />
+          <ReviewRow label="Retirada"     value={data.local_pick_up  ? 'Sim' : 'Não'} />
+          <ReviewRow label="Imagens"      value={data.images.filter(Boolean).length > 0 ? `${data.images.filter(Boolean).length} imagem(ns)` : 'Nenhuma'} />
+          <ReviewRow label="Descrição"    value={data.description ? `${data.description.length} caracteres` : 'Sem descrição'} />
         </div>
       </div>
     </div>
@@ -919,24 +1440,63 @@ export default function NovoAnuncioPage() {
     ok: boolean
     results: { plan: string; item_id?: string; permalink?: string; error?: string }[]
   } | null>(null)
+  const imageFiles = useRef<File[]>([])
 
   function canAdvance(): boolean {
     switch (step) {
-      case 0: return data.title.trim().length >= 10 && !!data.category_id
-      case 1: return data.title.trim().length >= 10
-      case 2: return data.plans.classico.enabled || data.plans.premium.enabled
-      case 3: return true
-      case 4: return true
-      case 5: return true
-      default: return false
+      case 0:
+        return data.title.trim().length >= 10 && !!data.category_id
+      case 1: {
+        const condOk = !!data.condition
+        const eanOk  = data.no_ean || data.ean.length >= 8
+        return condOk && eanOk
+      }
+      case 2: {
+        const planValid = (data.plans.classico.enabled && data.plans.classico.price > 0 && data.plans.classico.quantity > 0)
+                       || (data.plans.premium.enabled  && data.plans.premium.price  > 0 && data.plans.premium.quantity  > 0)
+        const weightOk = data.package_weight > 0
+        const dimOk    = data.package_length > 0 || data.package_width > 0 || data.package_height > 0
+        return planValid && weightOk && dimOk
+      }
+      case 3:
+        return data.images.filter(Boolean).length >= 1
+      case 4:
+        return true  // shipping location optional (graceful)
+      case 5:
+        return true
+      default:
+        return false
     }
   }
 
   function navError(): string | null {
-    if (step !== 0) return null
-    if (data.title.trim().length < 10) return 'Digite um título com pelo menos 10 caracteres'
-    if (!data.category_id)             return 'Selecione uma categoria para continuar'
-    return null
+    switch (step) {
+      case 0:
+        if (data.title.trim().length < 10) return 'Digite um título com pelo menos 10 caracteres'
+        if (!data.category_id)             return 'Selecione uma categoria para continuar'
+        return null
+      case 1:
+        if (!data.condition)               return 'Selecione a condição do produto'
+        if (!data.no_ean && data.ean.length > 0 && data.ean.length < 8)
+                                           return 'EAN inválido — mínimo 8 dígitos'
+        if (!data.no_ean && data.ean.length === 0)
+                                           return 'Informe o EAN ou marque "Não tenho código de barras"'
+        return null
+      case 2: {
+        const planValid = (data.plans.classico.enabled && data.plans.classico.price > 0 && data.plans.classico.quantity > 0)
+                       || (data.plans.premium.enabled  && data.plans.premium.price  > 0 && data.plans.premium.quantity  > 0)
+        if (!planValid)                    return 'Ative um plano e defina preço e estoque'
+        if (data.package_weight <= 0)      return 'Informe o peso da embalagem'
+        if (data.package_length === 0 && data.package_width === 0 && data.package_height === 0)
+                                           return 'Informe pelo menos uma dimensão da embalagem'
+        return null
+      }
+      case 3:
+        if (data.images.filter(Boolean).length === 0) return 'Adicione pelo menos uma imagem'
+        return null
+      default:
+        return null
+    }
   }
 
   async function publish() {
@@ -951,6 +1511,15 @@ export default function NovoAnuncioPage() {
 
     log.push(`Criando ${activePlans.length} anúncio(s) no Mercado Livre...`)
     setPublishLog([...log])
+
+    // Convert blob: URLs — for now pass only https: URLs (blob: means file needs upload after creation)
+    const publicImages = data.images.filter(u => u && !u.startsWith('blob:'))
+    const hasLocalFiles = imageFiles.current.length > 0
+
+    if (hasLocalFiles && publicImages.length === 0) {
+      log.push('ℹ️ Imagens locais serão enviadas após a criação do anúncio...')
+      setPublishLog([...log])
+    }
 
     try {
       const res = await fetch('/api/mercadolivre/items', {
@@ -967,10 +1536,17 @@ export default function NovoAnuncioPage() {
           })),
           description:         data.description || undefined,
           seller_custom_field: data.seller_custom_field || undefined,
-          pictures:            data.images.filter(Boolean),
+          pictures:            publicImages,
           free_shipping:       data.free_shipping,
           local_pick_up:       data.local_pick_up,
           save_draft:          true,
+          package_weight:      data.package_weight || undefined,
+          package_length:      data.package_length || undefined,
+          package_width:       data.package_width  || undefined,
+          package_height:      data.package_height || undefined,
+          attributes:          Object.entries(data.attributes)
+            .filter(([, v]) => v && v !== 'N/A')
+            .map(([id, value]) => ({ id, value_name: value })),
         }),
       })
 
@@ -998,7 +1574,8 @@ export default function NovoAnuncioPage() {
     }
   }
 
-  const isLast = step === STEPS.length - 1
+  const isLast  = step === STEPS.length - 1
+  const errMsg  = navError()
 
   return (
     <div className="min-h-screen bg-[#03050f]">
@@ -1063,12 +1640,12 @@ export default function NovoAnuncioPage() {
             </p>
           </div>
           <div className="p-5">
-            {step === 0 && <Step1TitleCategory data={data} setData={setData} />}
-            {step === 1 && <Step2Basic    data={data} setData={setData} />}
-            {step === 2 && <Step3Price    data={data} setData={setData} />}
-            {step === 3 && <Step4Description data={data} setData={setData} />}
-            {step === 4 && <Step5Shipping data={data} setData={setData} />}
-            {step === 5 && <Step6Review   data={data} />}
+            {step === 0 && <Step1TitleCategory     data={data} setData={setData} />}
+            {step === 1 && <Step2Basic             data={data} setData={setData} />}
+            {step === 2 && <Step3PriceLogistics    data={data} setData={setData} />}
+            {step === 3 && <Step4MediaDescription  data={data} setData={setData} imageFiles={imageFiles} />}
+            {step === 4 && <Step5ShippingLocation  data={data} setData={setData} />}
+            {step === 5 && <Step6Review            data={data} onBack={() => setStep(s => s - 1)} />}
           </div>
         </div>
 
@@ -1100,20 +1677,14 @@ export default function NovoAnuncioPage() {
                 ))}
                 <button
                   onClick={() => router.push('/dashboard/produtos')}
-                  className="mt-2 px-4 py-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-bold hover:bg-green-500/30 transition-all"
+                  className="mt-2 px-4 py-2 rounded-xl bg-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/30 transition-all"
                 >
-                  Voltar para Produtos
+                  Ver meus anúncios →
                 </button>
               </div>
             ) : (
               <div>
-                <p className="text-sm font-bold text-amber-400">⚠️ Erro ao criar anúncio(s). Verifique os logs acima.</p>
-                <button
-                  onClick={() => { setPublishResult(null); setPublishLog([]) }}
-                  className="mt-2 text-xs text-slate-400 hover:text-slate-300 underline"
-                >
-                  Tentar novamente
-                </button>
+                <p className="text-sm font-bold text-amber-400">⚠️ Publicação com erros. Verifique os detalhes acima.</p>
               </div>
             )}
           </div>
@@ -1121,43 +1692,40 @@ export default function NovoAnuncioPage() {
 
         {/* Navigation */}
         {!publishResult && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => step > 0 ? setStep(step - 1) : router.push('/dashboard/produtos')}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.07] transition-all"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                {step === 0 ? 'Cancelar' : 'Anterior'}
-              </button>
-
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              {step > 0 && (
+                <button
+                  onClick={() => setStep(s => s - 1)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.08] text-sm text-slate-400 hover:bg-white/[0.04] transition-all"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar
+                </button>
+              )}
+              <div className="flex-1" />
               {isLast ? (
                 <button
                   onClick={publish}
                   disabled={publishing}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 transition-all"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
                 >
-                  {publishing ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Publicando...</>
-                  ) : (
-                    <><Check className="w-3.5 h-3.5" /> Publicar no Mercado Livre</>
-                  )}
+                  {publishing ? <><Loader2 className="w-4 h-4 animate-spin" /> Publicando...</> : <><Check className="w-4 h-4" /> Publicar Anúncio</>}
                 </button>
               ) : (
                 <button
-                  onClick={() => canAdvance() && setStep(step + 1)}
+                  onClick={() => canAdvance() && setStep(s => s + 1)}
                   disabled={!canAdvance()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Próximo <ArrowRight className="w-3.5 h-3.5" />
+                  Próximo <ArrowRight className="w-4 h-4" />
                 </button>
               )}
             </div>
-            {navError() && (
-              <p className="text-[11px] text-amber-400 text-right flex items-center justify-end gap-1">
-                <AlertCircle className="w-3 h-3 shrink-0" />
-                {navError()}
-              </p>
+            {errMsg && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl self-end">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-300">{errMsg}</p>
+              </div>
             )}
           </div>
         )}
