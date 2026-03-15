@@ -3,13 +3,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter }                       from 'next/navigation'
 import {
-  ArrowLeft, Save, AlertCircle, CheckCircle2,
-  X, ImageOff, Plus, Info, Package, Loader2, ExternalLink,
-  ChevronRight, Tag, Truck, Box, FileText, Settings, List,
-  Upload, Zap, UploadCloud,
+  ArrowLeft, Save, AlertCircle,
+  X, ImageOff, Plus, Info, Loader2, ExternalLink,
+  ChevronRight, Tag, Box, Settings, List,
+  Zap, UploadCloud,
 } from 'lucide-react'
-import { uploadImageToML }         from '@/lib/ml-image-upload'
-import type { CategoryAttribute }  from '@/app/api/mercadolivre/categories/[category_id]/attributes/route'
+import { uploadImageToML } from '@/lib/ml-image-upload'
+
+/** Attribute schema from /api/mercadolivre/categories/[id]/attributes — defined locally to avoid bracket path issues */
+interface CategoryAttribute {
+  id:                string
+  name:              string
+  type:              string   // 'string' | 'number' | 'boolean' | 'list'
+  required:          boolean
+  isVariation:       boolean
+  values?:           { id: string; name: string }[]
+  hint?:             string
+  value_max_length?: number
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    TYPES

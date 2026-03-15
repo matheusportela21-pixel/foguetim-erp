@@ -13,6 +13,10 @@ export interface UploadResult {
 
 /** Validates image dimensions in-browser before upload. */
 async function validateDimensions(file: File): Promise<{ ok: boolean; error?: string }> {
+  // Guard: only runs in browser
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    return { ok: true }
+  }
   return new Promise(resolve => {
     const img = new Image()
     const url = URL.createObjectURL(file)
@@ -51,6 +55,10 @@ export async function uploadImageToML(
   itemId:      string,
   onProgress?: (pct: number) => void,
 ): Promise<UploadResult> {
+  if (typeof window === 'undefined') {
+    return { success: false, error: 'uploadImageToML deve ser chamado apenas no browser' }
+  }
+
   // 1. Client-side dimension check
   const dim = await validateDimensions(file)
   if (!dim.ok) return { success: false, error: dim.error }
