@@ -27,6 +27,7 @@ export interface CategoryAttribute {
   type:             string  // string | number | boolean | list
   required:         boolean
   isVariation:      boolean
+  tags?:            string[]
   values?:          { id: string; name: string }[]
   hint?:            string
   value_max_length?: number
@@ -59,14 +60,21 @@ export async function GET(_req: NextRequest, { params }: Params) {
       return NextResponse.json([])
     }
 
-    // Filter to only relevant attributes
+    // Only exclude attributes that are managed by dedicated fields in the UI
+    const ROUTE_EXCLUDED = new Set([
+      'ITEM_CONDITION',   // managed via Condição field
+      'LISTING_TYPE_ID',  // managed via Tipo field
+      'PACKAGE_LENGTH', 'PACKAGE_WIDTH',
+      'PACKAGE_HEIGHT', 'PACKAGE_WEIGHT', // managed in Pacote section
+    ])
+
     const relevant = (raw as MLRawAttribute[]).filter(a => {
       if (!a || typeof a !== 'object') return false
+      if (ROUTE_EXCLUDED.has(a.id))    return false
       const tags = Array.isArray(a.tags) ? a.tags : []
-      if (tags.includes('required'))            return true
-      if (tags.includes('variation_attribute')) return true
-      if (a.relevance != null)                  return true
-      return false
+      if (tags.includes('hidden'))         return false
+      if (tags.includes('read_only_api'))  return false
+      return true
     })
 
     const result: CategoryAttribute[] = relevant.map(a => {
@@ -83,16 +91,18 @@ export async function GET(_req: NextRequest, { params }: Params) {
         type,
         required:         tags.includes('required'),
         isVariation:      tags.includes('variation_attribute'),
+        tags:             tags.length > 0 ? tags : undefined,
         values:           Array.isArray(a.values) ? a.values.map(v => ({ id: v.id, name: v.name })) : undefined,
         hint:             a.hint ?? a.hints?.[0],
         value_max_length: a.value_max_length,
       }
     })
 
-    // Sort: required first, then variation, then alphabetical
+    // Sort: required first, then variation, then catalog_required, then alphabetical
     result.sort((a, b) => {
-      if (a.required && !b.required)       return -1
-      if (!a.required && b.required)       return  1
+      const aReq  = a.required ? 0 : 1
+      const bReq  = b.required ? 0 : 1
+      if (aReq !== bReq) return aReq - bReq
       if (a.isVariation && !b.isVariation) return -1
       if (!a.isVariation && b.isVariation) return  1
       return a.name.localeCompare(b.name, 'pt-BR')

@@ -120,6 +120,11 @@ interface ChangeItem {
   toDisplay:   string
 }
 
+interface ShippingLocation {
+  id:   string
+  name: string
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    CONSTANTS & HELPERS
 ══════════════════════════════════════════════════════════════════════════ */
@@ -456,6 +461,10 @@ export default function EditarAnuncioPage() {
   const [attrsLoading, setAttrsLoading]   = useState(false)
   const [showAllAttrs, setShowAllAttrs]   = useState(false)
 
+  /* ── shipping locations ───────────────────────────────────────────────── */
+  const [shippingLocations, setShippingLocations]     = useState<ShippingLocation[]>([])
+  const [shippingLocationId, setShippingLocationId]   = useState('')
+
   /* ── shared edits ─────────────────────────────────────────────────────── */
   const [shared, setShared]         = useState<SharedEdits>({ title: '', ean: '', pkg_weight: '', pkg_length: '', pkg_width: '', pkg_height: '' })
   const [origShared, setOrigShared] = useState<SharedEdits>({ title: '', ean: '', pkg_weight: '', pkg_length: '', pkg_width: '', pkg_height: '' })
@@ -528,18 +537,26 @@ export default function EditarAnuncioPage() {
       }
       setData(d)
 
-      // Shared: title
+      // Shared: title + EAN (from attributes array, fallback to gtin field)
       const title = d.plans[0]?.title ?? ''
+      const attrs = Array.isArray(d.attributes) ? d.attributes : []
+      const eanFromAttrs = attrs.find(
+        (a: ItemAttribute) => ['GTIN', 'EAN', 'BARCODE'].includes(a.id),
+      )?.value_name ?? ''
+      const skuFromAttrs = attrs.find(
+        (a: ItemAttribute) => a.id === 'SELLER_SKU' || a.id === 'SKU',
+      )?.value_name ?? ''
+
       const s: SharedEdits = {
         title,
-        ean:        (d.plans[0]?.gtin?.[0]) ?? '',
+        ean:        eanFromAttrs || d.plans[0]?.gtin?.[0] || '',
         pkg_weight: '',
         pkg_length: '',
         pkg_width:  '',
         pkg_height: '',
       }
       // Extract package dims from first plan attributes
-      for (const a of (Array.isArray(d.attributes) ? d.attributes : [])) {
+      for (const a of attrs) {
         if (a.id === 'PACKAGE_WEIGHT') s.pkg_weight = a.value_name ?? ''
         if (a.id === 'PACKAGE_LENGTH') s.pkg_length = a.value_name ?? ''
         if (a.id === 'PACKAGE_WIDTH')  s.pkg_width  = a.value_name ?? ''
@@ -556,7 +573,7 @@ export default function EditarAnuncioPage() {
           stock:               plan.available_quantity,
           condition:           plan.condition,
           listing_type_id:     plan.listing_type_id,
-          seller_custom_field: plan.seller_custom_field ?? '',
+          seller_custom_field: plan.seller_custom_field ?? skuFromAttrs,
           warranty:            getWarranty(plan),
           free_shipping:       plan.shipping?.free_shipping ?? false,
           flex_shipping:       getFlexActive(plan),
@@ -567,9 +584,9 @@ export default function EditarAnuncioPage() {
       setPlanEdits(JSON.parse(JSON.stringify(pe)) as Record<string, PlanEdits>)
       setOrigPlanEdits(JSON.parse(JSON.stringify(pe)) as Record<string, PlanEdits>)
 
-      // Attribute edits from item attributes
+      // Attribute edits from item attributes (current values of this item)
       const ae: Record<string, string> = {}
-      for (const a of (Array.isArray(d.attributes) ? d.attributes : [])) {
+      for (const a of attrs) {
         if (!EXCLUDED_ATTR_IDS.has(a.id)) {
           ae[a.id] = a.value_name ?? ''
         }
@@ -582,44 +599,41 @@ export default function EditarAnuncioPage() {
       setPictures(pics)
       setOrigPictures(pics)
 
-      // Fetch category name from public ML API
+      // Fetch category breadcrumb name from public ML API
       if (d.category_id) {
         fetch(`https://api.mercadolibre.com/categories/${d.category_id}`)
-          .then(r => r.ok ? r.json() as Promise<{ name?: string }> : Promise.resolve({ name: undefined }))
-          .then(cat => setCategoryName(cat.name ?? d.category_id))
+          .then(r => r.ok
+            ? r.json() as Promise<{ name?: string; path_from_root?: { id: string; name: string }[] }>
+            : Promise.resolve({ name: undefined }),
+          )
+          .then(cat => {
+            const breadcrumb = cat.path_from_root?.map(c => c.name).join(' > ') ?? cat.name
+            setCategoryName(breadcrumb ?? d.category_id)
+          })
           .catch(() => setCategoryName(d.category_id))
       }
 
-      // Fetch category attributes
+      // Fetch category attributes schema (route handles filtering; page excludes dedicated fields)
       if (d.category_id) {
         setAttrsLoading(true)
         fetch(`/api/mercadolivre/categories/${d.category_id}/attributes`)
           .then(r => r.json() as Promise<unknown>)
           .then((raw: unknown) => {
             const schema: CategoryAttribute[] = Array.isArray(raw) ? (raw as CategoryAttribute[]) : []
-            // Filter to relevant attributes
-            const relevant = schema.filter(a => {
-              if (EXCLUDED_ATTR_IDS.has(a.id))           return false
-              const tags = Array.isArray(a.tags) ? a.tags : []
-              if (tags.includes('hidden'))                return false
-              if (tags.includes('read_only_api'))         return false
-              if (a.required)                             return true
-              if (ae[a.id] && ae[a.id].trim() !== '')    return true
-              if (tags.includes('catalog_required'))      return true
-              return false
-            })
-            setCategoryAttrs(relevant)
-            // Seed missing attr edits
+            // Only exclude attrs handled by dedicated fields (SKU, EAN, package, condition)
+            const filtered = schema.filter(a => !EXCLUDED_ATTR_IDS.has(a.id))
+            setCategoryAttrs(filtered)
+            // Seed attr edits for attrs not yet in the map
             setAttrEdits(prev => {
               const next = { ...prev }
-              for (const a of relevant) {
+              for (const a of filtered) {
                 if (!(a.id in next)) next[a.id] = ''
               }
               return next
             })
             setOrigAttrEdits(prev => {
               const next = { ...prev }
-              for (const a of relevant) {
+              for (const a of filtered) {
                 if (!(a.id in next)) next[a.id] = ''
               }
               return next
@@ -627,6 +641,19 @@ export default function EditarAnuncioPage() {
           })
           .catch(() => { /* non-fatal */ })
           .finally(() => setAttrsLoading(false))
+      }
+
+      // Fetch shipping locations (graceful — falls back to read-only text if unavailable)
+      if (d.ml_user_id) {
+        fetch(`/api/mercadolivre/shipping-locations?ml_user_id=${d.ml_user_id}`)
+          .then(r => r.json() as Promise<ShippingLocation[]>)
+          .then(locs => {
+            if (Array.isArray(locs) && locs.length > 0) {
+              setShippingLocations(locs)
+              setShippingLocationId(locs[0].id)
+            }
+          })
+          .catch(() => { /* non-fatal */ })
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
@@ -977,7 +1004,14 @@ export default function EditarAnuncioPage() {
   /* ── attrs to show ────────────────────────────────────────────────────── */
   const shownAttrs = useMemo(() => {
     if (showAllAttrs) return categoryAttrs
-    return categoryAttrs.filter(a => a.required || (attrEdits[a.id] ?? '').trim() !== '')
+    // "Recommended": required OR catalog_required OR currently filled with a value
+    return categoryAttrs.filter(a => {
+      if (a.required) return true
+      const tags = Array.isArray(a.tags) ? a.tags : []
+      if (tags.includes('catalog_required'))      return true
+      if ((attrEdits[a.id] ?? '').trim() !== '') return true
+      return false
+    })
   }, [categoryAttrs, showAllAttrs, attrEdits])
 
   const hiddenAttrsCount = categoryAttrs.length - shownAttrs.length
@@ -1103,34 +1137,41 @@ export default function EditarAnuncioPage() {
                   <div className="flex items-center gap-2 text-slate-500 text-xs py-4">
                     <Loader2 className="w-4 h-4 animate-spin" /> Carregando atributos...
                   </div>
-                ) : shownAttrs.length > 0 ? (
+                ) : categoryAttrs.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {shownAttrs.map(attr => {
-                        const val     = attrEdits[attr.id] ?? ''
-                        const origVal = origAttrEdits[attr.id] ?? ''
-                        const isNA    = naAttrs.has(attr.id)
-                        const changed = isNA ? (origVal.trim() !== '') : (val !== origVal)
-                        return (
-                          <FieldRow key={attr.id} label={attr.name} required={attr.required} changed={changed} hint={attr.hint}>
-                            <AttrField
-                              attr={attr}
-                              value={val}
-                              isNA={isNA}
-                              onChange={v => setAttrEdits(prev => ({ ...prev, [attr.id]: v }))}
-                              onToggleNA={() => setNaAttrs(prev => {
-                                const next = new Set<string>(Array.from(prev))
-                                if (next.has(attr.id)) next.delete(attr.id)
-                                else next.add(attr.id)
-                                return next
-                              })}
-                            />
-                          </FieldRow>
-                        )
-                      })}
-                    </div>
+                    {shownAttrs.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {shownAttrs.map(attr => {
+                          const val     = attrEdits[attr.id] ?? ''
+                          const origVal = origAttrEdits[attr.id] ?? ''
+                          const isNA    = naAttrs.has(attr.id)
+                          const changed = isNA ? (origVal.trim() !== '') : (val !== origVal)
+                          return (
+                            <FieldRow key={attr.id} label={attr.name} required={attr.required} changed={changed} hint={attr.hint}>
+                              <AttrField
+                                attr={attr}
+                                value={val}
+                                isNA={isNA}
+                                onChange={v => setAttrEdits(prev => ({ ...prev, [attr.id]: v }))}
+                                onToggleNA={() => setNaAttrs(prev => {
+                                  const next = new Set<string>(Array.from(prev))
+                                  if (next.has(attr.id)) next.delete(attr.id)
+                                  else next.add(attr.id)
+                                  return next
+                                })}
+                              />
+                            </FieldRow>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 py-1">
+                        Nenhum atributo obrigatório nesta categoria.{' '}
+                        {hiddenAttrsCount > 0 && 'Use o botão abaixo para ver todos os opcionais.'}
+                      </p>
+                    )}
                     {/* Toggle show all */}
-                    {hiddenAttrsCount > 0 && (
+                    {(showAllAttrs || hiddenAttrsCount > 0) && (
                       <button
                         onClick={() => setShowAllAttrs(v => !v)}
                         className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
@@ -1138,21 +1179,12 @@ export default function EditarAnuncioPage() {
                         {showAllAttrs ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         {showAllAttrs
                           ? 'Mostrar apenas obrigatórios e preenchidos'
-                          : `Mostrar ${hiddenAttrsCount} atributo(s) recomendado(s)`}
+                          : `▼ Ver todos os atributos (${categoryAttrs.length})`}
                       </button>
                     )}
                   </div>
-                ) : data.attributes.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {data.attributes.slice(0, 12).map(a => (
-                      <div key={a.id} className="px-3 py-2.5 bg-white/[0.02] rounded-lg">
-                        <p className="text-[10px] text-slate-600 mb-0.5">{a.name}</p>
-                        <p className="text-xs font-semibold text-slate-300">{a.value_name || '—'}</p>
-                      </div>
-                    ))}
-                  </div>
                 ) : (
-                  <p className="text-xs text-slate-600 py-2">Nenhum atributo relevante para esta categoria.</p>
+                  <p className="text-xs text-slate-600 py-2">Nenhum atributo disponível para esta categoria.</p>
                 )}
               </SectionCard>
 
@@ -1201,7 +1233,23 @@ export default function EditarAnuncioPage() {
                     <p className="text-[10px] text-slate-600 mt-1">8, 12, 13 ou 14 dígitos. Melhora indexação.</p>
                   </FieldRow>
                   <FieldRow label="Local de Expedição">
-                    <input readOnly value="Configurado na conta ML" className={inputCls + ' opacity-70'} />
+                    {shippingLocations.length > 1 ? (
+                      <select
+                        value={shippingLocationId}
+                        onChange={e => setShippingLocationId(e.target.value)}
+                        className={selectCls}
+                      >
+                        {shippingLocations.map(loc => (
+                          <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        readOnly
+                        value={shippingLocations[0]?.name ?? 'Configurado na conta ML'}
+                        className={inputCls + ' opacity-70'}
+                      />
+                    )}
                     <p className="text-[10px] text-slate-600 mt-1">Gerenciado na conta do Mercado Livre</p>
                   </FieldRow>
                 </div>
