@@ -743,7 +743,15 @@ export default function EditarAnuncioPage() {
       const res  = await fetch(`/api/mercadolivre/items/${item_id}/siblings`)
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erro ao carregar')
-      const d: SiblingsData = json
+      // Siblings route now returns 200 even on error; check for error field
+      if (json.error && (!Array.isArray(json.plans) || json.plans.length === 0)) {
+        throw new Error(json.error)
+      }
+      const d: SiblingsData = {
+        ...json,
+        plans:      Array.isArray(json.plans)      ? json.plans      : [],
+        attributes: Array.isArray(json.attributes) ? json.attributes : [],
+      }
       setData(d)
 
       const title = d.plans[0]?.title ?? ''

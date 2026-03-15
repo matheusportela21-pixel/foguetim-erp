@@ -1758,11 +1758,16 @@ export default function ProdutosPage() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
               <div>
                 <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Anúncios no Mercado Livre</p>
-                <p className="text-xs text-slate-600 mt-0.5">Dados em tempo real da API do ML · Somente leitura</p>
+                <p className="text-xs text-slate-600 mt-0.5">Dados em tempo real da API do ML</p>
               </div>
-              <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
-                🔒 Somente leitura
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push('/dashboard/produtos/novo')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-purple-600 text-white hover:bg-purple-700 transition-all shadow-lg shadow-purple-900/20"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Criar Anúncio
+                </button>
+              </div>
             </div>
             <MLProductsTab />
           </div>

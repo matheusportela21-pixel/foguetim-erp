@@ -76,9 +76,10 @@ export async function GET(req: NextRequest, { params }: Params) {
         `${ML_API_BASE}/users/${conn.ml_user_id}/items/search?user_product_id=${rootItem.user_product_id}&limit=50`
       )
       if (searchRes.ok) {
-        const searchData: { results: string[] } = await searchRes.json()
-        if (searchData.results?.length > 0) {
-          siblingIds = searchData.results
+        const searchData: unknown = await searchRes.json()
+        const results = (searchData as { results?: unknown })?.results
+        if (Array.isArray(results) && results.length > 0) {
+          siblingIds = results.filter((r): r is string => typeof r === 'string')
         }
       }
     }
@@ -113,7 +114,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     let attributes: { id: string; name: string; value_name: string | null }[] = []
     const attrsRes = await fetchWithToken(token, `${ML_API_BASE}/items/${item_id}/attributes`)
     if (attrsRes.ok) {
-      attributes = await attrsRes.json()
+      const attrsRaw: unknown = await attrsRes.json()
+      if (Array.isArray(attrsRaw)) {
+        attributes = attrsRaw as { id: string; name: string; value_name: string | null }[]
+      }
     }
 
     return NextResponse.json({
@@ -126,6 +130,14 @@ export async function GET(req: NextRequest, { params }: Params) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[siblings GET]', msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Return degraded 200 so the page can show a friendlier error
+    return NextResponse.json({
+      error: msg,
+      user_product_id: null,
+      category_id:     '',
+      plans:           [],
+      attributes:      [],
+      ml_user_id:      0,
+    }, { status: 200 })
   }
 }
