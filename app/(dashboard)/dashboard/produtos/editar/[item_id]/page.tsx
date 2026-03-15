@@ -74,6 +74,8 @@ interface PlanData {
   buying_mode:         string
   category_id:         string
   description_text:    string
+  catalog_listing?:    boolean
+  catalog_product_id?: string | null
 }
 
 interface SiblingsData {
@@ -1024,26 +1026,48 @@ export default function EditarAnuncioPage() {
           </div>
         ) : data && (
           <>
+            {/* Catalog banner */}
+            {data.plans[0] && (data.plans[0].catalog_listing || data.plans[0].catalog_product_id) && (
+              <div className="flex items-start gap-3 px-4 py-3 bg-blue-500/[0.08] border border-blue-500/20 rounded-2xl">
+                <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-blue-300 mb-0.5">📋 Anúncio de Catálogo</p>
+                  <p className="text-[11px] text-blue-400">
+                    Título, imagens e atributos principais são controlados pelo Mercado Livre.
+                    Você pode editar: <strong>preço, estoque, condição e garantia</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* § 1 — Informação Básica */}
             <Section icon={Tag} title="Informação Básica">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field
-                  label="Nome do Produto (família)"
-                  changed={titleChanged}
-                  hint={`${rootTitle.length}/60 caracteres`}
-                >
-                  {allSold && (
-                    <div className="flex items-start gap-1.5 mb-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-                      <p className="text-[11px] text-amber-400">Todos os planos têm vendas. O ML pode rejeitar a alteração de título.</p>
-                    </div>
-                  )}
-                  <input
-                    type="text" value={rootTitle} onChange={e => setRootTitle(e.target.value)} maxLength={60}
-                    className={`w-full px-3 py-2 text-sm rounded-xl bg-dark-700 border text-white focus:outline-none focus:ring-1 transition-colors
-                      ${titleChanged ? 'border-yellow-400/40 focus:ring-yellow-400/30' : 'border-white/[0.08] focus:ring-purple-500/30'}`}
-                  />
-                </Field>
+                {(() => {
+                  const isCat = !!(data.plans[0]?.catalog_listing || data.plans[0]?.catalog_product_id)
+                  return (
+                    <Field
+                      label="Nome do Produto (família)"
+                      changed={!isCat && titleChanged}
+                      hint={isCat ? 'Controlado pelo catálogo ML (somente leitura)' : `${rootTitle.length}/60 caracteres`}
+                    >
+                      {!isCat && allSold && (
+                        <div className="flex items-start gap-1.5 mb-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                          <p className="text-[11px] text-amber-400">Todos os planos têm vendas. O ML pode rejeitar a alteração de título.</p>
+                        </div>
+                      )}
+                      <input
+                        type="text" value={rootTitle}
+                        onChange={isCat ? undefined : e => setRootTitle(e.target.value)}
+                        readOnly={isCat}
+                        maxLength={60}
+                        className={`w-full px-3 py-2 text-sm rounded-xl bg-dark-700 border text-white focus:outline-none focus:ring-1 transition-colors
+                          ${isCat ? 'opacity-50 cursor-not-allowed border-white/[0.06]' : titleChanged ? 'border-yellow-400/40 focus:ring-yellow-400/30' : 'border-white/[0.08] focus:ring-purple-500/30'}`}
+                      />
+                    </Field>
+                  )
+                })()}
                 <div className="space-y-4">
                   <Field label="Categoria (somente leitura)">
                     <TextInput value={data.category_id} readOnly />

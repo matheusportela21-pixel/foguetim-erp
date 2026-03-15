@@ -216,20 +216,24 @@ function CopyModal({ produto, onClose }: { produto: Produto | null; onClose: () 
 // ─── ML Types ─────────────────────────────────────────────────────────────────
 
 interface MLItem {
-  id:                 string
-  title:              string
-  price:              number
-  original_price:     number | null
-  available_quantity: number
-  sold_quantity:      number
-  status:             string
-  permalink:          string
-  thumbnail:          string
-  listing_type_id:    string
-  condition:          string
-  date_created:       string
-  last_updated:       string
-  description_text?:  string
+  id:                    string
+  title:                 string
+  price:                 number
+  original_price:        number | null
+  available_quantity:    number
+  sold_quantity:         number
+  status:                string
+  permalink:             string
+  thumbnail:             string
+  listing_type_id:       string
+  condition:             string
+  date_created:          string
+  last_updated:          string
+  description_text?:     string
+  catalog_listing?:      boolean
+  catalog_product_id?:   string | null
+  seller_custom_field?:  string | null
+  gtin?:                 string[] | null
   shipping?: {
     free_shipping?: boolean
     local_pick_up?: boolean
@@ -771,6 +775,162 @@ function RowActions({
   )
 }
 
+// ─── Title Copy Tooltip (MELHORIA 5) ─────────────────────────────────────────
+
+function TitleCopyTooltip({ item }: { item: MLItem }) {
+  const [visible, setVisible] = useState(false)
+  const [copied, setCopied]   = useState<string | null>(null)
+
+  function copy(text: string, label: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(label)
+      setTimeout(() => setCopied(null), 1500)
+    })
+  }
+
+  const ean = item.gtin?.[0] ?? null
+  const sku = item.seller_custom_field ?? null
+
+  return (
+    <div className="relative flex-1 min-w-0" onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)}>
+      <p className="text-white font-semibold leading-snug truncate max-w-[200px] cursor-default">{item.title}</p>
+      {visible && (
+        <div className="absolute left-0 top-full mt-1 z-50 w-72 bg-gray-900 border border-white/[0.12] rounded-xl shadow-2xl p-3 space-y-2">
+          <p className="text-[10px] text-slate-300 leading-snug break-words">{item.title}</p>
+          <div className="space-y-1">
+            <button onClick={() => copy(item.title, 'título')}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-300 hover:bg-white/[0.08] transition-colors text-left">
+              <Copy className="w-3 h-3 text-slate-500 shrink-0" />
+              {copied === 'título' ? '✓ Copiado!' : 'Copiar título'}
+            </button>
+            {ean && (
+              <button onClick={() => copy(ean, 'EAN')}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-300 hover:bg-white/[0.08] transition-colors text-left">
+                <Copy className="w-3 h-3 text-slate-500 shrink-0" />
+                {copied === 'EAN' ? '✓ Copiado!' : `Copiar EAN: ${ean}`}
+              </button>
+            )}
+            {sku && (
+              <button onClick={() => copy(sku, 'SKU')}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-300 hover:bg-white/[0.08] transition-colors text-left">
+                <Copy className="w-3 h-3 text-slate-500 shrink-0" />
+                {copied === 'SKU' ? '✓ Copiado!' : `Copiar SKU: ${sku}`}
+              </button>
+            )}
+            <button onClick={() => copy(item.id, 'ID')}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] text-slate-300 hover:bg-white/[0.08] transition-colors text-left">
+              <Copy className="w-3 h-3 text-slate-500 shrink-0" />
+              {copied === 'ID' ? '✓ Copiado!' : `Copiar ID: ${item.id}`}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Inline Discount (MELHORIA 6) ────────────────────────────────────────────
+
+function InlineDiscount({ item, onSaved }: {
+  item:    MLItem
+  onSaved: (price: number, originalPrice: number | null) => void
+}) {
+  const [open, setOpen]         = useState(false)
+  const [discPrice, setDiscPrice] = useState(String(item.price))
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
+
+  const origPrice  = item.original_price
+  const hasDisc    = origPrice != null && origPrice > item.price
+  const discPct    = hasDisc ? Math.round((1 - item.price / origPrice!) * 100) : 0
+  const newDiscNum = parseFloat(discPrice)
+  const newDiscPct = !isNaN(newDiscNum) && newDiscNum > 0 && newDiscNum < item.price
+    ? Math.round((1 - newDiscNum / item.price) * 100) : 0
+
+  async function apply() {
+    const discNum = parseFloat(discPrice)
+    if (isNaN(discNum) || discNum <= 0 || discNum >= item.price) {
+      setErr('Preço com desconto deve ser menor que o preço atual'); return
+    }
+    setSaving(true); setErr('')
+    // Set original_price = current price, price = discounted price
+    const res = await fetch(`/api/mercadolivre/items/${item.id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ field: 'price', value: discNum }),
+    })
+    if (res.ok) {
+      onSaved(discNum, item.price)
+      setOpen(false)
+    } else {
+      const d = await res.json()
+      setErr(d.error ?? 'Erro ao aplicar desconto')
+    }
+    setSaving(false)
+  }
+
+  async function remove() {
+    if (!origPrice) return
+    setSaving(true); setErr('')
+    const res = await fetch(`/api/mercadolivre/items/${item.id}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ field: 'price', value: origPrice }),
+    })
+    if (res.ok) {
+      onSaved(origPrice, null)
+      setOpen(false)
+    } else {
+      const d = await res.json()
+      setErr(d.error ?? 'Erro ao remover desconto')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(o => !o)} className="text-[10px] text-slate-500 hover:text-yellow-400 transition-colors">
+        {hasDisc
+          ? <span className="font-bold text-green-400">-{discPct}%</span>
+          : <span>—</span>}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-6 z-50 w-56 bg-gray-900 border border-white/[0.12] rounded-xl shadow-2xl p-3 space-y-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Desconto em ML</p>
+            <p className="text-[10px] text-slate-500">Preço atual: <span className="text-white">{fmtBRL(item.price)}</span></p>
+            <div>
+              <label className="text-[10px] text-slate-500 mb-1 block">Preço com desconto (R$):</label>
+              <input
+                type="number" value={discPrice} min={0.01} step={0.01}
+                onChange={e => setDiscPrice(e.target.value)}
+                className="w-full px-2 py-1.5 text-xs bg-dark-700 border border-white/[0.1] rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-yellow-400/40"
+              />
+              {newDiscPct > 0 && (
+                <p className="text-[10px] text-green-400 mt-1">= {newDiscPct}% de desconto</p>
+              )}
+            </div>
+            {err && <p className="text-[10px] text-red-400">{err}</p>}
+            <div className="flex gap-1.5">
+              <button onClick={apply} disabled={saving}
+                className="flex-1 py-1.5 text-[10px] font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 transition-colors">
+                {saving ? '...' : 'Aplicar'}
+              </button>
+              {hasDisc && (
+                <button onClick={remove} disabled={saving}
+                  className="flex-1 py-1.5 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg disabled:opacity-50 hover:bg-red-500/20 transition-colors">
+                  Remover
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── Bulk Price Modal ─────────────────────────────────────────────────────────
 
 function BulkPriceModal({
@@ -910,9 +1070,10 @@ function MLProductsTab() {
   const [statusFilter, setStatusFilter]       = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
   const [listingFilter, setListingFilter]     = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
   const [stockFilter, setStockFilter]         = useState<'all' | 'low' | 'zero'>('all')
+  const [catalogTab, setCatalogTab]           = useState<'all' | 'user' | 'catalog'>('all')
   const [freeShippingF, setFreeShippingF]     = useState(false)
   const [flexF, setFlexF]                     = useState(false)
-  const [sortBy, setSortBy]                   = useState<'default' | 'stock_asc' | 'price_desc' | 'price_asc' | 'sold_desc'>('default')
+  const [sortBy, setSortBy]                   = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('default')
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const [offset, setOffset]                   = useState(0)
   const [paging, setPaging]                   = useState({ total: 0, offset: 0, limit: 50 })
@@ -951,8 +1112,13 @@ function MLProductsTab() {
   const filtered = items.filter(i => {
     if (search) {
       const q = search.toLowerCase()
-      if (!i.title.toLowerCase().includes(q) && !i.id.toLowerCase().includes(q)) return false
+      const inTitle  = (i.title ?? '').toLowerCase().includes(q)
+      const inId     = (i.id ?? '').toLowerCase().includes(q)
+      const inSku    = (i.seller_custom_field ?? '').toLowerCase().includes(q)
+      if (!inTitle && !inId && !inSku) return false
     }
+    if (catalogTab === 'catalog' && !i.catalog_listing && !i.catalog_product_id)  return false
+    if (catalogTab === 'user'    && (i.catalog_listing || i.catalog_product_id))  return false
     if (listingFilter !== 'all' && i.listing_type_id !== listingFilter) return false
     if (stockFilter === 'zero' && i.available_quantity !== 0)            return false
     if (stockFilter === 'low'  && (i.available_quantity === 0 || i.available_quantity > 5)) return false
@@ -963,16 +1129,21 @@ function MLProductsTab() {
 
   // Local sort
   const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'price_desc')  return b.price - a.price
-    if (sortBy === 'price_asc')   return a.price - b.price
-    if (sortBy === 'stock_asc')   return a.available_quantity - b.available_quantity
-    if (sortBy === 'sold_desc')   return b.sold_quantity - a.sold_quantity
+    if (sortBy === 'price_desc')   return b.price - a.price
+    if (sortBy === 'price_asc')    return a.price - b.price
+    if (sortBy === 'stock_asc')    return a.available_quantity - b.available_quantity
+    if (sortBy === 'stock_desc')   return b.available_quantity - a.available_quantity
+    if (sortBy === 'sold_desc')    return b.sold_quantity - a.sold_quantity
+    if (sortBy === 'title_asc')    return (a.title ?? '').localeCompare(b.title ?? '', 'pt-BR')
+    if (sortBy === 'title_desc')   return (b.title ?? '').localeCompare(a.title ?? '', 'pt-BR')
+    if (sortBy === 'updated_desc') return (b.last_updated ?? '').localeCompare(a.last_updated ?? '')
     return 0
   })
 
   // Active filter chips
   interface Chip { label: string; onRemove: () => void }
   const chips: Chip[] = []
+  if (catalogTab !== 'all')     chips.push({ label: catalogTab === 'catalog' ? '📋 Catálogo' : '👤 User Product', onRemove: () => setCatalogTab('all') })
   if (listingFilter !== 'all')  chips.push({ label: `Tipo: ${listingLabel(listingFilter)}`, onRemove: () => setListingFilter('all') })
   if (stockFilter !== 'all')    chips.push({ label: stockFilter === 'zero' ? 'Sem estoque' : 'Estoque baixo', onRemove: () => setStockFilter('all') })
   if (freeShippingF)            chips.push({ label: 'Frete grátis', onRemove: () => setFreeShippingF(false) })
@@ -1067,6 +1238,20 @@ function MLProductsTab() {
           ))}
         </div>
 
+        {/* Catalog sub-tabs */}
+        <div className="flex items-center gap-0.5 bg-dark-700 rounded-xl p-0.5">
+          {([
+            { v: 'all',     label: 'Todos' },
+            { v: 'user',    label: '👤 User Product' },
+            { v: 'catalog', label: '📋 Catálogo' },
+          ] as const).map(s => (
+            <button key={s.v} onClick={() => setCatalogTab(s.v)}
+              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${catalogTab === s.v ? 'bg-blue-500/15 text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         {/* Listing type */}
         <select value={listingFilter} onChange={e => setListingFilter(e.target.value as typeof listingFilter)}
           className="px-3 py-1.5 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
@@ -1119,15 +1304,19 @@ function MLProductsTab() {
                   <p className="text-[10px] text-slate-600 mb-1.5">Ordenar por:</p>
                   <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
                     className="w-full px-3 py-1.5 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none">
-                    <option value="default">Padrão</option>
-                    <option value="price_desc">Maior preço</option>
-                    <option value="price_asc">Menor preço</option>
-                    <option value="stock_asc">Menor estoque</option>
+                    <option value="default">Padrão (relevância)</option>
+                    <option value="price_asc">Preço: menor primeiro</option>
+                    <option value="price_desc">Preço: maior primeiro</option>
+                    <option value="stock_asc">Estoque: menor primeiro</option>
+                    <option value="stock_desc">Estoque: maior primeiro</option>
+                    <option value="title_asc">Título: A → Z</option>
+                    <option value="title_desc">Título: Z → A</option>
                     <option value="sold_desc">Mais vendidos</option>
+                    <option value="updated_desc">Atualizado recentemente</option>
                   </select>
                 </div>
 
-                <button onClick={() => { setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+                <button onClick={() => { setCatalogTab('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
                   className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-300 border border-white/[0.06] rounded-xl transition-colors">
                   Limpar filtros
                 </button>
@@ -1158,7 +1347,7 @@ function MLProductsTab() {
               <X className="w-3 h-3" />
             </button>
           ))}
-          <button onClick={() => { setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+          <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
             className="px-2.5 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
             Limpar tudo
           </button>
@@ -1199,7 +1388,7 @@ function MLProductsTab() {
           <ShoppingBag className="w-8 h-8 text-slate-700" />
           <p className="text-sm text-slate-500">Nenhum anúncio encontrado</p>
           {chips.length > 0 && (
-            <button onClick={() => { setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+            <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
               className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
               Limpar filtros
             </button>
@@ -1215,7 +1404,7 @@ function MLProductsTab() {
                     <input type="checkbox" checked={allSelected} onChange={toggleAll}
                       className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" />
                   </th>
-                  {['Anúncio', 'Preço ML', 'Estoque', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
+                  {['Anúncio', 'Preço ML', 'Desconto', 'Estoque', 'Vendidos', 'Status', 'Tipo', ''].map(h => (
                     <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -1226,14 +1415,14 @@ function MLProductsTab() {
                   const isFlex      = item.shipping?.tags?.includes('self_service_in') ?? false
                   const isFreeShip  = item.shipping?.free_shipping ?? false
                   const isPremium   = item.listing_type_id === 'gold_pro'
+                  const isCatalog   = !!(item.catalog_listing || item.catalog_product_id)
                   return (
                     <tr key={item.id}
                       className={`hover:bg-white/[0.02] transition-colors group ${isSelected ? 'bg-purple-500/[0.04]' : ''}`}
-                      onClick={() => toggleOne(item.id)}
                     >
-                      <td className="py-3 px-3 cursor-pointer" onClick={e => { e.stopPropagation(); toggleOne(item.id) }}>
+                      <td className="py-3 px-3">
                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(item.id)}
-                          className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" onClick={e => e.stopPropagation()} />
+                          className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" />
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-3">
@@ -1250,7 +1439,8 @@ function MLProductsTab() {
                               {isPremium   && <span title="Premium"     className="text-purple-400 text-[10px]">⭐</span>}
                               {isFreeShip  && <span title="Frete grátis" className="text-green-400 text-[10px]">🚚</span>}
                               {isFlex      && <span title="Flex ativo"   className="text-amber-400 text-[10px]">⚡</span>}
-                              <p className="text-white font-semibold leading-snug truncate max-w-[200px]">{item.title}</p>
+                              {isCatalog   && <span className="text-[8px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-full">Catálogo</span>}
+                              <TitleCopyTooltip item={item} />
                             </div>
                             <p className="text-[10px] text-slate-600 font-mono">{item.id}</p>
                             <div className="flex gap-1 mt-0.5 flex-wrap">
@@ -1274,6 +1464,16 @@ function MLProductsTab() {
                           displayValue={<span className="text-white font-bold">{fmtBRL(item.price)}</span>}
                           inputValue={item.price}
                           onSaved={v => updateItem(item.id, { price: v })}
+                        />
+                        {item.original_price != null && item.original_price > item.price && (
+                          <p className="text-[9px] text-slate-600 line-through">{fmtBRL(item.original_price)}</p>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3" onClick={e => e.stopPropagation()}>
+                        <InlineDiscount
+                          item={item}
+                          onSaved={(price, originalPrice) => updateItem(item.id, { price, original_price: originalPrice })}
                         />
                       </td>
 
