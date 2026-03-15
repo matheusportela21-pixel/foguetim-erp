@@ -621,28 +621,55 @@ export default function EditarAnuncioPage() {
           .catch(() => setCategoryName(d.category_id))
       }
 
-      // Fetch category attributes schema (route handles filtering; page excludes dedicated fields)
+      // Fetch category attributes via unified engine (whitelist by category)
       if (d.category_id) {
         setAttrsLoading(true)
-        fetch(`/api/mercadolivre/categories/${d.category_id}/attributes`)
-          .then(r => r.json() as Promise<unknown>)
-          .then((raw: unknown) => {
-            const schema: CategoryAttribute[] = Array.isArray(raw) ? (raw as CategoryAttribute[]) : []
-            // Only exclude attrs handled by dedicated fields (SKU, EAN, package, condition)
-            const filtered = schema.filter(a => !EXCLUDED_ATTR_IDS.has(a.id))
-            setCategoryAttrs(filtered)
-            // Seed attr edits for attrs not yet in the map
+        fetch('/api/ml/categorize', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ force_category_id: d.category_id }),
+        })
+          .then(r => r.ok ? r.json() as Promise<unknown> : Promise.reject(r.status))
+          .then((payload: unknown) => {
+            type Attr = { id: string; name: string; value_type?: string; is_required?: boolean; is_variation_attribute?: boolean; allowed_values?: { id: string; name: string }[]; hint?: string; value_max_length?: number; tags?: string[] }
+            type Payload = { required_attributes?: Attr[]; optional_attributes?: Attr[]; conditional_attributes?: Attr[] }
+            const p = payload as Payload
+
+            const toSchema = (a: Attr): CategoryAttribute => ({
+              id:               a.id,
+              name:             a.name,
+              type:             a.value_type ?? 'string',
+              required:         a.is_required ?? false,
+              isVariation:      a.is_variation_attribute ?? false,
+              values:           Array.isArray(a.allowed_values) && a.allowed_values.length > 0 ? a.allowed_values : undefined,
+              hint:             a.hint,
+              value_max_length: a.value_max_length,
+              tags:             a.tags,
+            })
+
+            const required    = (p.required_attributes ?? []).map(toSchema)
+            const optional    = (p.optional_attributes ?? []).map(toSchema)
+            const conditional = (p.conditional_attributes ?? []).map(toSchema)
+            const schema      = [...required, ...optional, ...conditional]
+              .filter(a => !EXCLUDED_ATTR_IDS.has(a.id))
+
+            // Build whitelist
+            const whitelist = new Set(schema.map(a => a.id))
+
+            setCategoryAttrs(schema)
+
+            // Seed attr edits — only attrs in whitelist, discard values outside it silently
             setAttrEdits(prev => {
-              const next = { ...prev }
-              for (const a of filtered) {
-                if (!(a.id in next)) next[a.id] = ''
+              const next: Record<string, string> = {}
+              for (const a of schema) {
+                next[a.id] = whitelist.has(a.id) ? (prev[a.id] ?? '') : ''
               }
               return next
             })
             setOrigAttrEdits(prev => {
-              const next = { ...prev }
-              for (const a of filtered) {
-                if (!(a.id in next)) next[a.id] = ''
+              const next: Record<string, string> = {}
+              for (const a of schema) {
+                next[a.id] = whitelist.has(a.id) ? (prev[a.id] ?? '') : ''
               }
               return next
             })

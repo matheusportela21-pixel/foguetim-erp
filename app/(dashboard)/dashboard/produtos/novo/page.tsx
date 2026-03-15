@@ -344,7 +344,14 @@ function CategoryTreeModal({
   )
 }
 
-function Step1TitleCategory({ data, setData, isPlanAtLeast }: { data: WizardData; setData: (d: WizardData) => void; isPlanAtLeast: (p: string) => boolean }) {
+function Step1TitleCategory({
+  data, setData, isPlanAtLeast, onCategoryPayload,
+}: {
+  data:               WizardData
+  setData:            (d: WizardData) => void
+  isPlanAtLeast:      (p: string) => boolean
+  onCategoryPayload:  (p: import('@/lib/ml/types').CategoryAttributePayload | null) => void
+}) {
   const [suggestions, setSuggestions]     = useState<CategorySuggestion[]>([])
   const [sugLoading, setSugLoading]       = useState(false)
   const [sugFetched, setSugFetched]       = useState(false)
@@ -368,72 +375,65 @@ function Step1TitleCategory({ data, setData, isPlanAtLeast }: { data: WizardData
     setSugLoading(true)
     setSugFetched(true)
     try {
-      // 1st attempt: ML domain_discovery (requires auth)
-      const res = await fetch(`/api/mercadolivre/categories/suggest?q=${encodeURIComponent(query)}`)
+      // Unified engine: POST /api/ml/categorize
+      const res = await fetch('/api/ml/categorize', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          title:                query,
+          previous_category_id: currentData.category_id,
+        }),
+      })
+
       if (res.ok) {
-        const json: unknown = await res.json()
-        const list = Array.isArray(json) ? (json as CategorySuggestion[]) : []
-        if (list.length > 0) {
-          setSuggestions(list)
-          if (!currentData.category_id) {
-            const first = list[0]
-            setData({ ...currentData, category_id: first.category_id, category_name: first.breadcrumb || first.category_name })
+        const payload = await res.json() as import('@/lib/ml/types').CategoryAttributePayload & {
+          error?: string
+        }
+
+        if (payload.category?.category_id && !payload.error) {
+          onCategoryPayload(payload)
+
+          const sug: CategorySuggestion = {
+            category_id:   payload.category.category_id,
+            category_name: payload.category.category_name,
+            domain_name:   '',
+            domain_id:     payload.category.domain_id,
+            breadcrumb:    payload.category.breadcrumb || payload.category.category_name,
+            aiSuggested:   true,
+            reason:        payload.category.decision_summary ?? '',
+            confidence:    payload.category.confidence,
+            is_leaf:       payload.category.is_leaf,
           }
-          setSugLoading(false)
+
+          setSuggestions([sug])
+
+          if (!currentData.category_id) {
+            setData({
+              ...currentData,
+              category_id:   sug.category_id,
+              category_name: sug.breadcrumb || sug.category_name,
+            })
+          }
           return
         }
       }
 
-      // 2nd attempt: AI via GPT-4o-mini + domain_discovery
-      const aiRes = await fetch('/api/ai/suggest-category', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title: query }),
-      })
-      if (aiRes.ok) {
-        const aiJson = await aiRes.json() as {
-          suggestions?: {
-            category_id:   string
-            category_name: string
-            domain_id?:    string
-            breadcrumb:    string
-            reason:        string
-            confidence:    number
-            is_leaf?:      boolean
-            source?:       string
-          }[]
-        }
-        const aiList: CategorySuggestion[] = (aiJson.suggestions ?? []).map(s => ({
-          category_id:   s.category_id,
-          category_name: s.category_name,
-          domain_name:   '',
-          domain_id:     s.domain_id ?? '',
-          breadcrumb:    s.breadcrumb || s.category_name,
-          aiSuggested:   true,
-          reason:        s.reason,
-          confidence:    s.confidence,
-          is_leaf:       s.is_leaf,
-        }))
-        setSuggestions(aiList)
-        if (aiList.length > 0 && !currentData.category_id) {
-          const first = aiList[0]
-          setData({ ...currentData, category_id: first.category_id, category_name: first.breadcrumb || first.category_name })
-        }
-      } else {
-        setSuggestions([])
-      }
+      setSuggestions([])
+      onCategoryPayload(null)
     } catch {
       setSuggestions([])
+      onCategoryPayload(null)
     } finally {
       setSugLoading(false)
     }
-  }, [setData])
+  }, [setData, onCategoryPayload])
 
   function handleTitleChange(value: string) {
     const next: WizardData = { ...data, title: value, category_id: '', category_name: '' }
     setData(next)
     setSuggestions([])
     setSugFetched(false)
+    onCategoryPayload(null)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (value.trim().length >= 10) {
       debounceRef.current = setTimeout(() => fetchSuggestions(value, next), 600)
@@ -442,10 +442,12 @@ function Step1TitleCategory({ data, setData, isPlanAtLeast }: { data: WizardData
 
   function selectCategory(id: string, name: string) {
     setData({ ...data, category_id: id, category_name: name })
+    onCategoryPayload(null) // manual selection — Step2 will fetch its own attributes
   }
 
   function handleTreeSelect(id: string, name: string) {
     setData({ ...data, category_id: id, category_name: name })
+    onCategoryPayload(null)
     setShowTree(false)
   }
 
@@ -694,12 +696,39 @@ const CONDITIONS = [
   { value: 'not_specified', label: 'Recondicionado', desc: 'Produto restaurado ou reformado.'         },
 ]
 
-function Step2Basic({ data, setData }: { data: WizardData; setData: (d: WizardData) => void }) {
+/** Map NormalizedAttribute → CategoryAttribute for existing renderAttrField */
+function normToAttr(n: import('@/lib/ml/types').NormalizedAttribute): CategoryAttribute {
+  return {
+    id:               n.id,
+    name:             n.name,
+    type:             n.value_type,
+    required:         n.is_required,
+    isVariation:      n.is_variation_attribute,
+    values:           n.allowed_values.length > 0 ? n.allowed_values : undefined,
+    hint:             n.hint,
+    value_max_length: n.value_max_length,
+  }
+}
+
+function Step2Basic({
+  data, setData, categoryPayload,
+}: {
+  data:            WizardData
+  setData:         (d: WizardData) => void
+  categoryPayload: import('@/lib/ml/types').CategoryAttributePayload | null
+}) {
   const [attrs, setAttrs]         = useState<CategoryAttribute[]>([])
   const [attrsLoading, setAttrsLoading] = useState(false)
   const [showOptional, setShowOptional] = useState(false)
 
   useEffect(() => {
+    // If payload already provided by Step1, use it directly
+    if (categoryPayload) {
+      const required = categoryPayload.required_attributes.map(normToAttr)
+      const optional = categoryPayload.optional_attributes.map(normToAttr)
+      setAttrs([...required, ...optional])
+      return
+    }
     if (!data.category_id) { setAttrs([]); return }
     setAttrsLoading(true)
     fetch(`/api/mercadolivre/categories/${data.category_id}/attributes`)
@@ -707,7 +736,7 @@ function Step2Basic({ data, setData }: { data: WizardData; setData: (d: WizardDa
       .then(list => setAttrs(Array.isArray(list) ? list : []))
       .catch(() => setAttrs([]))
       .finally(() => setAttrsLoading(false))
-  }, [data.category_id])
+  }, [data.category_id, categoryPayload])
 
   const requiredAttrs = attrs.filter(a => a.required)
   const optionalAttrs = attrs.filter(a => !a.required)
@@ -1753,6 +1782,7 @@ export default function NovoAnuncioPage() {
   const { isPlanAtLeast } = usePlan()
   const [step, setStep]     = useState(0)
   const [data, setData]     = useState<WizardData>(INITIAL)
+  const [categoryPayload, setCategoryPayload] = useState<import('@/lib/ml/types').CategoryAttributePayload | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [publishLog, setPublishLog] = useState<string[]>([])
   const [publishResult, setPublishResult] = useState<{
@@ -1976,8 +2006,8 @@ export default function NovoAnuncioPage() {
             </p>
           </div>
           <div className="p-5">
-            {step === 0 && <Step1TitleCategory     data={data} setData={setData} isPlanAtLeast={isPlanAtLeast} />}
-            {step === 1 && <Step2Basic             data={data} setData={setData} />}
+            {step === 0 && <Step1TitleCategory     data={data} setData={setData} isPlanAtLeast={isPlanAtLeast} onCategoryPayload={setCategoryPayload} />}
+            {step === 1 && <Step2Basic             data={data} setData={setData} categoryPayload={categoryPayload} />}
             {step === 2 && <Step3PriceLogistics    data={data} setData={setData} />}
             {step === 3 && <Step4MediaDescription  data={data} setData={setData} imageFiles={imageFiles} isPlanAtLeast={isPlanAtLeast} />}
             {step === 4 && <Step5ShippingLocation  data={data} setData={setData} />}
