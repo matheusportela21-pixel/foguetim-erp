@@ -458,9 +458,12 @@ export default function EditarAnuncioPage() {
         (a: ItemAttribute) => ['MPN', 'ALPHANUMERIC_MODEL', 'MANUFACTURER_PART_NUMBER'].includes(a.id),
       )?.value_name ?? ''
 
+      const eanFromML  = eanFromAttrs || d.plans[0]?.gtin?.[0] || ''
+      const skuForPlan = d.plans[0]?.seller_custom_field ?? skuFromAttrs
+
       const s: SharedEdits = {
         title,
-        ean:        eanFromAttrs || d.plans[0]?.gtin?.[0] || '',
+        ean:        eanFromML,
         mpn:        mpnFromAttrs,
         pkg_weight: '',
         pkg_length: '',
@@ -479,6 +482,28 @@ export default function EditarAnuncioPage() {
       }
       setShared(s)
       setOrigShared(JSON.parse(JSON.stringify(s)) as SharedEdits)
+
+      // Fiscal prefill from local Supabase (non-blocking)
+      fetch(`/api/ml/fiscal-prefill?item_id=${encodeURIComponent(item_id)}&sku=${encodeURIComponent(skuForPlan ?? '')}`)
+        .then(r => r.ok ? r.json() as Promise<{ ean: string; ncm: string; cest: string; origem: string; source: string }> : null)
+        .then(fiscal => {
+          if (!fiscal) return
+          setShared(prev => ({
+            ...prev,
+            ean:    prev.ean    || fiscal.ean,   // ML value takes priority
+            ncm:    prev.ncm    || fiscal.ncm,
+            cest:   prev.cest   || fiscal.cest,
+            origem: prev.origem || fiscal.origem,
+          }))
+          setOrigShared(prev => ({
+            ...prev,
+            ean:    prev.ean    || fiscal.ean,
+            ncm:    prev.ncm    || fiscal.ncm,
+            cest:   prev.cest   || fiscal.cest,
+            origem: prev.origem || fiscal.origem,
+          }))
+        })
+        .catch(() => { /* non-fatal */ })
 
       // Per-plan edits
       const pe: Record<string, PlanEdits> = {}
@@ -499,12 +524,10 @@ export default function EditarAnuncioPage() {
       setPlanEdits(JSON.parse(JSON.stringify(pe)) as Record<string, PlanEdits>)
       setOrigPlanEdits(JSON.parse(JSON.stringify(pe)) as Record<string, PlanEdits>)
 
-      // Attribute edits from item attributes (current values of this item)
+      // Attribute edits — seeded from current item; ML engine overwrites via whitelist later
       const ae: Record<string, string> = {}
       for (const a of attrs) {
-        if (!EXCLUDED_ATTR_IDS.has(a.id)) {
-          ae[a.id] = a.value_name ?? ''
-        }
+        ae[a.id] = a.value_name ?? ''
       }
       setAttrEdits(JSON.parse(JSON.stringify(ae)) as Record<string, string>)
       setOrigAttrEdits(JSON.parse(JSON.stringify(ae)) as Record<string, string>)
