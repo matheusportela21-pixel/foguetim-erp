@@ -53,6 +53,8 @@ export async function syncListingsFromML(
   const status   = options.status ?? 'active'
   const headers  = { Authorization: `Bearer ${token}` }
 
+  console.log('[Sync] Iniciando — userId:', userId, '| mlUserId:', mlUserId, '| status:', status, '| maxItems:', maxItems)
+
   /* ── 1. Coletar todos os item_ids (paginado) ─────────────────────────── */
   const allItemIds: string[] = []
   let offset = 0
@@ -63,10 +65,14 @@ export async function syncListingsFromML(
       `?offset=${offset}&limit=${PAGE_SIZE}${statusParam}`
 
     const res = await fetch(url, { headers })
-    if (!res.ok) break
+    if (!res.ok) {
+      console.error('[Sync] Falha ao buscar IDs — status:', res.status, '| url:', url)
+      break
+    }
 
     const data: { results?: string[]; paging?: { total: number } } = await res.json()
     const ids = Array.isArray(data.results) ? data.results : []
+    console.log(`[Sync] Página offset=${offset}: ${ids.length} IDs (total ML: ${data.paging?.total ?? '?'})`)
     if (ids.length === 0) break
 
     allItemIds.push(...ids)
@@ -74,6 +80,8 @@ export async function syncListingsFromML(
     offset += PAGE_SIZE
     await sleep(RATE_MS)
   }
+
+  console.log('[Sync] Total de IDs coletados:', allItemIds.length)
 
   /* ── 2. Hidratar em batches de 20 e fazer upsert ─────────────────────── */
   let synced = 0
@@ -87,7 +95,11 @@ export async function syncListingsFromML(
         `https://api.mercadolibre.com/items?ids=${batch.join(',')}&attributes=${ITEM_FIELDS}`,
         { headers },
       )
-      if (!itemsRes.ok) { errors += batch.length; continue }
+      if (!itemsRes.ok) {
+        console.error('[Sync] Falha ao hidratar batch — status:', itemsRes.status)
+        errors += batch.length
+        continue
+      }
 
       const multiget: Array<{ code: number; body: RawMLItem }> = await itemsRes.json()
 
@@ -124,15 +136,24 @@ export async function syncListingsFromML(
         .from('ml_listings')
         .upsert(rows, { onConflict: 'user_id,item_id' })
 
-      if (error) errors += batch.length
-      else synced += rows.length
-    } catch {
+      if (error) {
+        console.error('[Sync] Upsert error — batch i=' + i + ':', error.message, '| code:', error.code, '| details:', error.details)
+        errors += batch.length
+      } else {
+        synced += rows.length
+        if (i % (BATCH * 5) === 0) {
+          console.log(`[Sync] Progresso: ${synced} salvos até agora...`)
+        }
+      }
+    } catch (e) {
+      console.error('[Sync] Exceção no batch i=' + i + ':', e instanceof Error ? e.message : String(e))
       errors += batch.length
     }
 
     await sleep(RATE_MS)
   }
 
+  console.log('[Sync] Concluído — synced:', synced, '| errors:', errors)
   return { synced, updated: 0, errors }
 }
 
