@@ -3,7 +3,7 @@ import { Rocket, Zap, Shield, CheckCircle2 } from 'lucide-react'
 
 export const metadata = {
   title: 'Integrações — Foguetim ERP',
-  description: 'Conecte seus marketplaces com segurança via APIs oficiais. Mercado Livre, Shopee e Amazon.',
+  description: 'Conecte seu marketplace com segurança via API oficial. Mercado Livre integrado, novas integrações em breve.',
 }
 
 const integrations = [
@@ -23,29 +23,16 @@ const integrations = [
     ],
   },
   {
-    name: 'Shopee',
-    color: '#f97316',
-    dot: 'bg-orange-400',
-    headline: 'Integração em desenvolvimento',
-    detail: 'Disponível em breve',
+    name: 'Novas integrações em breve',
+    color: '#94a3b8',
+    dot: 'bg-slate-400',
+    headline: 'Expandindo para novos marketplaces',
+    detail: 'Estamos trabalhando em novas integrações',
     badge: 'Em breve',
     badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
     features: [
-      'Integração em desenvolvimento',
-      'Sincronize produtos, pedidos e estoque quando disponível',
-    ],
-  },
-  {
-    name: 'Amazon',
-    color: '#0ea5e9',
-    dot: 'bg-sky-400',
-    headline: 'Em desenvolvimento',
-    detail: 'Disponível em breve',
-    badge: 'Em breve',
-    badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-    features: [
-      'Integração em desenvolvimento',
-      'Mais detalhes em breve',
+      'Novos marketplaces chegando em breve',
+      'Acompanhe nossas atualizações',
     ],
   },
 ]

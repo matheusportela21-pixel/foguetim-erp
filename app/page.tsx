@@ -209,13 +209,11 @@ const plansData = {
 }
 
 const futureIntegrations = [
-  { name: 'Shopee',       icon: '🛍️', status: 'Em breve' },
-  { name: 'Amazon',       icon: '📦', status: 'Em breve' },
-  { name: 'Outros',       icon: '🔜', status: 'Em breve' },
-  { name: 'NF-e',         icon: '🧾', status: 'Em breve' },
-  { name: 'Fretes',       icon: '🚚', status: 'Planejado' },
-  { name: 'WhatsApp',     icon: '💬', status: 'Planejado' },
-  { name: 'Pagamentos',   icon: '💳', status: 'Planejado' },
+  { name: 'Novos marketplaces', icon: '🔜', status: 'Em breve' },
+  { name: 'NF-e',               icon: '🧾', status: 'Em breve' },
+  { name: 'Fretes',             icon: '🚚', status: 'Planejado' },
+  { name: 'WhatsApp',           icon: '💬', status: 'Planejado' },
+  { name: 'Pagamentos',         icon: '💳', status: 'Planejado' },
 ]
 
 /* ── Feature Visual Mockups ───────────────────────────────────────────────── */
@@ -412,7 +410,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-lg">
-                Gerencie Mercado Livre, Shopee e Amazon com inteligência.
+                Gerencie o Mercado Livre com inteligência.
                 Produtos, pedidos, métricas e muito mais — tudo integrado.
               </p>
 
@@ -444,24 +442,16 @@ export default function LandingPage() {
       <section className="py-10 px-6 bg-gray-50 border-y border-gray-100">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-xs text-gray-400 font-semibold uppercase tracking-wider mb-6">
-            Integre com os maiores marketplaces do Brasil
+            Integração ativa com marketplace
           </p>
           <div className="flex flex-wrap items-center justify-center gap-6">
-            {[
-              { name: 'Mercado Livre', color: '#f59e0b', emoji: '🛒', status: 'Ativo' },
-              { name: 'Shopee',        color: '#f97316', emoji: '🛍️', status: 'Em breve' },
-              { name: 'Amazon',        color: '#0ea5e9', emoji: '📦', status: 'Em breve' },
-            ].map(p => (
-              <div key={p.name} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm">
-                <span className="text-lg">{p.emoji}</span>
-                <span className="text-sm font-bold text-gray-700">{p.name}</span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${p.status === 'Ativo' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                  {p.status}
-                </span>
-              </div>
-            ))}
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <span className="text-lg">🛒</span>
+              <span className="text-sm font-bold text-gray-700">Mercado Livre</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Ativo</span>
+            </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white border border-dashed border-gray-200 rounded-xl text-xs text-gray-400">
-              + mais em breve
+              🔜 Novas integrações em breve
             </div>
           </div>
         </div>
@@ -569,35 +559,22 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[
-              {
-                name: 'Mercado Livre', emoji: '🛒', status: 'Integração ativa', statusCls: 'bg-green-50 text-green-700 border-green-200',
-                dot: 'bg-green-500', desc: 'Produtos, pedidos, SAC, reclamações, reputação e financeiro integrados via API oficial.',
-                border: 'border-gray-200',
-              },
-              {
-                name: 'Shopee', emoji: '🛍️', status: 'Em breve', statusCls: 'bg-amber-50 text-amber-700 border-amber-200',
-                dot: 'bg-amber-400', desc: 'Integração em desenvolvimento. Previsão para os próximos meses.',
-                border: 'border-gray-200',
-              },
-              {
-                name: 'Amazon', emoji: '📦', status: 'Em breve', statusCls: 'bg-amber-50 text-amber-700 border-amber-200',
-                dot: 'bg-amber-400', desc: 'Suporte à API SP-API da Amazon em planejamento ativo.',
-                border: 'border-gray-200',
-              },
-            ].map(int => (
-              <div key={int.name} className={`bg-white border ${int.border} rounded-2xl p-6 shadow-sm`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{int.emoji}</span>
-                    <span className="font-bold text-gray-900">{int.name}</span>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${int.statusCls}`}>{int.status}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🛒</span>
+                  <span className="font-bold text-gray-900">Mercado Livre</span>
                 </div>
-                <p className="text-sm text-gray-500 leading-relaxed">{int.desc}</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">Integração ativa</span>
               </div>
-            ))}
+              <p className="text-sm text-gray-500 leading-relaxed">Produtos, pedidos, SAC, reclamações, reputação e financeiro integrados via API oficial.</p>
+            </div>
+            <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center gap-2">
+              <span className="text-3xl">🔜</span>
+              <p className="font-bold text-gray-700">Novas integrações em breve</p>
+              <p className="text-sm text-gray-400">Estamos expandindo para novos marketplaces.</p>
+            </div>
           </div>
         </div>
       </section>

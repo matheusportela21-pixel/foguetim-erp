@@ -94,8 +94,8 @@ export default function ContatoPage() {
             <div className="landing-card p-6 border-l-4 border-purple-400">
               <p className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-2">For API Evaluators</p>
               <p className="text-xs text-slate-600 leading-relaxed">
-                For Shopee Open Platform evaluators and API partners: Please use the test credentials provided
-                during the registration process. For technical inquiries:{' '}
+                Foguetim integrates with Mercado Livre via official OAuth 2.0 API.
+                For technical inquiries about API integration:{' '}
                 <a href="mailto:contato@foguetim.com.br" className="text-purple-600 font-semibold hover:underline">
                   contato@foguetim.com.br
                 </a>
