@@ -87,20 +87,22 @@ const ROLE_LABELS: Record<string, string> = {
 interface PlanCfg { label: string; limit: number; badge: string }
 
 const PLAN_CONFIG: Record<string, PlanCfg> = {
-  explorador:      { label: 'Explorador',      limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
-  explorer:        { label: 'Explorador',      limit: 50,       badge: 'text-purple-400 bg-purple-900/30' },
-  piloto:          { label: 'Piloto',          limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
-  crescimento:     { label: 'Crescimento',     limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
-  comandante:      { label: 'Comandante',      limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
-  commander:       { label: 'Comandante',      limit: 500,      badge: 'text-blue-400 bg-blue-900/30'     },
-  almirante:       { label: 'Almirante',       limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
-  admiral:         { label: 'Almirante',       limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
-  enterprise:      { label: 'Enterprise',      limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
-  missao_espacial: { label: 'Missão Espacial', limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  // Active plans
+  explorador:      { label: 'Explorador',      limit: 10,       badge: 'text-slate-400 bg-slate-900/30'   },
+  comandante:      { label: 'Comandante',       limit: 500,      badge: 'text-indigo-400 bg-indigo-900/30' },
+  almirante:       { label: 'Almirante',        limit: Infinity, badge: 'text-purple-400 bg-purple-900/30' },
+  missao_espacial: { label: 'Missão Espacial',  limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  enterprise:      { label: 'Enterprise',       limit: Infinity, badge: 'text-amber-400 bg-amber-900/30'   },
+  // Legacy aliases — kept for DB compatibility
+  explorer:        { label: 'Explorador',       limit: 10,       badge: 'text-slate-400 bg-slate-900/30'   },
+  piloto:          { label: 'Piloto',            limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
+  crescimento:     { label: 'Crescimento',       limit: 200,      badge: 'text-blue-400 bg-blue-900/30'     },
+  commander:       { label: 'Comandante',        limit: 500,      badge: 'text-indigo-400 bg-indigo-900/30' },
+  admiral:         { label: 'Almirante',         limit: Infinity, badge: 'text-purple-400 bg-purple-900/30' },
 }
 
 const DEFAULT_PLAN: PlanCfg = {
-  label: 'Explorador', limit: 50, badge: 'text-purple-400 bg-purple-900/30',
+  label: 'Explorador', limit: 10, badge: 'text-slate-400 bg-slate-900/30',
 }
 
 export default function Sidebar() {
