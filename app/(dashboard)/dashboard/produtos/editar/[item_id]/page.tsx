@@ -483,9 +483,9 @@ export default function EditarAnuncioPage() {
       setShared(s)
       setOrigShared(JSON.parse(JSON.stringify(s)) as SharedEdits)
 
-      // Fiscal prefill from local Supabase (non-blocking)
+      // Fiscal + identifiers prefill from local Supabase (non-blocking)
       fetch(`/api/ml/fiscal-prefill?item_id=${encodeURIComponent(item_id)}&sku=${encodeURIComponent(skuForPlan ?? '')}`)
-        .then(r => r.ok ? r.json() as Promise<{ ean: string; ncm: string; cest: string; origem: string; source: string }> : null)
+        .then(r => r.ok ? r.json() as Promise<{ ean: string; ncm: string; cest: string; origem: string; mpn: string; sku: string; source: string }> : null)
         .then(fiscal => {
           if (!fiscal) return
           setShared(prev => ({
@@ -494,6 +494,7 @@ export default function EditarAnuncioPage() {
             ncm:    prev.ncm    || fiscal.ncm,
             cest:   prev.cest   || fiscal.cest,
             origem: prev.origem || fiscal.origem,
+            mpn:    prev.mpn    || fiscal.mpn,
           }))
           setOrigShared(prev => ({
             ...prev,
@@ -501,7 +502,20 @@ export default function EditarAnuncioPage() {
             ncm:    prev.ncm    || fiscal.ncm,
             cest:   prev.cest   || fiscal.cest,
             origem: prev.origem || fiscal.origem,
+            mpn:    prev.mpn    || fiscal.mpn,
           }))
+          // Pre-fill SKU in planEdits when ML has no value
+          if (fiscal.sku) {
+            setPlanEdits(prev => {
+              const next = { ...prev }
+              for (const planId of Object.keys(next)) {
+                if (!next[planId].seller_custom_field) {
+                  next[planId] = { ...next[planId], seller_custom_field: fiscal.sku }
+                }
+              }
+              return next
+            })
+          }
         })
         .catch(() => { /* non-fatal */ })
 
@@ -1181,7 +1195,7 @@ export default function EditarAnuncioPage() {
                 ) : (
                   <AttributeSection
                     sections={attrSections}
-                    identifiers={attrIdentifiers}
+                    identifiers={[]}
                     variationFields={attrVariationFields}
                     values={attrEdits}
                     onChange={(id, v) => setAttrEdits(prev => ({ ...prev, [id]: v }))}

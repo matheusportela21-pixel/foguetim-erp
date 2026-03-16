@@ -11,6 +11,8 @@ export interface FiscalPrefillState {
   ncm:    string
   cest:   string
   origem: string
+  mpn:    string
+  sku:    string
   source: 'local_product' | 'empty'
 }
 
@@ -25,21 +27,24 @@ export async function preloadFiscalData(
 
     const { data } = await supabase
       .from('products')
-      .select('ean, ncm, cest, origem')
+      .select('ean, ncm, cest, origem, mpn, sku')
       .or(orClause.join(','))
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (data) {
+      const row = data as Record<string, string | null>
       return {
-        ean:    (data as Record<string, string | null>).ean    ?? '',
-        ncm:    (data as Record<string, string | null>).ncm    ?? '',
-        cest:   (data as Record<string, string | null>).cest   ?? '',
-        origem: (data as Record<string, string | null>).origem ?? 'nacional',
+        ean:    row.ean    ?? '',
+        ncm:    row.ncm    ?? '',
+        cest:   row.cest   ?? '',
+        origem: row.origem ?? 'nacional',
+        mpn:    row.mpn    ?? '',
+        sku:    row.sku    ?? '',
         source: 'local_product',
       }
     }
   } catch { /* non-fatal */ }
 
-  return { ean: '', ncm: '', cest: '', origem: 'nacional', source: 'empty' }
+  return { ean: '', ncm: '', cest: '', origem: 'nacional', mpn: '', sku: '', source: 'empty' }
 }

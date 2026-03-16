@@ -4,6 +4,25 @@ import type {
   MlVariationField,
   MlAttributeUiSection,
 } from './types'
+import { IDENTIFIER_IDS } from './ml-attribute-engine.service'
+
+/* ─── Deduplicação de identificadores ───────────────────────────────────── */
+
+/**
+ * Separa identificadores de produto (GTIN, EAN, MPN, SKU…) dos atributos comuns.
+ * Garante que GTIN/EAN nunca apareça dentro das seções de atributos gerais.
+ */
+export function dedupeIdentifiersFromAttributes(
+  attributes: NormalizedMlAttribute[],
+): {
+  cleanAttributes: NormalizedMlAttribute[]  // sem os identificadores
+  identifierAttrs: NormalizedMlAttribute[]  // apenas os identificadores
+} {
+  return {
+    cleanAttributes: attributes.filter((a) => !IDENTIFIER_IDS.has(a.id)),
+    identifierAttrs: attributes.filter((a) => IDENTIFIER_IDS.has(a.id)),
+  }
+}
 
 /* ─── Identificadores ────────────────────────────────────────────────────── */
 
@@ -88,8 +107,11 @@ function pendingCount(attrs: NormalizedMlAttribute[]): number {
 export function buildAttributeUiSections(
   attributes: NormalizedMlAttribute[],
 ): MlAttributeUiSection[] {
+  // Excluir identificadores (GTIN/EAN/MPN/SKU) — ficam em seção Identificação
+  const { cleanAttributes } = dedupeIdentifiersFromAttributes(attributes)
+
   // Excluir variações — ficam em seção própria
-  const main = attributes.filter(
+  const main = cleanAttributes.filter(
     (a) => !a.is_variation_attribute && !a.is_allow_variations && !a.is_hidden,
   )
 
@@ -125,7 +147,7 @@ export function buildAttributeUiSections(
       label:                   'Recomendados',
       description:             'Melhoram a visibilidade do anúncio',
       attributes:              recommended,
-      is_collapsed_by_default: false,
+      is_collapsed_by_default: true,
       pending_count:           0,
     },
     {

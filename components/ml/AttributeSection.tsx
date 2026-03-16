@@ -319,15 +319,29 @@ function CollapsibleSection({
 
 /* ── Main export ─────────────────────────────────────────────────────────── */
 
+type ShowMode = 'required_only' | 'recommended' | 'all'
+
+const SHOW_MODE_OPTIONS: { mode: ShowMode; label: string }[] = [
+  { mode: 'required_only', label: 'Só obrigatórios' },
+  { mode: 'recommended',   label: '+ Recomendados'  },
+  { mode: 'all',           label: 'Mostrar todos'   },
+]
+
+const SHOW_MODE_SECTION_IDS: Record<ShowMode, Array<MlAttributeUiSection['id']>> = {
+  required_only: ['required', 'conditional'],
+  recommended:   ['required', 'conditional', 'recommended'],
+  all:           ['required', 'conditional', 'recommended', 'optional', 'advanced'],
+}
+
 export default function AttributeSection({
   sections, identifiers, variationFields: _variationFields,
   values, onChange, onNAToggle, naValues,
   categoryName: _categoryName, productTitle: _productTitle,
   onAISuggest, canUseAI,
 }: AttributeSectionProps) {
-  const [aiLoading,    setAiLoading]    = useState(false)
-  const [suggestions,  setSuggestions]  = useState<MlAttributeSuggestion[]>([])
-  const [showRequired, setShowRequired] = useState(false)
+  const [aiLoading,   setAiLoading]   = useState(false)
+  const [suggestions, setSuggestions] = useState<MlAttributeSuggestion[]>([])
+  const [showMode,    setShowMode]     = useState<ShowMode>('required_only')
 
   const totalPending = sections.reduce((s, sec) => s + sec.pending_count, 0)
 
@@ -350,9 +364,8 @@ export default function AttributeSection({
     setSuggestions((prev) => prev.filter((s) => s.attribute_id !== id))
   }
 
-  const filteredSections = showRequired
-    ? sections.filter((s) => s.id === 'required' || s.id === 'conditional')
-    : sections
+  const allowedIds    = SHOW_MODE_SECTION_IDS[showMode]
+  const filteredSections = sections.filter((s) => allowedIds.includes(s.id))
 
   return (
     <div className="space-y-3">
@@ -365,15 +378,27 @@ export default function AttributeSection({
               {totalPending} obrigatório{totalPending !== 1 ? 's' : ''} pendente{totalPending !== 1 ? 's' : ''}
             </span>
           )}
+
+          {/* Visibility mode buttons */}
+          <div className="flex rounded-lg overflow-hidden border border-white/[0.06]">
+            {SHOW_MODE_OPTIONS.map(({ mode, label }) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setShowMode(mode)}
+                className={`px-2.5 py-1 text-[10px] font-medium transition-colors border-r border-white/[0.06] last:border-r-0 ${
+                  showMode === mode
+                    ? 'bg-purple-600/30 text-purple-300'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowRequired((v) => !v)}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded-lg border border-white/[0.06] hover:bg-white/[0.04]"
-          >
-            {showRequired ? 'Mostrar todos' : 'Apenas obrigatórios'}
-          </button>
           {canUseAI && (
             <button
               type="button"
@@ -389,12 +414,14 @@ export default function AttributeSection({
         </div>
       </div>
 
-      {/* ── Identifiers ──────────────────────────────────────────────────── */}
-      <IdentifierBlock
-        identifiers={identifiers}
-        values={values}
-        onChange={onChange}
-      />
+      {/* ── Identifiers (somente se passados — evita duplicação com seção s3) */}
+      {identifiers.length > 0 && (
+        <IdentifierBlock
+          identifiers={identifiers}
+          values={values}
+          onChange={onChange}
+        />
+      )}
 
       {/* ── Sections ─────────────────────────────────────────────────────── */}
       {filteredSections.map((sec) => (
