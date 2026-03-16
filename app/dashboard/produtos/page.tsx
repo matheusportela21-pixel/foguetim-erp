@@ -1078,6 +1078,9 @@ function MLProductsTab() {
   const [notConnected, setNotConnected] = useState(false)
   const [refreshKey, setRefreshKey]     = useState(0)
   const [searchSource, setSearchSource] = useState<string>('')
+  const [hasLocalData, setHasLocalData] = useState<boolean | null>(null)
+  const [syncing, setSyncing]           = useState(false)
+  const [syncMsg, setSyncMsg]           = useState<string | null>(null)
 
   // Search — inputValue drives the display, debouncedSearch triggers the API call
   const [inputValue, setInputValue]     = useState('')
@@ -1115,6 +1118,23 @@ function MLProductsTab() {
     window.open(`/dashboard/produtos/editar/${itemId}`, '_blank')
   }
 
+  async function handleSync() {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const res  = await fetch('/api/mercadolivre/listings/sync', { method: 'POST' })
+      const data = await res.json() as { synced?: number; errors?: number; duration_ms?: number; error?: string }
+      if (!res.ok) { setSyncMsg(data.error ?? 'Erro na sincronização'); return }
+      setSyncMsg(`${data.synced ?? 0} anúncios sincronizados em ${((data.duration_ms ?? 0) / 1000).toFixed(1)}s`)
+      setHasLocalData(true)
+      setRefreshKey(k => k + 1)
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : 'Erro na sincronização')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   useEffect(() => {
     setLoading(true)
     setError(null)
@@ -1126,12 +1146,13 @@ function MLProductsTab() {
 
     fetch(url)
       .then(r => r.json())
-      .then((d: { notConnected?: boolean; error?: string; items?: MLItem[]; paging?: { total: number; offset: number; limit: number }; search_source?: string }) => {
+      .then((d: { notConnected?: boolean; error?: string; items?: MLItem[]; paging?: { total: number; offset: number; limit: number }; search_source?: string; has_local_data?: boolean }) => {
         if (d.notConnected) { setNotConnected(true); return }
         if (d.error) { setError(d.error); return }
         setItems(d.items ?? [])
         setPaging(d.paging ?? { total: 0, offset, limit })
         setSearchSource(d.search_source ?? '')
+        if (d.has_local_data !== undefined) setHasLocalData(d.has_local_data)
       })
       .catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false))
@@ -1365,6 +1386,12 @@ function MLProductsTab() {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
+          <button onClick={handleSync} disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-yellow-300 border border-white/[0.06] hover:border-yellow-500/30 hover:bg-yellow-500/[0.06] transition-all disabled:opacity-50">
+            {syncing
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sincronizando...</>
+              : <><RefreshCw className="w-3.5 h-3.5" /> Sincronizar</>}
+          </button>
           <button onClick={() => setRefreshKey(k => k + 1)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all">
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1389,6 +1416,31 @@ function MLProductsTab() {
           <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
             className="px-2.5 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
             Limpar tudo
+          </button>
+        </div>
+      )}
+
+      {/* Sync banners */}
+      {hasLocalData === false && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-semibold text-amber-300">Busca limitada à página atual</span>
+            <span className="text-xs text-slate-500 ml-2">Sincronize para habilitar busca global em todos os seus anúncios.</span>
+          </div>
+          <button onClick={handleSync} disabled={syncing}
+            className="px-3 py-1.5 text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0">
+            {syncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            {syncing ? 'Sincronizando...' : 'Sincronizar agora'}
+          </button>
+        </div>
+      )}
+      {syncMsg && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-xs ${syncMsg.includes('Erro') || syncMsg.includes('erro') ? 'bg-red-500/[0.08] border-red-500/20 text-red-300' : 'bg-green-500/[0.08] border-green-500/20 text-green-300'}`}>
+          <Info className="w-4 h-4 shrink-0" />
+          {syncMsg}
+          <button onClick={() => setSyncMsg(null)} className="ml-auto p-0.5 text-slate-500 hover:text-slate-300 transition-colors">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
