@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronUp, X, TrendingDown,
   Package, CheckSquare, Square, Edit3, CopyPlus,
   ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
-  AlertCircle, ImageOff, Info, CheckCircle2,
+  AlertCircle, AlertTriangle, ImageOff, Info, CheckCircle2,
   ExternalLink, Loader2, ShoppingBag, Link2,
 } from 'lucide-react'
 import {
@@ -1099,7 +1099,7 @@ function MLProductsTab() {
 
   // Server-side filters (passed to /search endpoint)
   const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
-  const [catalogTab,   setCatalogTab]   = useState<'all' | 'user' | 'catalog'>('all')
+  const [catalogTab,   setCatalogTab]   = useState<'all' | 'user' | 'catalog'>('user')
   const [sortBy,       setSortBy]       = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('default')
 
   // Client-side filters (listing type, stock, shipping — not in ML API)
@@ -1214,7 +1214,7 @@ function MLProductsTab() {
     if (ls.page > 1) params.set('ml_page', String(ls.page)); else params.delete('ml_page')
     if (ls.per_page !== 50) params.set('ml_pp', String(ls.per_page)); else params.delete('ml_pp')
     if (statusFilter !== 'active') params.set('ml_s', statusFilter); else params.delete('ml_s')
-    if (catalogTab !== 'all') params.set('ml_ct', catalogTab); else params.delete('ml_ct')
+    if (catalogTab !== 'user') params.set('ml_ct', catalogTab); else params.delete('ml_ct')
     router.replace(`?${params.toString()}`, { scroll: false })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ls.search_query, ls.page, ls.per_page, statusFilter, catalogTab, sortBy])
@@ -1236,7 +1236,8 @@ function MLProductsTab() {
   // Active filter chips
   interface Chip { label: string; onRemove: () => void }
   const chips: Chip[] = []
-  if (catalogTab !== 'all')     chips.push({ label: catalogTab === 'catalog' ? '📋 Catálogo' : '👤 User Product', onRemove: () => setCatalogTab('all') })
+  if (catalogTab === 'catalog') chips.push({ label: '📋 Catálogo', onRemove: () => setCatalogTab('user') })
+  if (catalogTab === 'all')    chips.push({ label: 'Todos', onRemove: () => setCatalogTab('user') })
   if (listingFilter !== 'all')  chips.push({ label: `Tipo: ${listingLabel(listingFilter)}`, onRemove: () => setListingFilter('all') })
   if (stockFilter !== 'all')    chips.push({ label: stockFilter === 'zero' ? 'Sem estoque' : 'Estoque baixo', onRemove: () => setStockFilter('all') })
   if (freeShippingF)            chips.push({ label: 'Frete grátis', onRemove: () => setFreeShippingF(false) })
@@ -1422,7 +1423,7 @@ function MLProductsTab() {
                   </select>
                 </div>
 
-                <button onClick={() => { setCatalogTab('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+                <button onClick={() => { setCatalogTab('user'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
                   className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-300 border border-white/[0.06] rounded-xl transition-colors">
                   Limpar filtros
                 </button>
@@ -1459,10 +1460,30 @@ function MLProductsTab() {
               <X className="w-3 h-3" />
             </button>
           ))}
-          <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+          <button onClick={() => { setCatalogTab('user'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
             className="px-2.5 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
             Limpar tudo
           </button>
+        </div>
+      )}
+
+      {/* Catalog tab info banners */}
+      {catalogTab === 'user' && (
+        <div className="flex items-start gap-2 text-sm text-blue-400 bg-blue-950/30 border border-blue-800/40 rounded-lg px-4 py-2.5">
+          <Info className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>
+            Exibindo seus anúncios <strong>User Product</strong> — você tem controle total sobre preço, estoque e conteúdo.
+            Anúncios de <strong>Catálogo</strong> têm restrições de edição impostas pelo Mercado Livre.
+          </span>
+        </div>
+      )}
+      {catalogTab === 'catalog' && (
+        <div className="flex items-start gap-2 text-sm text-amber-400 bg-amber-950/30 border border-amber-800/40 rounded-lg px-4 py-2.5">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>
+            Anúncios de <strong>Catálogo</strong> têm título, imagem e atributos controlados pelo Mercado Livre.
+            Você só pode editar preço e estoque.
+          </span>
         </div>
       )}
 
@@ -1541,7 +1562,7 @@ function MLProductsTab() {
             <p className="text-xs text-amber-400">Sincronize seus anúncios para habilitar a busca completa</p>
           )}
           {chips.length > 0 && (
-            <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+            <button onClick={() => { setCatalogTab('user'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
               className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
               Limpar filtros
             </button>
