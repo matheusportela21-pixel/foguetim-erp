@@ -17,11 +17,14 @@ export interface ShippingLocation {
   zip_code:     string
 }
 
+// Na API do ML, city/state dentro de seller_address são objetos { id, name }
+interface MLNamedField { id?: string; name?: string }
+
 interface MLUserAddress {
-  city?:         string
-  state?:        string
-  zip_code?:     string
-  street_name?:  string
+  city?:          MLNamedField | string
+  state?:         MLNamedField | string
+  zip_code?:      string
+  street_name?:   string
   street_number?: string | number
 }
 
@@ -35,6 +38,13 @@ interface MLWarehouse {
   id?:      string | number
   name?:    string
   address?: MLUserAddress
+}
+
+/** Extrai o nome de um campo que pode ser string ou { name } */
+function extractName(field: MLNamedField | string | undefined, fallback = ''): string {
+  if (!field) return fallback
+  if (typeof field === 'string') return field
+  return field.name ?? fallback
 }
 
 export async function GET(req: NextRequest) {
@@ -64,12 +74,14 @@ export async function GET(req: NextRequest) {
             const street = addr?.street_name
               ? `${addr.street_name}${addr.street_number ? `, ${addr.street_number}` : ''}`
               : 'Endereço não configurado'
+            const city  = extractName(addr?.city)
+            const state = extractName(addr?.state)
             return {
               id:           String(w.id ?? ''),
               name:         String(w.name ?? `Depósito ${w.id ?? ''}`),
               address_line: street,
-              city:         addr?.city ?? '',
-              state:        addr?.state ?? '',
+              city,
+              state,
               zip_code:     addr?.zip_code ?? '',
             }
           })
@@ -83,21 +95,25 @@ export async function GET(req: NextRequest) {
     const userData = await mlFetch<MLUserData>(user.id, `/users/${mlUserId}`)
     if (!userData || typeof userData !== 'object') return NextResponse.json([])
 
-    const sa = userData.seller_address
+    const sa     = userData.seller_address
     const street = sa?.street_name
       ? `${sa.street_name}${sa.street_number ? `, ${sa.street_number}` : ''}`
       : 'Endereço do perfil ML'
 
-    const city  = sa?.city  ?? userData.address?.city  ?? ''
-    const state = sa?.state ?? userData.address?.state ?? ''
+    const city  = extractName(sa?.city)  || userData.address?.city  || ''
+    const state = extractName(sa?.state) || userData.address?.state || ''
+
+    const displayName = city && state
+      ? `${city} — ${state}`
+      : city || state || 'Endereço cadastrado no ML'
 
     return NextResponse.json([{
       id:           String(userData.id ?? mlUserId),
-      name:         city && state ? `${city}, ${state}` : 'Endereço cadastrado no ML',
+      name:         displayName,
       address_line: street,
       city,
       state,
-      zip_code: sa?.zip_code ?? '',
+      zip_code:     sa?.zip_code ?? '',
     }] as ShippingLocation[])
   } catch {
     return NextResponse.json([])

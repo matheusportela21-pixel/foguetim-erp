@@ -5,7 +5,7 @@ import { useParams, useRouter }    from 'next/navigation'
 import {
   ArrowLeft, Save, AlertCircle, X, Plus, Info, Loader2, ExternalLink,
   ChevronRight, Zap, CheckCircle2, XCircle, AlertTriangle,
-  Image as ImageIcon, UploadCloud, Copy, Package,
+  Image as ImageIcon, UploadCloud, Copy, Package, MapPin,
   Tag, FileText, Truck, BarChart2, Settings, List, ShoppingBag, Sparkles,
 } from 'lucide-react'
 import { usePlan } from '@/context/PlanContext'
@@ -29,9 +29,10 @@ interface Picture {
 }
 
 interface ItemAttribute {
-  id:         string
-  name:       string
-  value_name: string | null
+  id:           string
+  name:         string
+  value_name:   string | null
+  value_struct?: { number?: number; unit?: string } | null
 }
 
 interface SaleTerm {
@@ -120,8 +121,12 @@ interface ChangeItem {
 }
 
 interface ShippingLocation {
-  id:   string
-  name: string
+  id:           string
+  name:         string
+  address_line?: string
+  city?:         string
+  state?:        string
+  zip_code?:     string
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -473,12 +478,17 @@ export default function EditarAnuncioPage() {
         cest:       '',
         origem:     '',
       }
-      // Extract package dims from first plan attributes
+      // Extract package dims from first plan attributes — prefer value_struct.number (pure numeric)
+      const attrNum = (a: ItemAttribute): string => {
+        if (a.value_struct?.number != null) return String(a.value_struct.number)
+        const n = parseFloat(a.value_name ?? '')
+        return isNaN(n) ? '' : String(n)
+      }
       for (const a of attrs) {
-        if (a.id === 'PACKAGE_WEIGHT') s.pkg_weight = a.value_name ?? ''
-        if (a.id === 'PACKAGE_LENGTH') s.pkg_length = a.value_name ?? ''
-        if (a.id === 'PACKAGE_WIDTH')  s.pkg_width  = a.value_name ?? ''
-        if (a.id === 'PACKAGE_HEIGHT') s.pkg_height = a.value_name ?? ''
+        if (a.id === 'PACKAGE_WEIGHT') s.pkg_weight = attrNum(a)
+        if (a.id === 'PACKAGE_LENGTH') s.pkg_length = attrNum(a)
+        if (a.id === 'PACKAGE_WIDTH')  s.pkg_width  = attrNum(a)
+        if (a.id === 'PACKAGE_HEIGHT') s.pkg_height = attrNum(a)
       }
       setShared(s)
       setOrigShared(JSON.parse(JSON.stringify(s)) as SharedEdits)
@@ -1382,9 +1392,45 @@ export default function EditarAnuncioPage() {
               <SectionCard id="s5" title="Logística e Envio" icon={Truck}
                 sectionRef={el => { sectionRefs.current['s5'] = el }}>
                 <div className="space-y-5">
-                  {/* Shipping location */}
-                  <FieldRow label="Local de Expedição">
-                    {shippingLocations.length > 1 ? (
+
+                  {/* ── Local de Expedição ──────────────────────────────── */}
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Local de Expedição</p>
+                    {shippingLocations.length === 0 ? (
+                      <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl">
+                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-amber-300 mb-0.5">Nenhum local configurado</p>
+                          <p className="text-[11px] text-amber-400/80">Configure seu endereço no Mercado Livre para ativar o envio.</p>
+                        </div>
+                        <a
+                          href="https://www.mercadolivre.com.br/perfil/configuracoes"
+                          target="_blank" rel="noopener noreferrer"
+                          className="shrink-0 flex items-center gap-1 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+                        >
+                          Configurar no ML <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ) : shippingLocations.length === 1 ? (
+                      <div className="flex items-start justify-between gap-3 px-4 py-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+                        <div className="flex items-start gap-2.5">
+                          <MapPin className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-semibold text-slate-300">{shippingLocations[0].name}</p>
+                            {shippingLocations[0].address_line && shippingLocations[0].address_line !== 'Endereço do perfil ML' && (
+                              <p className="text-[11px] text-slate-500 mt-0.5">{shippingLocations[0].address_line}</p>
+                            )}
+                          </div>
+                        </div>
+                        <a
+                          href="https://www.mercadolivre.com.br/perfil/configuracoes"
+                          target="_blank" rel="noopener noreferrer"
+                          className="shrink-0 flex items-center gap-1 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+                        >
+                          Alterar no ML <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ) : (
                       <select
                         value={shippingLocationId}
                         onChange={e => setShippingLocationId(e.target.value)}
@@ -1394,21 +1440,17 @@ export default function EditarAnuncioPage() {
                           <option key={loc.id} value={loc.id}>{loc.name}</option>
                         ))}
                       </select>
-                    ) : (
-                      <input
-                        readOnly
-                        value={shippingLocations[0]?.name ?? 'Configurado na conta ML'}
-                        className={inputCls + ' opacity-70'}
-                      />
                     )}
-                    <p className="text-[10px] text-slate-600 mt-1">Gerenciado na conta do Mercado Livre</p>
-                  </FieldRow>
+                  </div>
 
-                  {/* Per-plan shipping toggles */}
+                  {/* ── Per-plan shipping toggles ────────────────────────── */}
                   {data.plans.map((plan, planIdx) => {
                     const e = planEdits[plan.id]
                     const o = origPlanEdits[plan.id]
                     if (!e || !o) return null
+                    const price = e.price
+                    const freeRequired = price > 79
+                    const freeVendorCost = price < 19
                     return (
                       <div key={plan.id} className="border border-white/[0.06] rounded-xl p-4 space-y-3">
                         <div className="flex items-center gap-2 mb-1">
@@ -1418,32 +1460,58 @@ export default function EditarAnuncioPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {/* Frete Grátis */}
                           <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.free_shipping !== o.free_shipping ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
                             <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Frete Grátis</p>
-                            <Toggle value={e.free_shipping} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], free_shipping: v } }))} label="Sim/Não" changed={e.free_shipping !== o.free_shipping} />
+                            <Toggle
+                              value={e.free_shipping}
+                              onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], free_shipping: v } }))}
+                              label="Sim/Não"
+                              changed={e.free_shipping !== o.free_shipping}
+                            />
+                            {freeRequired && !e.free_shipping && (
+                              <p className="text-[9px] text-amber-400 mt-1.5">⚠️ Recomendado para preços acima de R$79</p>
+                            )}
+                            {freeVendorCost && e.free_shipping && (
+                              <p className="text-[9px] text-amber-400 mt-1.5">⚠️ Abaixo de R$19 — você arca com o custo do frete</p>
+                            )}
                           </div>
 
+                          {/* Flex */}
                           <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.flex_shipping !== o.flex_shipping ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <Zap className="w-3 h-3 text-amber-400" />
                               <p className="text-[10px] font-semibold text-slate-400">Envio Flex</p>
                             </div>
-                            <Toggle value={e.flex_shipping} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], flex_shipping: v } }))} label="Ativo/Inativo" changed={e.flex_shipping !== o.flex_shipping} />
-                            {e.flex_shipping && (
-                              <p className="text-[9px] text-amber-400 mt-1.5">⚠️ Exige preparo e envio no mesmo dia do pedido</p>
-                            )}
+                            <Toggle
+                              value={e.flex_shipping}
+                              onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], flex_shipping: v } }))}
+                              label="Ativo/Inativo"
+                              changed={e.flex_shipping !== o.flex_shipping}
+                            />
+                            <p className="text-[9px] text-slate-600 mt-1.5">
+                              {e.flex_shipping
+                                ? '⚠️ Exige preparo e envio no mesmo dia'
+                                : 'Prioridade nas buscas quando ativo'}
+                            </p>
                           </div>
 
+                          {/* Retirada */}
                           <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.local_pick_up !== o.local_pick_up ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
                             <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Retirada Pessoal</p>
-                            <Toggle value={e.local_pick_up} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], local_pick_up: v } }))} label="Sim/Não" changed={e.local_pick_up !== o.local_pick_up} />
+                            <Toggle
+                              value={e.local_pick_up}
+                              onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], local_pick_up: v } }))}
+                              label="Sim/Não"
+                              changed={e.local_pick_up !== o.local_pick_up}
+                            />
                           </div>
                         </div>
                       </div>
                     )
                   })}
 
-                  {/* Package dimensions */}
+                  {/* ── Dimensões do Pacote ──────────────────────────────── */}
                   <div>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Dimensões do Pacote</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1466,7 +1534,26 @@ export default function EditarAnuncioPage() {
                         </FieldRow>
                       ))}
                     </div>
+                    {(() => {
+                      const w = parseFloat(shared.pkg_weight)
+                      const l = parseFloat(shared.pkg_length)
+                      const wid = parseFloat(shared.pkg_width)
+                      const h = parseFloat(shared.pkg_height)
+                      const heavy = !isNaN(w) && w > 30000
+                      const large = !isNaN(l) && !isNaN(wid) && !isNaN(h) && (l + wid + h) > 200
+                      if (!heavy && !large) return null
+                      return (
+                        <div className="flex items-start gap-2 mt-3 px-3 py-2.5 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl">
+                          <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          <p className="text-[11px] text-amber-400">
+                            {heavy && 'Pacotes acima de 30kg têm restrições de envio. '}
+                            {large && 'Soma das dimensões acima de 200cm pode ser recusada pela transportadora.'}
+                          </p>
+                        </div>
+                      )
+                    })()}
                   </div>
+
                 </div>
               </SectionCard>
 
