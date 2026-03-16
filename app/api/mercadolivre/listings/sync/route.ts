@@ -1,8 +1,9 @@
 /**
  * POST /api/mercadolivre/listings/sync
- * Body: { status?: 'active' | 'all'; limit?: number }
+ * Body: { limit?: number }
  *
- * Sincroniza anúncios do ML para a tabela local ml_listings.
+ * Sincroniza anúncios do ML (active, paused, under_review, closed, inactive)
+ * para a tabela local ml_listings.
  * Retorna: { synced: N, errors: N, duration_ms: N }
  */
 import { NextResponse }            from 'next/server'
@@ -22,13 +23,11 @@ export async function POST(req: Request) {
   const token = await getValidToken(user.id)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
-  let status: string  = 'active'
-  let limit:  number  = 2000
+  let limit: number = 2000
 
   try {
-    const body = await req.json() as { status?: string; limit?: number }
-    if (body.status) status = body.status
-    if (body.limit)  limit  = Math.min(Math.max(1, body.limit), 5000)
+    const body = await req.json() as { limit?: number }
+    if (body.limit) limit = Math.min(Math.max(1, body.limit), 5000)
   } catch { /* body vazio — usar defaults */ }
 
   const t0 = Date.now()
@@ -38,7 +37,7 @@ export async function POST(req: Request) {
       user.id,
       String(conn.ml_user_id),
       token,
-      { limit, status },
+      { limit },
     )
 
     return NextResponse.json({

@@ -30,9 +30,10 @@ interface RawMLItem {
   attributes?:           Array<{ id: string; value_name?: string | null }>
 }
 
+const STATUSES = ['active', 'paused', 'under_review', 'closed', 'inactive'] as const
+
 interface SyncOptions {
-  limit?:  number
-  status?: string
+  limit?: number
 }
 
 export interface SyncResult {
@@ -50,36 +51,40 @@ export async function syncListingsFromML(
   options:  SyncOptions = {},
 ): Promise<SyncResult> {
   const db       = supabaseAdmin()   // admin client — bypass de RLS
-  const maxItems = options.limit  ?? 2000
-  const status   = options.status ?? 'active'
+  const maxItems = options.limit ?? 2000
   const headers  = { Authorization: `Bearer ${token}` }
 
-  console.log('[Sync] Iniciando — userId:', userId, '| mlUserId:', mlUserId, '| status:', status, '| maxItems:', maxItems)
+  console.log('[Sync] Iniciando — userId:', userId, '| mlUserId:', mlUserId, '| statuses:', STATUSES.join(','), '| maxItems:', maxItems)
 
-  /* ── 1. Coletar todos os item_ids (paginado) ─────────────────────────── */
+  /* ── 1. Coletar todos os item_ids por status (paginado) ──────────────── */
   const allItemIds: string[] = []
-  let offset = 0
 
-  while (allItemIds.length < maxItems) {
-    const statusParam = status === 'all' ? '' : `&status=${status}`
-    const url = `https://api.mercadolibre.com/users/${mlUserId}/items/search` +
-      `?offset=${offset}&limit=${PAGE_SIZE}${statusParam}`
+  for (const st of STATUSES) {
+    let offset = 0
+    let collected = 0
 
-    const res = await fetch(url, { headers })
-    if (!res.ok) {
-      console.error('[Sync] Falha ao buscar IDs — status:', res.status, '| url:', url)
-      break
+    while (allItemIds.length < maxItems) {
+      const url = `https://api.mercadolibre.com/users/${mlUserId}/items/search` +
+        `?status=${st}&offset=${offset}&limit=${PAGE_SIZE}`
+
+      const res = await fetch(url, { headers })
+      if (!res.ok) {
+        console.error(`[Sync] Falha ao buscar IDs status=${st} — http:`, res.status)
+        break
+      }
+
+      const data: { results?: string[]; paging?: { total: number } } = await res.json()
+      const ids = Array.isArray(data.results) ? data.results : []
+      if (ids.length === 0) break
+
+      allItemIds.push(...ids)
+      collected += ids.length
+      if (ids.length < PAGE_SIZE) break
+      offset += PAGE_SIZE
+      await sleep(RATE_MS)
     }
 
-    const data: { results?: string[]; paging?: { total: number } } = await res.json()
-    const ids = Array.isArray(data.results) ? data.results : []
-    console.log(`[Sync] Página offset=${offset}: ${ids.length} IDs (total ML: ${data.paging?.total ?? '?'})`)
-    if (ids.length === 0) break
-
-    allItemIds.push(...ids)
-    if (ids.length < PAGE_SIZE) break
-    offset += PAGE_SIZE
-    await sleep(RATE_MS)
+    console.log(`[Sync] status=${st}: ${collected} IDs coletados`)
   }
 
   console.log('[Sync] Total de IDs coletados:', allItemIds.length)
