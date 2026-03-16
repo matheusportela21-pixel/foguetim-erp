@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       identifiers.map((r) => ({
         id:    r.id   as string,
         name:  r.name as string | undefined,
-        tags:  r.tags as string[] | undefined,
+        tags:  r.tags as Record<string, boolean> | string[] | undefined,
       })),
       item_attributes.map((a) => ({ id: a.id, value_name: a.value_name ?? undefined })),
       requiredIds,

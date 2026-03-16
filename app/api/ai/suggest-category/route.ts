@@ -21,7 +21,7 @@ interface DomainDiscoveryResult {
   category_name: string
   domain_id:     string
   domain_name:   string
-  attributes?:   { id: string; name: string; tags?: string[] }[]
+  attributes?:   { id: string; name: string; tags?: Record<string, boolean> | string[] }[]
 }
 
 interface MLCategoryDetail {
@@ -281,7 +281,11 @@ export async function POST(req: NextRequest) {
           has_children:        (catDetail?.children_categories?.length ?? 0) > 0,
           path_from_root:      catDetail?.path_from_root ?? [],
           required_attributes: (d.attributes ?? [])
-            .filter((a) => Array.isArray(a.tags) && a.tags.includes('required'))
+            .filter((a) => {
+              if (!a.tags) return false
+              if (Array.isArray(a.tags)) return a.tags.includes('required')
+              return a.tags['required'] === true
+            })
             .map((a) => a.name),
         }
       }),

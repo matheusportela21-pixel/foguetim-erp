@@ -32,7 +32,7 @@ export async function loadCategoryAttributeGroups(
 
   /* optional_recommended = catalog_required OR currently has a value */
   const optional_recommended = attrs.optional.filter((a) => {
-    if (a.tags.includes('catalog_required')) return true
+    if (a.tags['catalog_required'] === true) return true
     if ((currentValues[a.id] ?? '').trim() !== '') return true
     return false
   })

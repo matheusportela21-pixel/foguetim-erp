@@ -35,7 +35,7 @@ export interface NormalizedAttribute {
   value_type:            string
   value_max_length?:     number
   hint?:                 string
-  tags:                  string[]
+  tags:                  Record<string, boolean>
   attribute_group_id:    string
   attribute_group_name:  string
   allowed_values:        Array<{ id: string; name: string }>

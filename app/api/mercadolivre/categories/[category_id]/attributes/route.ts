@@ -13,12 +13,18 @@ interface MLRawAttribute {
   name:              string
   type?:             string
   value_type?:       string  // ML uses value_type in some API versions
-  tags:              string[] | null
+  tags:              Record<string, boolean> | string[] | null
   relevance?:        number
   values?:           { id: string; name: string }[] | null
   value_max_length?: number
   hint?:             string
   hints?:            string[]
+}
+
+function hasTag(tags: Record<string, boolean> | string[] | null | undefined, tag: string): boolean {
+  if (!tags) return false
+  if (Array.isArray(tags)) return tags.includes(tag)
+  return tags[tag] === true
 }
 
 export interface CategoryAttribute {
@@ -93,16 +99,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const relevant = (raw as MLRawAttribute[]).filter(a => {
       if (!a || typeof a !== 'object') return false
       if (ROUTE_EXCLUDED.has(a.id))    return false
-      const tags = Array.isArray(a.tags) ? a.tags : []
-      if (tags.includes('hidden'))         return false
-      if (tags.includes('read_only_api'))  return false
-      if (tags.includes('read_only'))      return false
-      if (tags.includes('fixed'))          return false
+      if (hasTag(a.tags, 'hidden'))        return false
+      if (hasTag(a.tags, 'read_only_api')) return false
+      if (hasTag(a.tags, 'read_only'))     return false
+      if (hasTag(a.tags, 'fixed'))         return false
       return true
     })
 
     const result: CategoryAttribute[] = relevant.map(a => {
-      const tags    = Array.isArray(a.tags) ? a.tags : []
       // ML uses both `value_type` and `type` depending on API version
       const typeRaw = (a.value_type ?? a.type ?? 'string').toLowerCase()
       const type    = typeRaw === 'list'    ? 'list'
@@ -113,9 +117,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
         id:               a.id ?? '',
         name:             a.name ?? '',
         type,
-        required:         tags.includes('required'),
-        isVariation:      tags.includes('variation_attribute'),
-        tags:             tags.length > 0 ? tags : undefined,
+        required:         hasTag(a.tags, 'required'),
+        isVariation:      hasTag(a.tags, 'variation_attribute'),
         values:           Array.isArray(a.values) ? a.values.map(v => ({ id: v.id, name: v.name })) : undefined,
         hint:             a.hint ?? a.hints?.[0],
         value_max_length: a.value_max_length,

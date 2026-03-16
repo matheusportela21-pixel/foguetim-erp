@@ -20,10 +20,23 @@ interface MLAttributeRaw {
   value_type?:           string
   value_max_length?:     number
   hint?:                 string
-  tags?:                 string[]
+  tags?:                 Record<string, boolean> | string[]
   attribute_group_id?:   string
   attribute_group_name?: string
   values?:               Array<{ id: string; name: string }>
+}
+
+/** ML tags são objetos {required: true}, não arrays. Suporta ambos os formatos. */
+function hasTag(tags: Record<string, boolean> | string[] | null | undefined, tag: string): boolean {
+  if (!tags) return false
+  if (Array.isArray(tags)) return tags.includes(tag)
+  return tags[tag] === true
+}
+
+function normalizeTags(raw?: Record<string, boolean> | string[]): Record<string, boolean> {
+  if (!raw) return {}
+  if (Array.isArray(raw)) return Object.fromEntries(raw.map(t => [t, true]))
+  return raw
 }
 
 interface MLTechSpecGroup {
@@ -43,7 +56,7 @@ interface MLDiscoveryItem {
   attributes?:    Array<{
     id:    string
     name:  string
-    tags?: string[]
+    tags?: Record<string, boolean> | string[]
   }>
 }
 
@@ -346,11 +359,9 @@ export async function loadCategoryAttributes(
         if (!attr?.id)                                     return false
         if (ALWAYS_EXCLUDED.has(attr.id))                  return false
         if (!isAutomotive && AUTOMOTIVE_ONLY.has(attr.id)) return false
-        if (Array.isArray(attr.tags)) {
-          if (attr.tags.includes('hidden'))        return false
-          if (attr.tags.includes('read_only'))     return false
-          if (attr.tags.includes('read_only_api')) return false
-        }
+        if (hasTag(attr.tags, 'hidden'))        return false
+        if (hasTag(attr.tags, 'read_only'))     return false
+        if (hasTag(attr.tags, 'read_only_api')) return false
         return true
       })
       .map(
@@ -360,18 +371,18 @@ export async function loadCategoryAttributes(
           value_type:             attr.value_type ?? 'string',
           value_max_length:       attr.value_max_length,
           hint:                   attr.hint,
-          tags:                   Array.isArray(attr.tags) ? attr.tags : [],
+          tags:                   normalizeTags(attr.tags),
           attribute_group_id:     attr.attribute_group_id ?? 'OTHERS',
           attribute_group_name:   attr.attribute_group_name ?? 'Outros',
           allowed_values:         Array.isArray(attr.values)
             ? attr.values.map((v) => ({ id: v.id ?? '', name: v.name ?? '' }))
             : [],
           source_endpoint:        source,
-          is_required:            Array.isArray(attr.tags) && attr.tags.includes('required'),
+          is_required:            hasTag(attr.tags, 'required'),
           is_conditional:         source === 'conditional',
-          is_hidden:              Array.isArray(attr.tags) && attr.tags.includes('hidden'),
-          is_allow_variations:    Array.isArray(attr.tags) && attr.tags.includes('allow_variations'),
-          is_variation_attribute: Array.isArray(attr.tags) && attr.tags.includes('variation_attribute'),
+          is_hidden:              hasTag(attr.tags, 'hidden'),
+          is_allow_variations:    hasTag(attr.tags, 'allow_variations'),
+          is_variation_attribute: hasTag(attr.tags, 'variation_attribute'),
           domain_id:              domainId,
           category_id:            categoryId,
         }),

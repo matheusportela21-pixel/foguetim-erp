@@ -4,7 +4,7 @@ import type {
   MlVariationField,
   MlAttributeUiSection,
 } from './types'
-import { IDENTIFIER_IDS } from './ml-attribute-engine.service'
+import { IDENTIFIER_IDS, hasTag } from './ml-attribute-engine.service'
 
 /* ─── Deduplicação de identificadores ───────────────────────────────────── */
 
@@ -40,7 +40,7 @@ const GTIN_IDS = new Set(['GTIN', 'EAN', 'UPC', 'ISBN'])
 interface RawIdentifier {
   id:    string
   name?: string
-  tags?: string[]
+  tags?: Record<string, boolean> | string[]
 }
 
 interface ItemAttrInput {
@@ -62,7 +62,7 @@ export function extractIdentifierFields(
     const value    = currentMap[raw.id] ?? ''
     const isGtin   = GTIN_IDS.has(raw.id)
     const isValid  = isGtin ? /^\d{8,14}$/.test(value) : value.length > 0
-    const tagReq   = Array.isArray(raw.tags) && raw.tags.includes('required')
+    const tagReq   = hasTag(raw.tags, 'required')
 
     return {
       type:               IDENTIFIER_TYPE_MAP[raw.id] ?? 'SELLER_SKU',

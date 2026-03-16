@@ -37,7 +37,7 @@ interface RawMlAttribute {
   value_type?:           string
   value_max_length?:     number
   hint?:                 string
-  tags?:                 string[]
+  tags?:                 Record<string, boolean> | string[]
   attribute_group_id?:   string
   attribute_group_name?: string
   values?:               Array<{ id?: string; name?: string }>
@@ -52,6 +52,23 @@ interface RawTechResponse {
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
+
+/** ML tags chegam como objeto {required: true}, não array. Suporta ambos. */
+export function hasTag(
+  tags: Record<string, boolean> | string[] | null | undefined,
+  tag: string,
+): boolean {
+  if (!tags) return false
+  if (Array.isArray(tags)) return tags.includes(tag)
+  return tags[tag] === true
+}
+
+/** Normaliza tags brutas da API para Record<string, boolean> */
+function normalizeTags(raw?: Record<string, boolean> | string[]): Record<string, boolean> {
+  if (!raw) return {}
+  if (Array.isArray(raw)) return Object.fromEntries(raw.map(t => [t, true]))
+  return raw
+}
 
 function isAutomotiveDomain(domainId: string): boolean {
   const d = (domainId ?? '').toUpperCase()
@@ -80,7 +97,7 @@ function parseRawAttribute(
   currentValues:   CurrentValuesMap,
 ): NormalizedMlAttribute {
   const id      = raw.id!
-  const tags    = Array.isArray(raw.tags) ? raw.tags : []
+  const tags    = normalizeTags(raw.tags)
   const cv      = currentValues[id]
   const hasVal  = !!(cv?.value || cv?.value_id)
 
@@ -99,15 +116,15 @@ function parseRawAttribute(
     category_id:            categoryId,
     domain_id:              domainId,
     hint:                   raw.hint,
-    is_required:            tags.includes('required'),
+    is_required:            hasTag(tags, 'required'),
     is_conditional:         source === 'conditional',
-    is_hidden:              tags.includes('hidden'),
-    is_fixed:               tags.includes('fixed'),
-    is_new_required:        tags.includes('new_required'),
-    is_variation_attribute: tags.includes('variation_attribute'),
-    is_allow_variations:    tags.includes('allow_variations'),
+    is_hidden:              hasTag(tags, 'hidden'),
+    is_fixed:               hasTag(tags, 'fixed'),
+    is_new_required:        hasTag(tags, 'new_required'),
+    is_variation_attribute: hasTag(tags, 'variation_attribute'),
+    is_allow_variations:    hasTag(tags, 'allow_variations'),
     is_identifier:          IDENTIFIER_IDS.has(id),
-    is_recommended:         tags.includes('catalog_required') || hasVal,
+    is_recommended:         hasTag(tags, 'catalog_required') || hasVal,
     current_value:          cv?.value,
     current_value_id:       cv?.value_id,
   } satisfies NormalizedMlAttribute
@@ -215,8 +232,7 @@ export async function buildAttributeEngineState(
         continue
       }
 
-      const tags = Array.isArray(raw.tags) ? raw.tags : []
-      if (tags.includes('hidden') && !currentValues[raw.id]) continue
+      if (hasTag(raw.tags, 'hidden') && !currentValues[raw.id]) continue
 
       attributes.push(parseRawAttribute(raw, source, categoryId, domainId, currentValues))
     }
