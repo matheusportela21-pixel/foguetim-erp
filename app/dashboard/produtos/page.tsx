@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
+import BulkActionModal, { type BulkAction, type BulkProgress } from '@/components/ml/BulkActionModal'
 import { useAuth } from '@/lib/auth-context'
 import { getProducts, deleteProduct } from '@/lib/db/products'
 import { logActivity } from '@/lib/activity-log'
@@ -1111,9 +1112,13 @@ function MLProductsTab() {
   const [gotoPage,        setGotoPage]        = useState('')
 
   // Bulk actions
-  const [selectedIds,   setSelectedIds]   = useState<string[]>([])
-  const [bulkSaving,    setBulkSaving]    = useState(false)
-  const [showBulkPrice, setShowBulkPrice] = useState(false)
+  const [selectedIds,      setSelectedIds]      = useState<string[]>([])
+  const [bulkSaving,       setBulkSaving]       = useState(false)
+  const [showBulkPrice,    setShowBulkPrice]    = useState(false)
+  const [activeBulkAction, setActiveBulkAction] = useState<BulkAction | null>(null)
+  const [bulkRunning,      setBulkRunning]      = useState(false)
+  const [bulkProgress,     setBulkProgress]     = useState<BulkProgress | null>(null)
+  const [bulkToast,        setBulkToast]        = useState<{ type: 'success' | 'partial'; message: string } | null>(null)
 
   // Debounce search input → reset to page 1 and update search_query
   useEffect(() => {
@@ -1254,20 +1259,49 @@ function MLProductsTab() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
-  // Bulk status change
-  async function bulkStatus(newStatus: 'active' | 'paused') {
+  // Bulk action execution (per-item for real-time progress)
+  async function executeBulkAction() {
+    if (!activeBulkAction) return
+    const ids   = Array.from(selectedIds)
+    const total = ids.length
+    setBulkRunning(true)
     setBulkSaving(true)
-    for (const id of selectedIds) {
-      await fetch(`/api/mercadolivre/items/${id}`, {
-        method: 'PATCH',
+    setBulkProgress({ done: 0, errors: 0, total })
+
+    let done   = 0
+    let errors = 0
+
+    for (const id of ids) {
+      const res = await fetch('/api/mercadolivre/items/bulk-action', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: 'status', value: newStatus }),
+        body:    JSON.stringify({ action: activeBulkAction, item_ids: [id] }),
       })
-      updateItem(id, { status: newStatus })
-      await new Promise(r => setTimeout(r, 1000))
+      const data = await res.json() as { success?: string[]; failed?: string[] }
+      if (data.success?.includes(id)) {
+        done++
+        const newStatus = activeBulkAction === 'pause' ? 'paused' : activeBulkAction === 'reactivate' ? 'active' : 'closed'
+        updateItem(id, { status: newStatus })
+      } else {
+        errors++
+      }
+      setBulkProgress({ done, errors, total })
     }
+
+    setBulkRunning(false)
     setBulkSaving(false)
+    setActiveBulkAction(null)
+    setBulkProgress(null)
     setSelectedIds([])
+    setRefreshKey(k => k + 1)
+
+    const actionLabel = activeBulkAction === 'pause' ? 'pausados' : activeBulkAction === 'reactivate' ? 'reativados' : 'fechados'
+    if (errors === 0) {
+      setBulkToast({ type: 'success', message: `${done} anúncio(s) ${actionLabel} com sucesso.` })
+    } else {
+      setBulkToast({ type: 'partial', message: `${done} ${actionLabel}, ${errors} com erro.` })
+    }
+    setTimeout(() => setBulkToast(null), 5000)
   }
 
   const selectedItems = displayed.filter(i => selectedIds.includes(i.id))
@@ -1529,22 +1563,25 @@ function MLProductsTab() {
           <span className="text-xs font-bold text-purple-300">
             {selectedIds.length} anúncio(s) selecionado(s)
           </span>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
             <button onClick={() => setShowBulkPrice(true)} disabled={bulkSaving}
               className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-all disabled:opacity-50">
               Alterar preço
             </button>
-            <button onClick={() => bulkStatus('paused')} disabled={bulkSaving}
-              className="px-3 py-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50 flex items-center gap-1.5">
-              {bulkSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-              Pausar todos
-            </button>
-            <button onClick={() => bulkStatus('active')} disabled={bulkSaving}
+            <button onClick={() => setActiveBulkAction('reactivate')} disabled={bulkSaving}
               className="px-3 py-1.5 text-xs font-semibold text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl hover:bg-green-500/20 transition-all disabled:opacity-50">
-              Reativar todos
+              ▶ Reativar
             </button>
-            <button onClick={() => setSelectedIds([])}
-              className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors">
+            <button onClick={() => setActiveBulkAction('pause')} disabled={bulkSaving}
+              className="px-3 py-1.5 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50">
+              ⏸ Pausar
+            </button>
+            <button onClick={() => setActiveBulkAction('close')} disabled={bulkSaving}
+              className="px-3 py-1.5 text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-all disabled:opacity-50">
+              🔴 Fechar permanentemente
+            </button>
+            <button onClick={() => setSelectedIds([])} disabled={bulkSaving}
+              className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1859,6 +1896,35 @@ function MLProductsTab() {
           onClose={() => setShowBulkPrice(false)}
           onDone={() => { setShowBulkPrice(false); setSelectedIds([]); setRefreshKey(k => k + 1) }}
         />
+      )}
+
+      {/* Bulk action modal */}
+      {activeBulkAction && (
+        <BulkActionModal
+          action={activeBulkAction}
+          selectedCount={selectedIds.length}
+          onConfirm={executeBulkAction}
+          onCancel={() => { if (!bulkRunning) setActiveBulkAction(null) }}
+          isLoading={bulkRunning}
+          progress={bulkProgress ?? undefined}
+        />
+      )}
+
+      {/* Bulk action toast */}
+      {bulkToast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl text-sm font-semibold transition-all ${
+          bulkToast.type === 'success'
+            ? 'bg-green-900/80 border-green-700/50 text-green-300'
+            : 'bg-amber-900/80 border-amber-700/50 text-amber-300'
+        }`}>
+          {bulkToast.type === 'success'
+            ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+            : <AlertTriangle className="w-4 h-4 shrink-0" />}
+          {bulkToast.message}
+          <button onClick={() => setBulkToast(null)} className="ml-2 text-slate-400 hover:text-slate-200">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       )}
     </div>
   )
