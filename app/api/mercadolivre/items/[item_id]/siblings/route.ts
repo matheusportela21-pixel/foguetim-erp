@@ -25,7 +25,13 @@ interface MLItemRaw {
   date_created:       string
   last_updated:       string
   user_product_id:    string | null
-  attributes:         { id: string; name: string; value_name: string | null }[]
+  attributes:         {
+    id:            string
+    name:          string
+    value_name:    string | null
+    value_struct?: { number?: number; unit?: string } | null
+    value_id?:     string | null
+  }[]
   shipping:           Record<string, unknown>
   seller_custom_field: string | null
   gtin:               string[] | null
@@ -33,6 +39,7 @@ interface MLItemRaw {
   buying_mode:        string
   site_id:            string
   category_id:        string
+  domain_id?:         string
   variations:         unknown[]
   tags:               string[]
 }
@@ -110,19 +117,24 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const plans = await Promise.all(planPromises)
 
-    // 4. Fetch attributes for the root item
-    let attributes: { id: string; name: string; value_name: string | null }[] = []
-    const attrsRes = await fetchWithToken(token, `${ML_API_BASE}/items/${item_id}/attributes`)
-    if (attrsRes.ok) {
-      const attrsRaw: unknown = await attrsRes.json()
-      if (Array.isArray(attrsRaw)) {
-        attributes = attrsRaw as { id: string; name: string; value_name: string | null }[]
-      }
-    }
+    // 4. Use attributes from root item (already fetched in step 1)
+    // GET /items/{id} includes the complete attributes array with value_name and value_struct
+    const attributes = Array.isArray(rootItem.attributes) ? rootItem.attributes : []
+
+    console.log('[siblings GET] item_id:', item_id)
+    console.log('[siblings GET] attributes total:', attributes.length)
+    console.log('[siblings GET] EAN/GTIN attrs:', JSON.stringify(
+      attributes.filter(a => ['GTIN', 'EAN', 'UPC', 'ISBN', 'MPN', 'SELLER_SKU'].includes(a.id))
+    ))
+    console.log('[siblings GET] seller_custom_field:', rootItem.seller_custom_field)
+    console.log('[siblings GET] gtin:', rootItem.gtin)
+    console.log('[siblings GET] sold_quantity:', rootItem.sold_quantity)
+    console.log('[siblings GET] domain_id:', rootItem.domain_id)
 
     return NextResponse.json({
       user_product_id: rootItem.user_product_id,
       category_id:     rootItem.category_id,
+      domain_id:       rootItem.domain_id ?? '',
       plans,
       attributes,
       ml_user_id:      conn.ml_user_id,

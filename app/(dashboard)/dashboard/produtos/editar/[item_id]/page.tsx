@@ -32,6 +32,7 @@ interface ItemAttribute {
   id:           string
   name:         string
   value_name:   string | null
+  value_id?:    string | null
   value_struct?: { number?: number; unit?: string } | null
 }
 
@@ -80,6 +81,7 @@ interface PlanData {
 interface SiblingsData {
   user_product_id: string | null
   category_id:     string
+  domain_id:       string
   plans:           PlanData[]
   attributes:      ItemAttribute[]
   ml_user_id:      number
@@ -443,6 +445,7 @@ export default function EditarAnuncioPage() {
       const d: SiblingsData = {
         user_product_id: json.user_product_id as string | null,
         category_id:     String(json.category_id ?? ''),
+        domain_id:       String(json.domain_id   ?? ''),
         plans:           Array.isArray(json.plans)      ? json.plans      as PlanData[]      : [],
         attributes:      Array.isArray(json.attributes) ? json.attributes as ItemAttribute[] : [],
         ml_user_id:      Number(json.ml_user_id ?? 0),
@@ -452,19 +455,28 @@ export default function EditarAnuncioPage() {
       // Shared: title + EAN (from attributes array, fallback to gtin field)
       const title = d.plans[0]?.title ?? ''
       const attrs = Array.isArray(d.attributes) ? d.attributes : []
-      const eanFromAttrs = attrs.find(
-        (a: ItemAttribute) => ['GTIN', 'EAN', 'BARCODE'].includes(a.id),
-      )?.value_name ?? ''
-      const skuFromAttrs = attrs.find(
-        (a: ItemAttribute) => a.id === 'SELLER_SKU' || a.id === 'SKU',
-      )?.value_name ?? ''
 
+      // ML returns EAN/GTIN inside attributes[] with id='GTIN','EAN','UPC','ISBN'
+      const eanFromAttrs = attrs.find(
+        (a: ItemAttribute) => ['GTIN', 'EAN', 'UPC', 'ISBN'].includes(a.id),
+      )?.value_name ?? ''
+      // ML returns SKU in seller_custom_field (plan field) or SELLER_SKU attribute
+      const skuFromAttrs = attrs.find(
+        (a: ItemAttribute) => a.id === 'SELLER_SKU',
+      )?.value_name ?? ''
+      // ML returns MPN in MPN or ALPHANUMERIC_MODEL
       const mpnFromAttrs = attrs.find(
-        (a: ItemAttribute) => ['MPN', 'ALPHANUMERIC_MODEL', 'MANUFACTURER_PART_NUMBER'].includes(a.id),
+        (a: ItemAttribute) => ['MPN', 'ALPHANUMERIC_MODEL'].includes(a.id),
       )?.value_name ?? ''
 
       const eanFromML  = eanFromAttrs || d.plans[0]?.gtin?.[0] || ''
       const skuForPlan = d.plans[0]?.seller_custom_field ?? skuFromAttrs
+
+      console.log('[Editor] attributes total:', attrs.length)
+      console.log('[Editor] EAN encontrado:', eanFromML)
+      console.log('[Editor] SKU encontrado:', skuForPlan)
+      console.log('[Editor] MPN encontrado:', mpnFromAttrs)
+      console.log('[Editor] gtin[]:', d.plans[0]?.gtin)
 
       const s: SharedEdits = {
         title,
@@ -583,9 +595,9 @@ export default function EditarAnuncioPage() {
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             category_id:     d.category_id,
-            domain_id:       '',
+            domain_id:       d.domain_id,
             item_attributes: Array.isArray(d.attributes) ? d.attributes.map(
-              (a: ItemAttribute) => ({ id: a.id, value_name: a.value_name }),
+              (a: ItemAttribute) => ({ id: a.id, value_name: a.value_name, value_id: a.value_id ?? null }),
             ) : [],
           }),
         })
