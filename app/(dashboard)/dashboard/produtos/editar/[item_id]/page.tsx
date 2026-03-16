@@ -105,11 +105,15 @@ interface PlanEdits {
 
 interface SharedEdits {
   title:      string
-  ean:        string
+  ean:        string   // GTIN/EAN
+  mpn:        string   // Manufacturer Part Number
   pkg_weight: string
   pkg_length: string
   pkg_width:  string
   pkg_height: string
+  ncm:        string   // Fiscal — ERP internal only
+  cest:       string   // Fiscal — ERP internal only
+  origem:     string   // Fiscal — ERP internal only
 }
 
 interface ChangeItem {
@@ -160,15 +164,15 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
 }
 
 const NAV_SECTIONS = [
-  { id: 's1', label: 'Informação Básica'   },
-  { id: 's2', label: 'Atributos'           },
-  { id: 's3', label: 'Info do Anúncio'    },
-  { id: 's4', label: 'Mídia'              },
-  { id: 's5', label: 'Inf. de Venda'     },
-  { id: 's6', label: 'Descrição'          },
-  { id: 's7', label: 'Envio'              },
-  { id: 's8', label: 'Pacote'             },
-  { id: 's9', label: 'Saúde do Anúncio'  },
+  { id: 's1', label: 'Informação Básica'    },
+  { id: 's2', label: 'Atributos'            },
+  { id: 's3', label: 'Identificação'        },
+  { id: 's4', label: 'Venda'               },
+  { id: 's5', label: 'Logística'            },
+  { id: 's6', label: 'Mídia'               },
+  { id: 's7', label: 'Descrição'            },
+  { id: 's8', label: 'Fiscal'              },
+  { id: 's9', label: 'Saúde do Anúncio'   },
 ]
 
 function fmtBRL(v: number) {
@@ -474,8 +478,8 @@ export default function EditarAnuncioPage() {
   const [shippingLocationId, setShippingLocationId]   = useState('')
 
   /* ── shared edits ─────────────────────────────────────────────────────── */
-  const [shared, setShared]         = useState<SharedEdits>({ title: '', ean: '', pkg_weight: '', pkg_length: '', pkg_width: '', pkg_height: '' })
-  const [origShared, setOrigShared] = useState<SharedEdits>({ title: '', ean: '', pkg_weight: '', pkg_length: '', pkg_width: '', pkg_height: '' })
+  const [shared, setShared]         = useState<SharedEdits>({ title: '', ean: '', mpn: '', pkg_weight: '', pkg_length: '', pkg_width: '', pkg_height: '', ncm: '', cest: '', origem: '' })
+  const [origShared, setOrigShared] = useState<SharedEdits>({ title: '', ean: '', mpn: '', pkg_weight: '', pkg_length: '', pkg_width: '', pkg_height: '', ncm: '', cest: '', origem: '' })
 
   /* ── per-plan edits ───────────────────────────────────────────────────── */
   const [planEdits, setPlanEdits]       = useState<Record<string, PlanEdits>>({})
@@ -555,13 +559,21 @@ export default function EditarAnuncioPage() {
         (a: ItemAttribute) => a.id === 'SELLER_SKU' || a.id === 'SKU',
       )?.value_name ?? ''
 
+      const mpnFromAttrs = attrs.find(
+        (a: ItemAttribute) => ['MPN', 'ALPHANUMERIC_MODEL', 'MANUFACTURER_PART_NUMBER'].includes(a.id),
+      )?.value_name ?? ''
+
       const s: SharedEdits = {
         title,
         ean:        eanFromAttrs || d.plans[0]?.gtin?.[0] || '',
+        mpn:        mpnFromAttrs,
         pkg_weight: '',
         pkg_length: '',
         pkg_width:  '',
         pkg_height: '',
+        ncm:        '',
+        cest:       '',
+        origem:     '',
       }
       // Extract package dims from first plan attributes
       for (const a of attrs) {
@@ -730,6 +742,18 @@ export default function EditarAnuncioPage() {
       })
     }
 
+    // MPN (→ first plan attributes)
+    if (shared.mpn !== origShared.mpn && data.plans[0]) {
+      changes.push({
+        id:          'mpn',
+        planId:      data.plans[0].id,
+        planLabel:   'Produto',
+        label:       'MPN',
+        fromDisplay: origShared.mpn || '—',
+        toDisplay:   shared.mpn   || '(remover)',
+      })
+    }
+
     // Category attributes (→ first plan)
     const changedAttrs = Object.entries(attrEdits).filter(([id, val]) => {
       const isNA    = naAttrs.has(id)
@@ -834,52 +858,57 @@ export default function EditarAnuncioPage() {
     const firstPlanE  = planEdits[firstPlan.id]
     const desc        = firstPlanE?.description ?? ''
     const mainPicSize = parsePicSize(pictures[0]?.size)
+    const reqIds      = categoryAttrs.filter(a => a.required).map(a => a.id)
 
-    type HealthCheck = { id: string; label: string; ok: boolean; points: number; tip: string }
+    type HealthCheck = { id: string; label: string; ok: boolean; points: number; tip: string; section: string }
     const checks: HealthCheck[] = [
       {
-        id:     'title_length',
-        label:  'Título otimizado (40-60 chars)',
-        ok:     shared.title.length >= 40 && shared.title.length <= 60,
-        points: 15,
-        tip:    `Seu título tem ${shared.title.length} chars. Ideal: 40-60.`,
+        id:      'title_length',
+        label:   'Título otimizado (40-60 chars)',
+        ok:      shared.title.length >= 40 && shared.title.length <= 60,
+        points:  15,
+        tip:     `Seu título tem ${shared.title.length} chars. Ideal: 40-60.`,
+        section: 's1',
       },
       {
-        id:     'has_description',
-        label:  'Descrição preenchida (≥ 100 chars)',
-        ok:     desc.length >= 100,
-        points: 20,
-        tip:    'Adicione uma descrição com pelo menos 100 caracteres.',
+        id:      'has_description',
+        label:   'Descrição preenchida (≥ 100 chars)',
+        ok:      desc.length >= 100,
+        points:  20,
+        tip:     'Adicione uma descrição com pelo menos 100 caracteres.',
+        section: 's7',
       },
       {
-        id:     'has_images',
-        label:  'Ao menos 3 imagens',
-        ok:     pictures.length >= 3,
-        points: 20,
-        tip:    'Adicione pelo menos 3 imagens do produto.',
+        id:      'has_images',
+        label:   'Ao menos 3 imagens',
+        ok:      pictures.length >= 3,
+        points:  20,
+        tip:     'Adicione pelo menos 3 imagens do produto.',
+        section: 's6',
       },
       {
-        id:     'main_image_hd',
-        label:  'Imagem principal ≥ 800×800px',
-        ok:     mainPicSize !== null && mainPicSize.w >= 800 && mainPicSize.h >= 800,
-        points: 15,
-        tip:    mainPicSize ? `Imagem atual: ${mainPicSize.w}×${mainPicSize.h}px.` : 'Tamanho da imagem não disponível.',
+        id:      'main_image_hd',
+        label:   'Imagem principal ≥ 800×800px',
+        ok:      mainPicSize !== null && mainPicSize.w >= 800 && mainPicSize.h >= 800,
+        points:  15,
+        tip:     mainPicSize ? `Imagem atual: ${mainPicSize.w}×${mainPicSize.h}px.` : 'Tamanho da imagem não disponível.',
+        section: 's6',
       },
       {
-        id:     'has_ean',
-        label:  'Código de barras (EAN/GTIN)',
-        ok:     shared.ean.trim() !== '',
-        points: 10,
-        tip:    'EAN/GTIN melhora a visibilidade no catálogo ML.',
+        id:      'has_ean',
+        label:   'Código de barras (EAN/GTIN)',
+        ok:      shared.ean.trim() !== '',
+        points:  10,
+        tip:     'EAN/GTIN melhora a visibilidade no catálogo ML.',
+        section: 's3',
       },
       {
-        id:     'required_attrs',
-        label:  'Atributos obrigatórios preenchidos',
-        ok:     categoryAttrs
-          .filter(a => a.required)
-          .every(a => (attrEdits[a.id] ?? '').trim() !== '' && !naAttrs.has(a.id)),
-        points: 20,
-        tip:    'Preencha todos os atributos obrigatórios da categoria.',
+        id:      'required_attrs',
+        label:   'Atributos obrigatórios preenchidos',
+        ok:      reqIds.every((id) => (attrEdits[id] ?? '').trim() !== '' && !naAttrs.has(id)),
+        points:  20,
+        tip:     'Preencha todos os atributos obrigatórios da categoria.',
+        section: 's2',
       },
     ]
 
@@ -930,6 +959,9 @@ export default function EditarAnuncioPage() {
 
     if (shared.ean !== origShared.ean) {
       attrPayload.push({ id: 'GTIN', value_name: shared.ean || null })
+    }
+    if (shared.mpn !== origShared.mpn) {
+      attrPayload.push({ id: 'MPN', value_name: shared.mpn || null })
     }
     for (const [id, val] of Object.entries(attrEdits)) {
       const isNA    = naAttrs.has(id)
@@ -1302,13 +1334,23 @@ export default function EditarAnuncioPage() {
                 )}
               </SectionCard>
 
-              {/* ── § 3 Informação do Anúncio ─────────────────────────── */}
-              <SectionCard id="s3" title="Informação do Anúncio" icon={Settings}
+              {/* ── § 3 Identificação do Produto ─────────────────────── */}
+              <SectionCard id="s3" title="Identificação do Produto" icon={Tag}
                 sectionRef={el => { sectionRefs.current['s3'] = el }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FieldRow label="Tipo de Anúncio">
-                    <input readOnly value={firstPlan?.buying_mode === 'classified' ? 'Classificado' : 'Simples'} className={inputCls + ' opacity-70'} />
-                    <p className="text-[10px] text-slate-600 mt-1">Somente leitura</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FieldRow
+                    label="EAN / GTIN (código de barras)"
+                    changed={shared.ean !== origShared.ean}
+                  >
+                    <input
+                      type="text"
+                      value={shared.ean}
+                      onChange={e => setShared(s => ({ ...s, ean: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="7891000000000"
+                      maxLength={14}
+                      className={inputCls}
+                    />
+                    <p className="text-[10px] text-slate-600 mt-1">8, 12, 13 ou 14 dígitos. Melhora indexação no catálogo.</p>
                   </FieldRow>
                   <FieldRow
                     label="SKU do Vendedor"
@@ -1333,139 +1375,24 @@ export default function EditarAnuncioPage() {
                     <p className="text-[10px] text-slate-600 mt-1">Aplicado a todos os planos</p>
                   </FieldRow>
                   <FieldRow
-                    label="EAN / GTIN (código de barras)"
-                    changed={shared.ean !== origShared.ean}
+                    label="MPN (referência do fabricante)"
+                    changed={shared.mpn !== origShared.mpn}
                   >
                     <input
                       type="text"
-                      value={shared.ean}
-                      onChange={e => setShared(s => ({ ...s, ean: e.target.value.replace(/\D/g, '') }))}
-                      placeholder="7891000000000"
-                      maxLength={14}
+                      value={shared.mpn}
+                      onChange={e => setShared(s => ({ ...s, mpn: e.target.value }))}
+                      placeholder="ABC-12345"
                       className={inputCls}
                     />
-                    <p className="text-[10px] text-slate-600 mt-1">8, 12, 13 ou 14 dígitos. Melhora indexação.</p>
-                  </FieldRow>
-                  <FieldRow label="Local de Expedição">
-                    {shippingLocations.length > 1 ? (
-                      <select
-                        value={shippingLocationId}
-                        onChange={e => setShippingLocationId(e.target.value)}
-                        className={selectCls}
-                      >
-                        {shippingLocations.map(loc => (
-                          <option key={loc.id} value={loc.id}>{loc.name}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        readOnly
-                        value={shippingLocations[0]?.name ?? 'Configurado na conta ML'}
-                        className={inputCls + ' opacity-70'}
-                      />
-                    )}
-                    <p className="text-[10px] text-slate-600 mt-1">Gerenciado na conta do Mercado Livre</p>
+                    <p className="text-[10px] text-slate-600 mt-1">Manufacturer Part Number — opcional</p>
                   </FieldRow>
                 </div>
               </SectionCard>
 
-              {/* ── § 4 Mídia ─────────────────────────────────────────── */}
-              <SectionCard id="s4" title="Mídia" icon={ImageIcon}
+              {/* ── § 4 Venda ─────────────────────────────────────────── */}
+              <SectionCard id="s4" title="Informações de Venda" icon={ShoppingBag}
                 sectionRef={el => { sectionRefs.current['s4'] = el }}>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-slate-500">
-                      <span className={pictures.length === 0 ? 'text-red-400' : 'text-white font-semibold'}>{pictures.length}</span>
-                      /12 imagens
-                    </p>
-                    <button
-                      onClick={() => setAddImgOpen(v => !v)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.09] transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Adicionar Imagem
-                    </button>
-                  </div>
-
-                  {/* Add image panel */}
-                  {addImgOpen && (
-                    <div className="p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl space-y-3">
-                      <p className="text-xs font-semibold text-slate-400">Adicionar via URL</p>
-                      <div className="flex gap-2">
-                        <input
-                          type="url" value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && addImageByUrl()}
-                          placeholder="https://example.com/imagem.jpg"
-                          className={inputCls + ' flex-1 text-xs'}
-                        />
-                        <button onClick={addImageByUrl} disabled={!newImageUrl.trim()}
-                          className="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 transition-all">
-                          Adicionar
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-px bg-white/[0.06]" />
-                        <span className="text-[10px] text-slate-600">ou</span>
-                        <div className="flex-1 h-px bg-white/[0.06]" />
-                      </div>
-                      <div
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-white/20 cursor-pointer transition-all text-xs text-slate-500 hover:text-slate-300"
-                        onClick={() => uploadInputRef.current?.click()}
-                      >
-                        <UploadCloud className="w-4 h-4" />
-                        {imgUploading ? 'Enviando...' : 'Clique para fazer upload do computador'}
-                        <input ref={uploadInputRef} type="file" accept="image/jpeg,image/png" className="hidden"
-                          onChange={e => { const f = e.target.files?.[0]; if (f) void handleFileUpload(f); e.target.value = '' }} />
-                      </div>
-                      {imgMsg && (
-                        <p className={`text-xs font-semibold ${imgMsg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{imgMsg}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Image grid */}
-                  {pictures.length > 0 ? (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {pictures.map((pic, idx) => {
-                        const dims = parsePicSize(pic.size)
-                        return (
-                          <div key={pic.id} className="relative group aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-dark-700">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={pic.url || pic.secure_url} alt={`Imagem ${idx + 1}`} className="w-full h-full object-cover" />
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => setPictures(prev => prev.filter((_, i) => i !== idx))}
-                                className="p-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/40 transition-colors"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                              <a href={pic.secure_url || pic.url} target="_blank" rel="noopener noreferrer"
-                                className="p-1 rounded-full bg-white/10 border border-white/20 text-slate-300 hover:bg-white/20 transition-colors">
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </div>
-                            {idx === 0 && (
-                              <span className="absolute top-1 left-1 text-[7px] font-bold bg-purple-600 text-white px-1 rounded">CAPA</span>
-                            )}
-                            {dims && (
-                              <span className="absolute bottom-1 left-1 right-1 text-[7px] text-slate-400 text-center leading-none">{dims.w}×{dims.h}</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center py-8 rounded-xl border-2 border-dashed border-white/[0.06]">
-                      <p className="text-xs text-slate-600">Nenhuma imagem. Adicione ao menos 1.</p>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-slate-600">Mínimo 500×500px. Primeira foto: fundo branco recomendado.</p>
-                </div>
-              </SectionCard>
-
-              {/* ── § 5 Informações de Venda ─────────────────────────── */}
-              <SectionCard id="s5" title="Informações de Venda" icon={ShoppingBag}
-                sectionRef={el => { sectionRefs.current['s5'] = el }}>
                 <div className="space-y-5">
                   {data.plans.map((plan, planIdx) => {
                     const e  = planEdits[plan.id]
@@ -1572,9 +1499,195 @@ export default function EditarAnuncioPage() {
                 </div>
               </SectionCard>
 
-              {/* ── § 6 Descrição ────────────────────────────────────── */}
-              <SectionCard id="s6" title="Descrição" icon={FileText}
+              {/* ── § 5 Logística ─────────────────────────────────────── */}
+              <SectionCard id="s5" title="Logística e Envio" icon={Truck}
+                sectionRef={el => { sectionRefs.current['s5'] = el }}>
+                <div className="space-y-5">
+                  {/* Shipping location */}
+                  <FieldRow label="Local de Expedição">
+                    {shippingLocations.length > 1 ? (
+                      <select
+                        value={shippingLocationId}
+                        onChange={e => setShippingLocationId(e.target.value)}
+                        className={selectCls}
+                      >
+                        {shippingLocations.map(loc => (
+                          <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        readOnly
+                        value={shippingLocations[0]?.name ?? 'Configurado na conta ML'}
+                        className={inputCls + ' opacity-70'}
+                      />
+                    )}
+                    <p className="text-[10px] text-slate-600 mt-1">Gerenciado na conta do Mercado Livre</p>
+                  </FieldRow>
+
+                  {/* Per-plan shipping toggles */}
+                  {data.plans.map((plan, planIdx) => {
+                    const e = planEdits[plan.id]
+                    const o = origPlanEdits[plan.id]
+                    if (!e || !o) return null
+                    return (
+                      <div key={plan.id} className="border border-white/[0.06] rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold text-slate-400">Plano {planIdx + 1}</span>
+                          <PlanTag plan={plan} short />
+                          <span className="text-[10px] text-slate-600 ml-auto">{plan.shipping?.mode ?? 'me2'} · {plan.shipping?.logistic_type ?? '—'}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.free_shipping !== o.free_shipping ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                            <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Frete Grátis</p>
+                            <Toggle value={e.free_shipping} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], free_shipping: v } }))} label="Sim/Não" changed={e.free_shipping !== o.free_shipping} />
+                          </div>
+
+                          <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.flex_shipping !== o.flex_shipping ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <Zap className="w-3 h-3 text-amber-400" />
+                              <p className="text-[10px] font-semibold text-slate-400">Envio Flex</p>
+                            </div>
+                            <Toggle value={e.flex_shipping} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], flex_shipping: v } }))} label="Ativo/Inativo" changed={e.flex_shipping !== o.flex_shipping} />
+                            {e.flex_shipping && (
+                              <p className="text-[9px] text-amber-400 mt-1.5">⚠️ Exige preparo e envio no mesmo dia do pedido</p>
+                            )}
+                          </div>
+
+                          <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.local_pick_up !== o.local_pick_up ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                            <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Retirada Pessoal</p>
+                            <Toggle value={e.local_pick_up} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], local_pick_up: v } }))} label="Sim/Não" changed={e.local_pick_up !== o.local_pick_up} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Package dimensions */}
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Dimensões do Pacote</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {([
+                        { key: 'pkg_weight', label: 'Peso',         unit: 'g',  placeholder: '500' },
+                        { key: 'pkg_length', label: 'Comprimento',  unit: 'cm', placeholder: '20'  },
+                        { key: 'pkg_width',  label: 'Largura',      unit: 'cm', placeholder: '15'  },
+                        { key: 'pkg_height', label: 'Altura',       unit: 'cm', placeholder: '10'  },
+                      ] as { key: keyof SharedEdits; label: string; unit: string; placeholder: string }[]).map(f => (
+                        <FieldRow key={f.key} label={`${f.label} (${f.unit})`} changed={shared[f.key] !== origShared[f.key]}>
+                          <div className="relative">
+                            <input
+                              type="number" min={0} value={shared[f.key]}
+                              onChange={e => setShared(s => ({ ...s, [f.key]: e.target.value }))}
+                              placeholder={f.placeholder}
+                              className={inputCls}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-600">{f.unit}</span>
+                          </div>
+                        </FieldRow>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* ── § 6 Mídia ─────────────────────────────────────────── */}
+              <SectionCard id="s6" title="Mídia" icon={ImageIcon}
                 sectionRef={el => { sectionRefs.current['s6'] = el }}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-500">
+                      <span className={pictures.length === 0 ? 'text-red-400' : 'text-white font-semibold'}>{pictures.length}</span>
+                      /12 imagens
+                    </p>
+                    <button
+                      onClick={() => setAddImgOpen(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.09] transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Adicionar Imagem
+                    </button>
+                  </div>
+
+                  {/* Add image panel */}
+                  {addImgOpen && (
+                    <div className="p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl space-y-3">
+                      <p className="text-xs font-semibold text-slate-400">Adicionar via URL</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="url" value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addImageByUrl()}
+                          placeholder="https://example.com/imagem.jpg"
+                          className={inputCls + ' flex-1 text-xs'}
+                        />
+                        <button onClick={addImageByUrl} disabled={!newImageUrl.trim()}
+                          className="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 transition-all">
+                          Adicionar
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                        <span className="text-[10px] text-slate-600">ou</span>
+                        <div className="flex-1 h-px bg-white/[0.06]" />
+                      </div>
+                      <div
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-white/20 cursor-pointer transition-all text-xs text-slate-500 hover:text-slate-300"
+                        onClick={() => uploadInputRef.current?.click()}
+                      >
+                        <UploadCloud className="w-4 h-4" />
+                        {imgUploading ? 'Enviando...' : 'Clique para fazer upload do computador'}
+                        <input ref={uploadInputRef} type="file" accept="image/jpeg,image/png" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) void handleFileUpload(f); e.target.value = '' }} />
+                      </div>
+                      {imgMsg && (
+                        <p className={`text-xs font-semibold ${imgMsg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{imgMsg}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Image grid */}
+                  {pictures.length > 0 ? (
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {pictures.map((pic, idx) => {
+                        const dims = parsePicSize(pic.size)
+                        return (
+                          <div key={pic.id} className="relative group aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-dark-700">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={pic.url || pic.secure_url} alt={`Imagem ${idx + 1}`} className="w-full h-full object-cover" />
+                            {/* Overlay */}
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => setPictures(prev => prev.filter((_, i) => i !== idx))}
+                                className="p-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/40 transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                              <a href={pic.secure_url || pic.url} target="_blank" rel="noopener noreferrer"
+                                className="p-1 rounded-full bg-white/10 border border-white/20 text-slate-300 hover:bg-white/20 transition-colors">
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                            {idx === 0 && (
+                              <span className="absolute top-1 left-1 text-[7px] font-bold bg-purple-600 text-white px-1 rounded">CAPA</span>
+                            )}
+                            {dims && (
+                              <span className="absolute bottom-1 left-1 right-1 text-[7px] text-slate-400 text-center leading-none">{dims.w}×{dims.h}</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-8 rounded-xl border-2 border-dashed border-white/[0.06]">
+                      <p className="text-xs text-slate-600">Nenhuma imagem. Adicione ao menos 1.</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-slate-600">Mínimo 500×500px. Primeira foto: fundo branco recomendado.</p>
+                </div>
+              </SectionCard>
+
+              {/* ── § 7 Descrição ────────────────────────────────────── */}
+              <SectionCard id="s7" title="Descrição" icon={FileText}
+                sectionRef={el => { sectionRefs.current['s7'] = el }}>
                 <div className="space-y-4">
                   {data.plans.map((plan, planIdx) => {
                     const e  = planEdits[plan.id]
@@ -1644,72 +1757,59 @@ export default function EditarAnuncioPage() {
                 </div>
               </SectionCard>
 
-              {/* ── § 7 Envio ────────────────────────────────────────── */}
-              <SectionCard id="s7" title="Envio" icon={Truck}
-                sectionRef={el => { sectionRefs.current['s7'] = el }}>
-                <div className="space-y-5">
-                  {data.plans.map((plan, planIdx) => {
-                    const e = planEdits[plan.id]
-                    const o = origPlanEdits[plan.id]
-                    if (!e || !o) return null
-                    return (
-                      <div key={plan.id} className="border border-white/[0.06] rounded-xl p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold text-slate-400">Plano {planIdx + 1}</span>
-                          <PlanTag plan={plan} short />
-                          <span className="text-[10px] text-slate-600 ml-auto">{plan.shipping?.mode ?? 'me2'} · {plan.shipping?.logistic_type ?? '—'}</span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.free_shipping !== o.free_shipping ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                            <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Frete Grátis</p>
-                            <Toggle value={e.free_shipping} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], free_shipping: v } }))} label="Sim/Não" changed={e.free_shipping !== o.free_shipping} />
-                          </div>
-
-                          <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.flex_shipping !== o.flex_shipping ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <Zap className="w-3 h-3 text-amber-400" />
-                              <p className="text-[10px] font-semibold text-slate-400">Envio Flex</p>
-                            </div>
-                            <Toggle value={e.flex_shipping} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], flex_shipping: v } }))} label="Ativo/Inativo" changed={e.flex_shipping !== o.flex_shipping} />
-                            {e.flex_shipping && (
-                              <p className="text-[9px] text-amber-400 mt-1.5">⚠️ Exige preparo e envio no mesmo dia do pedido</p>
-                            )}
-                          </div>
-
-                          <div className={`px-3 py-2.5 rounded-xl border transition-all ${e.local_pick_up !== o.local_pick_up ? 'border-yellow-400/20 bg-yellow-400/[0.03]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                            <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Retirada Pessoal</p>
-                            <Toggle value={e.local_pick_up} onChange={v => setPlanEdits(prev => ({ ...prev, [plan.id]: { ...prev[plan.id], local_pick_up: v } }))} label="Sim/Não" changed={e.local_pick_up !== o.local_pick_up} />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </SectionCard>
-
-              {/* ── § 8 Pacote ───────────────────────────────────────── */}
-              <SectionCard id="s8" title="Pacote do Vendedor" icon={Package}
+              {/* ── § 8 Fiscal ───────────────────────────────────────── */}
+              <SectionCard id="s8" title="Informações Fiscais (ERP)" icon={FileText}
                 sectionRef={el => { sectionRefs.current['s8'] = el }}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {([
-                    { key: 'pkg_weight', label: 'Peso',         unit: 'g',  placeholder: '500' },
-                    { key: 'pkg_length', label: 'Comprimento',  unit: 'cm', placeholder: '20'  },
-                    { key: 'pkg_width',  label: 'Largura',      unit: 'cm', placeholder: '15'  },
-                    { key: 'pkg_height', label: 'Altura',       unit: 'cm', placeholder: '10'  },
-                  ] as { key: keyof SharedEdits; label: string; unit: string; placeholder: string }[]).map(f => (
-                    <FieldRow key={f.key} label={`${f.label} (${f.unit})`} changed={shared[f.key] !== origShared[f.key]}>
-                      <div className="relative">
-                        <input
-                          type="number" min={0} value={shared[f.key]}
-                          onChange={e => setShared(s => ({ ...s, [f.key]: e.target.value }))}
-                          placeholder={f.placeholder}
-                          className={inputCls}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-600">{f.unit}</span>
-                      </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-500/[0.07] border border-blue-500/20 rounded-xl">
+                    <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-300">
+                      Dados fiscais são internos ao ERP Foguetim e <strong>não são enviados ao Mercado Livre</strong>.
+                      Use para controle de estoque, emissão de NF-e e relatórios contábeis.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FieldRow label="NCM (8 dígitos)" changed={shared.ncm !== origShared.ncm}>
+                      <input
+                        type="text"
+                        value={shared.ncm}
+                        onChange={e => setShared(s => ({ ...s, ncm: e.target.value.replace(/\D/g, '').slice(0, 8) }))}
+                        placeholder="12345678"
+                        maxLength={8}
+                        className={inputCls}
+                      />
+                      <p className="text-[10px] text-slate-600 mt-1">Nomenclatura Comum do Mercosul</p>
                     </FieldRow>
-                  ))}
+                    <FieldRow label="CEST (7 dígitos)" changed={shared.cest !== origShared.cest}>
+                      <input
+                        type="text"
+                        value={shared.cest}
+                        onChange={e => setShared(s => ({ ...s, cest: e.target.value.replace(/\D/g, '').slice(0, 7) }))}
+                        placeholder="1234567"
+                        maxLength={7}
+                        className={inputCls}
+                      />
+                      <p className="text-[10px] text-slate-600 mt-1">Código Especificador de Substituição Tributária</p>
+                    </FieldRow>
+                    <FieldRow label="Origem" changed={shared.origem !== origShared.origem}>
+                      <select
+                        value={shared.origem}
+                        onChange={e => setShared(s => ({ ...s, origem: e.target.value }))}
+                        className={selectCls}
+                      >
+                        <option value="">— Selecione —</option>
+                        <option value="0">0 — Nacional (padrão)</option>
+                        <option value="1">1 — Estrangeiro (importação direta)</option>
+                        <option value="2">2 — Estrangeiro (adquirido interno)</option>
+                        <option value="3">3 — Nacional (conteúdo import. &gt; 40%)</option>
+                        <option value="4">4 — Nacional (processo prod. básico)</option>
+                        <option value="5">5 — Nacional (conteúdo import. ≤ 40%)</option>
+                        <option value="6">6 — Estrangeiro (importação direta s/ similar)</option>
+                        <option value="7">7 — Estrangeiro (adquirido s/ similar)</option>
+                        <option value="8">8 — Nacional (conteúdo import. &gt; 70%)</option>
+                      </select>
+                    </FieldRow>
+                  </div>
                 </div>
               </SectionCard>
 
@@ -1739,13 +1839,25 @@ export default function EditarAnuncioPage() {
                   {/* Checks */}
                   <div className="space-y-2">
                     {health.checks.map(c => (
-                      <div key={c.id} className="flex items-start gap-2.5 py-1.5 border-b border-white/[0.04] last:border-0">
+                      <div
+                        key={c.id}
+                        onClick={!c.ok ? () => {
+                          const el = sectionRefs.current[c.section]
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        } : undefined}
+                        className={`flex items-start gap-2.5 py-1.5 border-b border-white/[0.04] last:border-0 ${!c.ok ? 'cursor-pointer hover:bg-white/[0.02] rounded-lg px-1 -mx-1 transition-colors' : ''}`}
+                      >
                         {c.ok
                           ? <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
                           : <XCircle     className="w-4 h-4 text-red-400   shrink-0 mt-0.5" />}
                         <div className="flex-1 min-w-0">
                           <p className={`text-xs font-semibold ${c.ok ? 'text-slate-300' : 'text-slate-400'}`}>{c.label}</p>
-                          {!c.ok && <p className="text-[10px] text-slate-600 mt-0.5">{c.tip}</p>}
+                          {!c.ok && (
+                            <p className="text-[10px] text-slate-600 mt-0.5">
+                              {c.tip}
+                              <span className="ml-1.5 text-blue-500">↑ Clique para ir até a seção</span>
+                            </p>
+                          )}
                         </div>
                         <span className={`text-[10px] font-bold shrink-0 ${c.ok ? 'text-green-400' : 'text-slate-600'}`}>
                           {c.ok ? `+${c.points}` : `0/${c.points}`}

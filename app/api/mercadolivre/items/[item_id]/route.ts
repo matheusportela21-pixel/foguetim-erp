@@ -46,7 +46,20 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
     if (!itemData) throw new Error('Falha ao carregar o anúncio')
 
-    return NextResponse.json({ ...itemData, description_text: descText })
+    /* Enrich with category_name from public ML API (no auth needed) */
+    let category_name: string | null = null
+    const categoryId = typeof itemData.category_id === 'string' ? itemData.category_id : null
+    if (categoryId) {
+      try {
+        const catRes = await fetch(`https://api.mercadolibre.com/categories/${categoryId}`)
+        if (catRes.ok) {
+          const cat = await catRes.json() as { name?: string; path_from_root?: { id: string; name: string }[] }
+          category_name = cat.path_from_root?.map((p) => p.name).join(' > ') ?? cat.name ?? categoryId
+        }
+      } catch { /* non-fatal */ }
+    }
+
+    return NextResponse.json({ ...itemData, description_text: descText, category_name })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[items GET]', msg)
