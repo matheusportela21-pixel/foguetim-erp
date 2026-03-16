@@ -5,10 +5,7 @@ import { Send, Package, Printer, QrCode, Clock, CheckCircle, Truck, MapPin } fro
 
 const shipments = [
   { id: '#ML-48291', produto: 'Óleo Capilar Fio Cabana 100ml',      cliente: 'Ana Beatriz Sousa',  destino: 'Fortaleza, CE',    plat: 'ML',  status: 'aguardando', rastreio: null,          peso: '0.18 kg', prazo: '3 dias' },
-  { id: '#SP-19847', produto: 'Shampoo Castilla Antiqueda 400ml',   cliente: 'Carlos Lima',         destino: 'Caucaia, CE',      plat: 'SP',  status: 'etiquetado', rastreio: 'BR1234567890', peso: '0.45 kg', prazo: '2 dias' },
   { id: '#ML-48260', produto: 'Hidratante Corporal Zalike 200ml',   cliente: 'Antônio Vieira Neto', destino: 'Fortaleza, CE',    plat: 'ML',  status: 'aguardando', rastreio: null,          peso: '0.22 kg', prazo: '3 dias' },
-  { id: '#SP-19800', produto: 'Castilla Shampoo Vegano 400ml',      cliente: 'Luciana de Oliveira', destino: 'Iguatu, CE',       plat: 'SP',  status: 'coletado',   rastreio: 'BR0987654321', peso: '0.47 kg', prazo: '5 dias' },
-  { id: '#VIA-2201', produto: 'Lanossi Máscara Reparadora 500g',    cliente: 'Suzana Barbosa',      destino: 'Quixadá, CE',      plat: 'VIA', status: 'etiquetado', rastreio: 'BR1122334455', peso: '0.55 kg', prazo: '4 dias' },
   { id: '#ML-48211', produto: 'Castilla Condicionador Coco 400ml',  cliente: 'Sebastião Pinheiro',  destino: 'Itapipoca, CE',    plat: 'ML',  status: 'aguardando', rastreio: null,          peso: '0.42 kg', prazo: '4 dias' },
 ]
 

@@ -23,11 +23,7 @@ const PERMISSOES: Record<Cargo, string[]> = {
 }
 
 const initial: Membro[] = [
-  { id: 1, nome: 'Matheus Portela', email: 'matheus.portela21@gmail.com', cargo: 'Diretor',             status: 'ativo', entrada: '01/01/2025', avatar: 'MP' },
-  { id: 2, nome: 'Juliana Santos',  email: 'juliana.santos@skincenter.ce', cargo: 'Analista de Produtos',status: 'ativo', entrada: '15/03/2025', avatar: 'JS' },
-  { id: 3, nome: 'Carlos Andrade',  email: 'carlos.andrade@skincenter.ce', cargo: 'Analista Financeiro', status: 'ativo', entrada: '10/05/2025', avatar: 'CA' },
-  { id: 4, nome: 'Fernanda Lima',   email: 'fernanda.lima@skincenter.ce',  cargo: 'Suporte ao Cliente',  status: 'ativo', entrada: '02/08/2025', avatar: 'FL' },
-  { id: 5, nome: 'Pedro Nunes',     email: 'pedro.nunes@skincenter.ce',    cargo: 'Operador',            status: 'inativo',entrada:'14/11/2025', avatar: 'PN' },
+  { id: 1, nome: 'Matheus Portela', email: 'matheus.portela21@gmail.com', cargo: 'Diretor', status: 'ativo', entrada: '01/01/2025', avatar: 'MP' },
 ]
 
 const cargoColor: Record<Cargo, string> = {

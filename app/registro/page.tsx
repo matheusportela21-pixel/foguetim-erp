@@ -101,22 +101,14 @@ const PLANS = [
     id:      'explorador',
     name:    'Explorador',
     price:   'Grátis',
-    desc:    'Até 50 produtos · 1 marketplace',
+    desc:    'Até 10 produtos · 1 marketplace',
     popular: false,
     trial:   false,
   },
   {
-    id:      'piloto',
-    name:    'Piloto',
-    price:   'R$29/mês',
-    desc:    'Até 200 produtos · 3 marketplaces',
-    popular: false,
-    trial:   true,
-  },
-  {
     id:      'comandante',
     name:    'Comandante',
-    price:   'R$59/mês',
+    price:   'R$49,90/mês',
     desc:    'Até 500 produtos · Todos os módulos',
     popular: true,
     trial:   true,
@@ -124,7 +116,7 @@ const PLANS = [
 ]
 
 const BENEFITS = [
-  { icon: Rocket,       text: 'Conecte Mercado Livre, Shopee e Amazon em minutos' },
+  { icon: Rocket,       text: 'Conecte seu Mercado Livre em minutos' },
   { icon: Package,      text: 'Gerencie produtos, pedidos e estoque em um só lugar' },
   { icon: BarChart2,    text: 'Métricas e relatórios em tempo real' },
   { icon: Zap,          text: 'Geração de listagens com inteligência artificial' },

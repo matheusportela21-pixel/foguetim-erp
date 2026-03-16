@@ -1,4 +1,13 @@
+import type { Metadata } from 'next'
 import { ThemeProvider } from '@/context/ThemeContext'
+
+export const metadata: Metadata = {
+  title: {
+    default:  'Dashboard — Foguetim ERP',
+    template: '%s — Foguetim ERP',
+  },
+  description: 'Gerencie seu e-commerce com inteligência',
+}
 import { PlanProvider } from '@/context/PlanContext'
 import { SidebarProvider } from '@/context/SidebarContext'
 import Sidebar from '@/components/Sidebar'
