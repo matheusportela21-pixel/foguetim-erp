@@ -5,11 +5,17 @@ import { useParams, useRouter }    from 'next/navigation'
 import {
   ArrowLeft, Save, AlertCircle, X, Plus, Info, Loader2, ExternalLink,
   ChevronRight, Zap, CheckCircle2, XCircle, AlertTriangle,
-  Image as ImageIcon, UploadCloud, Copy, Eye, EyeOff, Package,
+  Image as ImageIcon, UploadCloud, Copy, Package,
   Tag, FileText, Truck, BarChart2, Settings, List, ShoppingBag, Sparkles,
 } from 'lucide-react'
 import { usePlan } from '@/context/PlanContext'
 import { uploadImageToML } from '@/lib/ml-image-upload'
+import AttributeSection from '@/components/ml/AttributeSection'
+import type {
+  MlAttributeUiSection,
+  MlIdentifierField,
+  MlVariationField,
+} from '@/lib/ml/attributes/types'
 
 /* ══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -78,18 +84,6 @@ interface SiblingsData {
   ml_user_id:      number
 }
 
-interface CategoryAttribute {
-  id:               string
-  name:             string
-  type:             string
-  required:         boolean
-  isVariation:      boolean
-  values?:          { id: string; name: string }[]
-  hint?:            string
-  value_max_length?: number
-  tags?:            string[]
-}
-
 interface PlanEdits {
   price:               number
   stock:               number
@@ -133,12 +127,6 @@ interface ShippingLocation {
 /* ══════════════════════════════════════════════════════════════════════════
    CONSTANTS & HELPERS
 ══════════════════════════════════════════════════════════════════════════ */
-
-const EXCLUDED_ATTR_IDS = new Set([
-  'ALPHANUMERIC_MODEL', 'SELLER_SKU', 'GTIN', 'EAN',
-  'PACKAGE_LENGTH', 'PACKAGE_WIDTH', 'PACKAGE_HEIGHT', 'PACKAGE_WEIGHT',
-  'ITEM_CONDITION',
-])
 
 const LISTING_TYPE_LABELS: Record<string, string> = {
   gold_pro:     'Premium',
@@ -242,100 +230,6 @@ function FieldRow({ label, required, changed, hint, children }: {
       </label>
       {children}
       {hint && <p className="text-[10px] text-slate-600 mt-1">{hint}</p>}
-    </div>
-  )
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   ATTRIBUTE FIELD with N/A button
-══════════════════════════════════════════════════════════════════════════ */
-
-function AttrField({ attr, value, isNA, onChange, onToggleNA }: {
-  attr:       CategoryAttribute
-  value:      string
-  isNA:       boolean
-  onChange:   (v: string) => void
-  onToggleNA: () => void
-}) {
-  const naBtn = !attr.required && (
-    <button
-      onClick={onToggleNA}
-      title="Marcar como não aplicável"
-      className={`shrink-0 text-[10px] px-2 py-1 rounded transition-all ${
-        isNA
-          ? 'bg-amber-900/40 text-amber-400 border border-amber-700'
-          : 'bg-dark-700 text-slate-500 border border-white/[0.08] hover:bg-dark-600'
-      }`}
-    >
-      N/A
-    </button>
-  )
-
-  if (attr.type === 'list' && Array.isArray(attr.values) && attr.values.length > 0) {
-    return (
-      <div className="flex gap-2">
-        <select
-          value={isNA ? '' : value}
-          onChange={e => onChange(e.target.value)}
-          disabled={isNA}
-          className={selectCls + ' flex-1' + (isNA ? ' opacity-40 cursor-not-allowed' : '')}
-        >
-          <option value="">— Selecione —</option>
-          {attr.values.map(v => <option key={v.id} value={v.name}>{v.name}</option>)}
-        </select>
-        {naBtn}
-      </div>
-    )
-  }
-
-  if (attr.type === 'boolean') {
-    return (
-      <div className="flex gap-2">
-        {(['Sim', 'Não'] as const).map(opt => (
-          <button
-            key={opt}
-            onClick={() => !isNA && onChange(opt)}
-            disabled={isNA}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-              !isNA && value === opt
-                ? 'bg-purple-600/20 border-purple-500/40 text-purple-300'
-                : 'border-white/[0.08] text-slate-500 hover:text-slate-300'
-            } ${isNA ? 'opacity-40 cursor-not-allowed' : ''}`}
-          >
-            {opt}
-          </button>
-        ))}
-        {naBtn}
-      </div>
-    )
-  }
-
-  if (attr.type === 'number') {
-    return (
-      <div className="flex gap-2">
-        <input
-          type="number" value={isNA ? '' : value}
-          onChange={e => onChange(e.target.value)}
-          disabled={isNA}
-          placeholder={isNA ? 'N/A' : attr.hint ?? ''}
-          className={inputCls + ' flex-1' + (isNA ? ' opacity-40 cursor-not-allowed' : '')}
-        />
-        {naBtn}
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex gap-2">
-      <input
-        type="text" value={isNA ? '' : value}
-        onChange={e => onChange(e.target.value)}
-        disabled={isNA}
-        maxLength={attr.value_max_length}
-        placeholder={isNA ? 'N/A' : (attr.hint ?? `Informe ${attr.name}`)}
-        className={inputCls + ' flex-1' + (isNA ? ' opacity-40 cursor-not-allowed' : '')}
-      />
-      {naBtn}
     </div>
   )
 }
@@ -468,10 +362,11 @@ export default function EditarAnuncioPage() {
   const [data, setData]               = useState<SiblingsData | null>(null)
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
-  const [categoryName, setCategoryName] = useState('')
-  const [categoryAttrs, setCategoryAttrs] = useState<CategoryAttribute[]>([])
-  const [attrsLoading, setAttrsLoading]   = useState(false)
-  const [showAllAttrs, setShowAllAttrs]   = useState(false)
+  const [categoryName, setCategoryName]             = useState('')
+  const [attrSections, setAttrSections]             = useState<MlAttributeUiSection[]>([])
+  const [attrIdentifiers, setAttrIdentifiers]       = useState<MlIdentifierField[]>([])
+  const [attrVariationFields, setAttrVariationFields] = useState<MlVariationField[]>([])
+  const [attrsLoading, setAttrsLoading]             = useState(false)
 
   /* ── shipping locations ───────────────────────────────────────────────── */
   const [shippingLocations, setShippingLocations]     = useState<ShippingLocation[]>([])
@@ -633,55 +528,46 @@ export default function EditarAnuncioPage() {
           .catch(() => setCategoryName(d.category_id))
       }
 
-      // Fetch category attributes via unified engine (whitelist by category)
+      // Fetch category attributes via unified ML attributes engine
       if (d.category_id) {
         setAttrsLoading(true)
-        fetch('/api/ml/categorize', {
+        fetch('/api/ml/attributes', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ force_category_id: d.category_id }),
+          body:    JSON.stringify({
+            category_id:     d.category_id,
+            domain_id:       '',
+            item_attributes: Array.isArray(d.attributes) ? d.attributes.map(
+              (a: ItemAttribute) => ({ id: a.id, value_name: a.value_name }),
+            ) : [],
+          }),
         })
-          .then(r => r.ok ? r.json() as Promise<unknown> : Promise.reject(r.status))
-          .then((payload: unknown) => {
-            type Attr = { id: string; name: string; value_type?: string; is_required?: boolean; is_variation_attribute?: boolean; allowed_values?: { id: string; name: string }[]; hint?: string; value_max_length?: number; tags?: string[] }
-            type Payload = { required_attributes?: Attr[]; optional_attributes?: Attr[]; conditional_attributes?: Attr[] }
-            const p = payload as Payload
+          .then(r => r.ok ? r.json() as Promise<{
+            ui_sections:      MlAttributeUiSection[]
+            identifiers:      MlIdentifierField[]
+            variation_fields: MlVariationField[]
+          }> : Promise.reject(r.status))
+          .then((payload) => {
+            setAttrSections(payload.ui_sections      ?? [])
+            setAttrIdentifiers(payload.identifiers   ?? [])
+            setAttrVariationFields(payload.variation_fields ?? [])
 
-            const toSchema = (a: Attr): CategoryAttribute => ({
-              id:               a.id,
-              name:             a.name,
-              type:             a.value_type ?? 'string',
-              required:         a.is_required ?? false,
-              isVariation:      a.is_variation_attribute ?? false,
-              values:           Array.isArray(a.allowed_values) && a.allowed_values.length > 0 ? a.allowed_values : undefined,
-              hint:             a.hint,
-              value_max_length: a.value_max_length,
-              tags:             a.tags,
-            })
+            // Collect all attr IDs in the whitelist from sections
+            const allAttrs = payload.ui_sections.flatMap(s => s.attributes)
+            const whitelist = new Set(allAttrs.map(a => a.id))
 
-            const required    = (p.required_attributes ?? []).map(toSchema)
-            const optional    = (p.optional_attributes ?? []).map(toSchema)
-            const conditional = (p.conditional_attributes ?? []).map(toSchema)
-            const schema      = [...required, ...optional, ...conditional]
-              .filter(a => !EXCLUDED_ATTR_IDS.has(a.id))
-
-            // Build whitelist
-            const whitelist = new Set(schema.map(a => a.id))
-
-            setCategoryAttrs(schema)
-
-            // Seed attr edits — only attrs in whitelist, discard values outside it silently
+            // Seed attrEdits with current_value from engine (already set from item_attributes)
             setAttrEdits(prev => {
               const next: Record<string, string> = {}
-              for (const a of schema) {
-                next[a.id] = whitelist.has(a.id) ? (prev[a.id] ?? '') : ''
+              for (const a of allAttrs) {
+                next[a.id] = whitelist.has(a.id) ? (prev[a.id] ?? a.current_value ?? '') : ''
               }
               return next
             })
             setOrigAttrEdits(prev => {
               const next: Record<string, string> = {}
-              for (const a of schema) {
-                next[a.id] = whitelist.has(a.id) ? (prev[a.id] ?? '') : ''
+              for (const a of allAttrs) {
+                next[a.id] = whitelist.has(a.id) ? (prev[a.id] ?? a.current_value ?? '') : ''
               }
               return next
             })
@@ -858,7 +744,8 @@ export default function EditarAnuncioPage() {
     const firstPlanE  = planEdits[firstPlan.id]
     const desc        = firstPlanE?.description ?? ''
     const mainPicSize = parsePicSize(pictures[0]?.size)
-    const reqIds      = categoryAttrs.filter(a => a.required).map(a => a.id)
+    const reqSection  = attrSections.find(s => s.id === 'required')
+    const reqIds      = (reqSection?.attributes ?? []).map(a => a.id)
 
     type HealthCheck = { id: string; label: string; ok: boolean; points: number; tip: string; section: string }
     const checks: HealthCheck[] = [
@@ -914,7 +801,7 @@ export default function EditarAnuncioPage() {
 
     const score = checks.reduce((sum, c) => sum + (c.ok ? c.points : 0), 0)
     return { score, checks }
-  }, [data, shared, planEdits, pictures, categoryAttrs, attrEdits, naAttrs])
+  }, [data, shared, planEdits, pictures, attrSections, attrEdits, naAttrs])
 
   /* ── save ─────────────────────────────────────────────────────────────── */
   async function handleSave() {
@@ -1067,21 +954,6 @@ export default function EditarAnuncioPage() {
   const hasSold     = data ? data.plans.some(p => p.sold_quantity > 0) : false
   const hasChanges  = allChanges.length > 0
   const sc = firstPlan ? (STATUS_CONFIG[firstPlan.status] ?? STATUS_CONFIG['closed']) : null
-
-  /* ── attrs to show ────────────────────────────────────────────────────── */
-  const shownAttrs = useMemo(() => {
-    if (showAllAttrs) return categoryAttrs
-    // "Recommended": required OR catalog_required OR currently filled with a value
-    return categoryAttrs.filter(a => {
-      if (a.required) return true
-      const tags = Array.isArray(a.tags) ? a.tags : []
-      if (tags.includes('catalog_required'))      return true
-      if ((attrEdits[a.id] ?? '').trim() !== '') return true
-      return false
-    })
-  }, [categoryAttrs, showAllAttrs, attrEdits])
-
-  const hiddenAttrsCount = categoryAttrs.length - shownAttrs.length
 
   /* ── AI handlers ──────────────────────────────────────────────────────── */
   async function improveTitle() {
@@ -1283,54 +1155,24 @@ export default function EditarAnuncioPage() {
                   <div className="flex items-center gap-2 text-slate-500 text-xs py-4">
                     <Loader2 className="w-4 h-4 animate-spin" /> Carregando atributos...
                   </div>
-                ) : categoryAttrs.length > 0 ? (
-                  <div className="space-y-4">
-                    {shownAttrs.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {shownAttrs.map(attr => {
-                          const val     = attrEdits[attr.id] ?? ''
-                          const origVal = origAttrEdits[attr.id] ?? ''
-                          const isNA    = naAttrs.has(attr.id)
-                          const changed = isNA ? (origVal.trim() !== '') : (val !== origVal)
-                          return (
-                            <FieldRow key={attr.id} label={attr.name} required={attr.required} changed={changed} hint={attr.hint}>
-                              <AttrField
-                                attr={attr}
-                                value={val}
-                                isNA={isNA}
-                                onChange={v => setAttrEdits(prev => ({ ...prev, [attr.id]: v }))}
-                                onToggleNA={() => setNaAttrs(prev => {
-                                  const next = new Set<string>(Array.from(prev))
-                                  if (next.has(attr.id)) next.delete(attr.id)
-                                  else next.add(attr.id)
-                                  return next
-                                })}
-                              />
-                            </FieldRow>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500 py-1">
-                        Nenhum atributo obrigatório nesta categoria.{' '}
-                        {hiddenAttrsCount > 0 && 'Use o botão abaixo para ver todos os opcionais.'}
-                      </p>
-                    )}
-                    {/* Toggle show all */}
-                    {(showAllAttrs || hiddenAttrsCount > 0) && (
-                      <button
-                        onClick={() => setShowAllAttrs(v => !v)}
-                        className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                      >
-                        {showAllAttrs ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        {showAllAttrs
-                          ? 'Mostrar apenas obrigatórios e preenchidos'
-                          : `▼ Ver todos os atributos (${categoryAttrs.length})`}
-                      </button>
-                    )}
-                  </div>
                 ) : (
-                  <p className="text-xs text-slate-600 py-2">Nenhum atributo disponível para esta categoria.</p>
+                  <AttributeSection
+                    sections={attrSections}
+                    identifiers={attrIdentifiers}
+                    variationFields={attrVariationFields}
+                    values={attrEdits}
+                    onChange={(id, v) => setAttrEdits(prev => ({ ...prev, [id]: v }))}
+                    onNAToggle={(id) => setNaAttrs(prev => {
+                      const next = new Set<string>(Array.from(prev))
+                      if (next.has(id)) next.delete(id)
+                      else next.add(id)
+                      return next
+                    })}
+                    naValues={naAttrs}
+                    categoryName={categoryName || (data?.category_id ?? '')}
+                    productTitle={shared.title}
+                    canUseAI={isPlanAtLeast('piloto')}
+                  />
                 )}
               </SectionCard>
 

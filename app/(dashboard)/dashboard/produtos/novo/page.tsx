@@ -9,6 +9,12 @@ import {
   X, ChevronRight, Info, ExternalLink, ChevronLeft, Home,
   Grid3X3, Package, MapPin, Upload, Star, Sparkles,
 } from 'lucide-react'
+import AttributeSection from '@/components/ml/AttributeSection'
+import type {
+  MlAttributeUiSection,
+  MlIdentifierField,
+  MlVariationField,
+} from '@/lib/ml/attributes/types'
 
 /* ══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -29,17 +35,6 @@ interface CategorySuggestion {
 interface ChildCategory {
   id:   string
   name: string
-}
-
-interface CategoryAttribute {
-  id:               string
-  name:             string
-  type:             string
-  required:         boolean
-  isVariation:      boolean
-  values?:          { id: string; name: string }[]
-  hint?:            string
-  value_max_length?: number
 }
 
 interface ShippingLocation {
@@ -696,110 +691,45 @@ const CONDITIONS = [
   { value: 'not_specified', label: 'Recondicionado', desc: 'Produto restaurado ou reformado.'         },
 ]
 
-/** Map NormalizedAttribute → CategoryAttribute for existing renderAttrField */
-function normToAttr(n: import('@/lib/ml/types').NormalizedAttribute): CategoryAttribute {
-  return {
-    id:               n.id,
-    name:             n.name,
-    type:             n.value_type,
-    required:         n.is_required,
-    isVariation:      n.is_variation_attribute,
-    values:           n.allowed_values.length > 0 ? n.allowed_values : undefined,
-    hint:             n.hint,
-    value_max_length: n.value_max_length,
-  }
-}
-
 function Step2Basic({
-  data, setData, categoryPayload,
+  data, setData,
 }: {
-  data:            WizardData
-  setData:         (d: WizardData) => void
-  categoryPayload: import('@/lib/ml/types').CategoryAttributePayload | null
+  data:    WizardData
+  setData: (d: WizardData) => void
 }) {
-  const [attrs, setAttrs]         = useState<CategoryAttribute[]>([])
-  const [attrsLoading, setAttrsLoading] = useState(false)
-  const [showOptional, setShowOptional] = useState(false)
+  const { isPlanAtLeast } = usePlan()
+  const [attrSections,      setAttrSections]      = useState<MlAttributeUiSection[]>([])
+  const [attrIdentifiers,   setAttrIdentifiers]   = useState<MlIdentifierField[]>([])
+  const [attrVariationFields, setAttrVariationFields] = useState<MlVariationField[]>([])
+  const [attrsLoading,      setAttrsLoading]      = useState(false)
+  const [naAttrs,           setNaAttrs]           = useState(new Set<string>())
 
   useEffect(() => {
-    // If payload already provided by Step1, use it directly
-    if (categoryPayload) {
-      const required = categoryPayload.required_attributes.map(normToAttr)
-      const optional = categoryPayload.optional_attributes.map(normToAttr)
-      setAttrs([...required, ...optional])
+    if (!data.category_id) {
+      setAttrSections([])
+      setAttrIdentifiers([])
+      setAttrVariationFields([])
       return
     }
-    if (!data.category_id) { setAttrs([]); return }
     setAttrsLoading(true)
-    fetch(`/api/mercadolivre/categories/${data.category_id}/attributes`)
-      .then(r => r.json() as Promise<CategoryAttribute[]>)
-      .then(list => setAttrs(Array.isArray(list) ? list : []))
-      .catch(() => setAttrs([]))
+    fetch('/api/ml/attributes', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ category_id: data.category_id, domain_id: '' }),
+    })
+      .then(r => r.ok ? r.json() as Promise<{
+        ui_sections:      MlAttributeUiSection[]
+        identifiers:      MlIdentifierField[]
+        variation_fields: MlVariationField[]
+      }> : Promise.reject(r.status))
+      .then((payload) => {
+        setAttrSections(payload.ui_sections      ?? [])
+        setAttrIdentifiers(payload.identifiers   ?? [])
+        setAttrVariationFields(payload.variation_fields ?? [])
+      })
+      .catch(() => { /* non-fatal */ })
       .finally(() => setAttrsLoading(false))
-  }, [data.category_id, categoryPayload])
-
-  const requiredAttrs = attrs.filter(a => a.required)
-  const optionalAttrs = attrs.filter(a => !a.required)
-
-  function setAttr(id: string, value: string) {
-    setData({ ...data, attributes: { ...data.attributes, [id]: value } })
-  }
-
-  function renderAttrField(attr: CategoryAttribute, isRequired: boolean) {
-    const val = data.attributes[attr.id] ?? ''
-    if (attr.values && attr.values.length > 0) {
-      return (
-        <div key={attr.id}>
-          <Label required={isRequired}>{attr.name}</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {!isRequired && (
-              <button
-                onClick={() => setAttr(attr.id, 'N/A')}
-                className={`px-2.5 py-1 rounded-lg text-xs border transition-all ${val === 'N/A' ? 'border-slate-500 bg-slate-700 text-slate-300' : 'border-white/[0.06] text-slate-600 hover:border-white/[0.15]'}`}
-              >
-                N/A
-              </button>
-            )}
-            {attr.values.map(v => (
-              <button
-                key={v.id}
-                onClick={() => setAttr(attr.id, v.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs border transition-all ${val === v.id ? 'border-purple-500/40 bg-purple-500/[0.12] text-purple-300' : 'border-white/[0.06] text-slate-400 hover:border-white/[0.2] hover:text-white'}`}
-              >
-                {v.name}
-              </button>
-            ))}
-          </div>
-          {attr.hint && <Hint>{attr.hint}</Hint>}
-        </div>
-      )
-    }
-    return (
-      <div key={attr.id}>
-        <Label required={isRequired}>{attr.name}</Label>
-        <div className="flex gap-2">
-          {!isRequired && (
-            <button
-              onClick={() => setAttr(attr.id, val === 'N/A' ? '' : 'N/A')}
-              className={`px-2.5 py-2 rounded-xl text-xs border shrink-0 transition-all ${val === 'N/A' ? 'border-slate-500 bg-slate-700 text-slate-300' : 'border-white/[0.06] text-slate-600 hover:border-white/[0.15]'}`}
-            >
-              N/A
-            </button>
-          )}
-          <input
-            type={attr.type === 'number' ? 'number' : 'text'}
-            value={val === 'N/A' ? '' : val}
-            maxLength={attr.value_max_length}
-            disabled={val === 'N/A'}
-            onChange={e => setAttr(attr.id, e.target.value)}
-            placeholder={attr.hint ?? attr.name}
-            className={inputCls + (val === 'N/A' ? ' opacity-40' : '')}
-          />
-        </div>
-        {attr.hint && <Hint>{attr.hint}</Hint>}
-      </div>
-    )
-  }
+  }, [data.category_id])
 
   return (
     <div className="space-y-5">
@@ -939,44 +869,30 @@ function Step2Basic({
 
       {/* Dynamic attributes */}
       {data.category_id && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {attrsLoading ? (
             <div className="flex items-center gap-2 text-slate-500 py-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
               <span className="text-xs">Carregando atributos da categoria...</span>
             </div>
           ) : (
-            <>
-              {/* Required attrs */}
-              {requiredAttrs.length > 0 && (
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atributos Obrigatórios</p>
-                  {requiredAttrs.map(a => renderAttrField(a, true))}
-                </div>
-              )}
-
-              {/* Optional attrs toggle */}
-              {optionalAttrs.length > 0 && (
-                <div>
-                  <button
-                    onClick={() => setShowOptional(v => !v)}
-                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showOptional ? 'rotate-90' : ''}`} />
-                    {showOptional ? 'Ocultar' : 'Ver'} atributos opcionais ({optionalAttrs.length})
-                  </button>
-                  {showOptional && (
-                    <div className="space-y-4 mt-4 pl-4 border-l border-white/[0.06]">
-                      {optionalAttrs.map(a => renderAttrField(a, false))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {requiredAttrs.length === 0 && optionalAttrs.length === 0 && (
-                <p className="text-xs text-slate-600">Nenhum atributo adicional para esta categoria.</p>
-              )}
-            </>
+            <AttributeSection
+              sections={attrSections}
+              identifiers={attrIdentifiers}
+              variationFields={attrVariationFields}
+              values={data.attributes}
+              onChange={(id, v) => setData({ ...data, attributes: { ...data.attributes, [id]: v } })}
+              onNAToggle={(id) => setNaAttrs(prev => {
+                const next = new Set<string>(Array.from(prev))
+                if (next.has(id)) next.delete(id)
+                else next.add(id)
+                return next
+              })}
+              naValues={naAttrs}
+              categoryName={data.category_name}
+              productTitle={data.title}
+              canUseAI={isPlanAtLeast('piloto')}
+            />
           )}
         </div>
       )}
@@ -1782,7 +1698,6 @@ export default function NovoAnuncioPage() {
   const { isPlanAtLeast } = usePlan()
   const [step, setStep]     = useState(0)
   const [data, setData]     = useState<WizardData>(INITIAL)
-  const [categoryPayload, setCategoryPayload] = useState<import('@/lib/ml/types').CategoryAttributePayload | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [publishLog, setPublishLog] = useState<string[]>([])
   const [publishResult, setPublishResult] = useState<{
@@ -2006,8 +1921,8 @@ export default function NovoAnuncioPage() {
             </p>
           </div>
           <div className="p-5">
-            {step === 0 && <Step1TitleCategory     data={data} setData={setData} isPlanAtLeast={isPlanAtLeast} onCategoryPayload={setCategoryPayload} />}
-            {step === 1 && <Step2Basic             data={data} setData={setData} categoryPayload={categoryPayload} />}
+            {step === 0 && <Step1TitleCategory     data={data} setData={setData} isPlanAtLeast={isPlanAtLeast} onCategoryPayload={() => {}} />}
+            {step === 1 && <Step2Basic             data={data} setData={setData} />}
             {step === 2 && <Step3PriceLogistics    data={data} setData={setData} />}
             {step === 3 && <Step4MediaDescription  data={data} setData={setData} imageFiles={imageFiles} isPlanAtLeast={isPlanAtLeast} />}
             {step === 4 && <Step5ShippingLocation  data={data} setData={setData} />}
