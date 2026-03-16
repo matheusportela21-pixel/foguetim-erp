@@ -16,7 +16,7 @@ const reports = [
   },
   {
     icon: BarChart3,    title: 'Relatório por Marketplace',
-    desc: 'Comparativo de performance entre ML, Shopee, Amazon e demais canais.',
+    desc: 'Performance do Mercado Livre por período: receita, pedidos e ticket médio.',
     tags: ['Canais', 'Comparativo'], available: true, ai: false,
   },
   {
@@ -51,29 +51,12 @@ const reports = [
   },
 ]
 
-const quickStats = [
-  { label: 'Receita do mês',    val: 'R$ 52.800', delta: '+11,8%', color: 'text-green-400' },
-  { label: 'Lucro líquido',     val: 'R$ 24.700', delta: '+14,4%', color: 'text-green-400' },
-  { label: 'Ticket médio',      val: 'R$ 86,30',  delta: '+3,2%',  color: 'text-green-400' },
-  { label: 'Taxa cancelamento', val: '4,2%',       delta: '-0,8%',  color: 'text-red-400'   },
-]
-
 export default function RelatoriosPage() {
   return (
     <div>
       <Header title="Relatórios" subtitle="Análises e insights do seu negócio" />
 
       <div className="p-6 space-y-6">
-        {/* Quick stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {quickStats.map(s => (
-            <div key={s.label} className="dash-card p-4 rounded-2xl">
-              <p className="text-xs text-slate-600 mb-1">{s.label}</p>
-              <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{s.val}</p>
-              <p className={`text-xs font-semibold mt-1 ${s.color}`}>{s.delta} vs. mês anterior</p>
-            </div>
-          ))}
-        </div>
 
         {/* Reports grid */}
         <div>

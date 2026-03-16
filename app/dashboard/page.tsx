@@ -6,9 +6,10 @@ import {
   TrendingUp, Package, DollarSign, ShoppingCart,
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
-  Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck,
+  Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useSidebar } from '@/context/SidebarContext'
 
 /* ── ML Metrics type ────────────────────────────────────────────────── */
 interface MLMetrics {
@@ -42,10 +43,9 @@ const LEVEL_CFG: Record<string, { label: string; color: string; bg: string; emoj
 
 /* ── Notices & Changelog (informational content, not mock data) ─────────── */
 const notices = [
-  { badge: 'IMPORTANTE', badgeCls: 'bg-red-500/15 text-red-400 ring-1 ring-red-500/30',        title: 'Black Friday 2026 — Prepare seu estoque com antecedência!',               date: '10/03/2026' },
-  { badge: 'ATENÇÃO',    badgeCls: 'bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30',  title: 'Shopee: Novas regras de comissão a partir de Abril/2026',                  date: '08/03/2026' },
-  { badge: 'OPORTUNIDADE',badgeCls:'bg-green-500/15 text-green-400 ring-1 ring-green-500/30',  title: 'Mercado Livre: Promoção relâmpago disponível para sellers Gold',           date: '07/03/2026' },
-  { badge: 'NOVO',       badgeCls: 'bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30',title: 'Novo: Integração com TikTok Shop disponível no próximo update!',          date: '05/03/2026' },
+  { badge: 'IMPORTANTE',  badgeCls: 'bg-red-500/15 text-red-400 ring-1 ring-red-500/30',        title: 'Black Friday 2026 — Prepare seu estoque com antecedência!',                date: '10/03/2026' },
+  { badge: 'OPORTUNIDADE', badgeCls: 'bg-green-500/15 text-green-400 ring-1 ring-green-500/30', title: 'Mercado Livre: Promoção relâmpago disponível para sellers Gold',            date: '07/03/2026' },
+  { badge: 'NOVO',         badgeCls: 'bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30', title: 'Foguetim ERP v1.1 lançado — Integração ML com pedidos e SAC em tempo real!', date: '14/03/2026' },
 ]
 
 const changelog = [
@@ -105,6 +105,7 @@ export default function DashboardPage() {
   const [reputaLoading, setReputaLoading] = useState(true)
   const { user } = useAuth()
 
+  const { toggle } = useSidebar()
   const firstName = user?.user_metadata?.name?.split(' ')[0] ?? 'lá'
 
   useEffect(() => {
@@ -137,11 +138,23 @@ export default function DashboardPage() {
     <div>
       <div className="p-6 space-y-6">
 
+        {/* ── Mobile sticky nav strip ── */}
+        <div className="md:hidden sticky top-0 -mx-6 -mt-6 px-4 py-3 bg-dark-900/90 backdrop-blur border-b border-white/[0.06] flex items-center gap-3 z-20 mb-2">
+          <button
+            onClick={toggle}
+            aria-label="Abrir menu"
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-all"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Dashboard</span>
+        </div>
+
         {/* ── Greeting ── */}
         <div className="animate-slide-up">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
+              <h1 suppressHydrationWarning className="text-2xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
                 {greeting()}, {firstName}! 👋
               </h1>
               <p className="text-sm text-slate-500 mt-1">
@@ -150,7 +163,7 @@ export default function DashboardPage() {
                   : 'Conecte seus canais de venda para ver seus dados em tempo real.'}
               </p>
             </div>
-            <p className="text-xs text-slate-600 shrink-0">
+            <p suppressHydrationWarning className="text-xs text-slate-600 shrink-0">
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
@@ -415,7 +428,7 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-600 mb-4">Distribuição no mês</p>
               <EmptyCard
                 message="Apenas ML integrado"
-                hint="Shopee e Amazon em breve"
+                hint="Novas integrações em breve"
               />
             </div>
 

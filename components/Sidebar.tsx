@@ -240,31 +240,41 @@ export default function Sidebar() {
         <div className="mx-3 mb-3 p-3 rounded-xl bg-dark-700 border border-white/[0.06]">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wider">Plano Ativo</p>
-            <Link
-              href="/planos"
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity ${planCfg.badge}`}
-              title="Ver planos disponíveis"
-            >
-              {planCfg.label}
-            </Link>
+            {profile === null ? (
+              <div className="h-4 w-16 bg-dark-600 animate-pulse rounded-full" />
+            ) : (
+              <Link
+                href="/planos"
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full hover:opacity-80 transition-opacity ${planCfg.badge}`}
+                title="Ver planos disponíveis"
+              >
+                {planCfg.label}
+              </Link>
+            )}
           </div>
-          {!unlimited && (
-            <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 transition-all duration-500"
-                style={{ width: `${barPct}%` }}
-              />
-            </div>
-          )}
-          <p className="text-[10px] text-slate-600">{countText}</p>
-          {/* Upgrade CTA — only for limited plans */}
-          {!unlimited && (
-            <Link
-              href="/planos"
-              className="mt-1.5 block text-[10px] font-semibold text-purple-500 hover:text-purple-400 transition-colors"
-            >
-              Fazer upgrade →
-            </Link>
+          {profile === null ? (
+            <div className="h-3 w-28 bg-dark-600 animate-pulse rounded mt-1" />
+          ) : (
+            <>
+              {!unlimited && (
+                <div className="h-1.5 bg-dark-600 rounded-full overflow-hidden mb-1.5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-500 transition-all duration-500"
+                    style={{ width: `${barPct}%` }}
+                  />
+                </div>
+              )}
+              <p className="text-[10px] text-slate-600">{countText}</p>
+              {/* Upgrade CTA — only for limited plans */}
+              {!unlimited && (
+                <Link
+                  href="/planos"
+                  className="mt-1.5 block text-[10px] font-semibold text-purple-500 hover:text-purple-400 transition-colors"
+                >
+                  Fazer upgrade →
+                </Link>
+              )}
+            </>
           )}
         </div>
 
