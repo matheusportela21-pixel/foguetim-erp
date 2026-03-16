@@ -1077,9 +1077,13 @@ function MLProductsTab() {
   const [error, setError]               = useState<string | null>(null)
   const [notConnected, setNotConnected] = useState(false)
   const [refreshKey, setRefreshKey]     = useState(0)
+  const [searchSource, setSearchSource] = useState<string>('')
+
+  // Search — inputValue drives the display, debouncedSearch triggers the API call
+  const [inputValue, setInputValue]     = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   // Filters
-  const [search, setSearch]                   = useState('')
   const [statusFilter, setStatusFilter]       = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
   const [listingFilter, setListingFilter]     = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
   const [stockFilter, setStockFilter]         = useState<'all' | 'low' | 'zero'>('all')
@@ -1091,11 +1095,21 @@ function MLProductsTab() {
   const [offset, setOffset]                   = useState(0)
   const [limit, setLimit]                     = useState(50)
   const [paging, setPaging]                   = useState({ total: 0, offset: 0, limit: 50 })
+  const [gotoPage, setGotoPage]               = useState('')
 
   // Bulk actions
   const [selectedIds, setSelectedIds]       = useState<string[]>([])
   const [bulkSaving, setBulkSaving]         = useState(false)
   const [showBulkPrice, setShowBulkPrice]   = useState(false)
+
+  // Debounce search input → 500ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(inputValue), 500)
+    return () => clearTimeout(t)
+  }, [inputValue])
+
+  // Reset to page 0 when search changes
+  useEffect(() => { setOffset(0) }, [debouncedSearch, statusFilter])
 
   function openEditPage(itemId: string) {
     window.open(`/dashboard/produtos/editar/${itemId}`, '_blank')
@@ -1106,31 +1120,29 @@ function MLProductsTab() {
     setError(null)
     setSelectedIds([])
     const apiStatus = statusFilter === 'all' ? 'all' : statusFilter
-    fetch(`/api/mercadolivre/products?offset=${offset}&limit=${limit}&status=${apiStatus}`)
+    const url = debouncedSearch
+      ? `/api/mercadolivre/products/search?q=${encodeURIComponent(debouncedSearch)}&offset=${offset}&limit=${limit}&status=${apiStatus}`
+      : `/api/mercadolivre/products?offset=${offset}&limit=${limit}&status=${apiStatus}`
+
+    fetch(url)
       .then(r => r.json())
-      .then(d => {
+      .then((d: { notConnected?: boolean; error?: string; items?: MLItem[]; paging?: { total: number; offset: number; limit: number }; search_source?: string }) => {
         if (d.notConnected) { setNotConnected(true); return }
         if (d.error) { setError(d.error); return }
         setItems(d.items ?? [])
-        setPaging(d.paging ?? { total: 0, offset, limit: 50 })
+        setPaging(d.paging ?? { total: 0, offset, limit })
+        setSearchSource(d.search_source ?? '')
       })
       .catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false))
-  }, [offset, limit, statusFilter, refreshKey])
+  }, [offset, limit, statusFilter, debouncedSearch, refreshKey])
 
   function updateItem(id: string, patch: Partial<MLItem>) {
     setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it))
   }
 
-  // Apply local filters
+  // Apply local filters (search is now server-side via debouncedSearch)
   const filtered = items.filter(i => {
-    if (search) {
-      const q = search.toLowerCase()
-      const inTitle  = (i.title ?? '').toLowerCase().includes(q)
-      const inId     = (i.id ?? '').toLowerCase().includes(q)
-      const inSku    = (i.seller_custom_field ?? '').toLowerCase().includes(q)
-      if (!inTitle && !inId && !inSku) return false
-    }
     if (catalogTab === 'catalog' && !i.catalog_listing && !i.catalog_product_id)  return false
     if (catalogTab === 'user'    && (i.catalog_listing || i.catalog_product_id))  return false
     if (listingFilter !== 'all' && i.listing_type_id !== listingFilter) return false
@@ -1230,11 +1242,24 @@ function MLProductsTab() {
       {/* ── Toolbar ── */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por título ou ID..."
-            className="pl-9 pr-4 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-56" />
+        <div className="flex flex-col gap-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+            <input value={inputValue} onChange={e => setInputValue(e.target.value)}
+              placeholder="Buscar por título, ID ou SKU..."
+              className="pl-9 pr-8 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-64" />
+            {inputValue && (
+              <button onClick={() => { setInputValue(''); setDebouncedSearch('') }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {debouncedSearch && (
+            <span className="text-[10px] text-slate-500 pl-1">
+              {paging.total} resultado(s) para &ldquo;{debouncedSearch}&rdquo;
+            </span>
+          )}
         </div>
 
         {/* Status tabs */}
@@ -1670,6 +1695,20 @@ function MLProductsTab() {
                     >
                       »
                     </button>
+                    <span className="text-[10px] text-slate-600 ml-1">Ir para</span>
+                    <input
+                      type="number" min={1} max={totalPages}
+                      value={gotoPage}
+                      onChange={e => setGotoPage(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const p = Math.max(1, Math.min(totalPages, Number(gotoPage)))
+                          if (!isNaN(p)) { setOffset((p - 1) * limit); setGotoPage('') }
+                        }
+                      }}
+                      placeholder={String(currentPage + 1)}
+                      className="w-12 px-2 py-1 rounded-lg text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 text-center"
+                    />
                   </div>
                 )
               })()}
