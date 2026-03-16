@@ -8,26 +8,11 @@ export const metadata = {
 
 const integrations = [
   {
-    name: 'Shopee',
-    color: '#f97316',
-    dot: 'bg-orange-400',
-    headline: 'Parceiro registrado na Shopee Open Platform',
-    detail: 'Autenticação OAuth 2.0 oficial',
-    badge: 'Disponível',
-    badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
-    features: [
-      'Parceiro oficial Shopee Open Platform',
-      'Autenticação OAuth 2.0 padrão',
-      'Gestão de pedidos e produtos',
-      'Sincronização de estoque em tempo real',
-    ],
-  },
-  {
     name: 'Mercado Livre',
     color: '#f59e0b',
     dot: 'bg-amber-400',
-    headline: 'API oficial MLB',
-    detail: 'Autenticação OAuth 2.0',
+    headline: 'Integração ativa',
+    detail: 'Autenticação OAuth 2.0 via API oficial MLB',
     badge: 'Disponível',
     badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
     features: [
@@ -38,18 +23,29 @@ const integrations = [
     ],
   },
   {
-    name: 'Amazon',
-    color: '#0ea5e9',
-    dot: 'bg-sky-400',
-    headline: 'SP-API',
-    detail: 'Em desenvolvimento',
+    name: 'Shopee',
+    color: '#f97316',
+    dot: 'bg-orange-400',
+    headline: 'Integração em desenvolvimento',
+    detail: 'Disponível em breve',
     badge: 'Em breve',
     badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
     features: [
-      'Integração via SP-API (em desenvolvimento)',
-      'OAuth 2.0 com LWA (Login with Amazon)',
-      'Gestão de pedidos FBA e FBM',
-      'Relatórios de desempenho',
+      'Integração em desenvolvimento',
+      'Sincronize produtos, pedidos e estoque quando disponível',
+    ],
+  },
+  {
+    name: 'Amazon',
+    color: '#0ea5e9',
+    dot: 'bg-sky-400',
+    headline: 'Em desenvolvimento',
+    detail: 'Disponível em breve',
+    badge: 'Em breve',
+    badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    features: [
+      'Integração em desenvolvimento',
+      'Mais detalhes em breve',
     ],
   },
 ]
@@ -155,17 +151,10 @@ export default function IntegracoesPage() {
 
             <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
               <p>
-                Foguetim integrates with marketplaces using their official OAuth 2.0 APIs:
+                Foguetim integrates with marketplaces via official OAuth 2.0 APIs:
               </p>
 
               <ul className="space-y-3 pl-4">
-                <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0 mt-1.5" />
-                  <span>
-                    <strong className="text-navy-900">Shopee:</strong> Registered partner on Shopee Open Platform.
-                    Uses official Shopee Partner API with OAuth 2.0 authorization flow.
-                  </span>
-                </li>
                 <li className="flex items-start gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-1.5" />
                   <span>
@@ -174,16 +163,15 @@ export default function IntegracoesPage() {
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0 mt-1.5" />
+                  <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0 mt-1.5" />
                   <span>
-                    <strong className="text-navy-900">Amazon:</strong> Integration via SP-API (in development).
+                    <strong className="text-navy-900">Other marketplaces:</strong> Coming soon.
                   </span>
                 </li>
               </ul>
 
               <p>
                 All OAuth tokens are stored encrypted and can be revoked by the user at any time.
-                Test credentials and partner documentation available upon request.
               </p>
 
               <p className="font-semibold text-navy-900">

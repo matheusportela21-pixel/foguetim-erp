@@ -92,9 +92,9 @@ function DashboardMockup() {
         {/* Products */}
         <div className="space-y-1.5">
           {[
-            { name: 'Tênis Nike Air Force 1', price: 'R$299', stock: 45, status: 'ativo' },
-            { name: 'Camiseta Premium Pima', price: 'R$89',  stock: 12, status: 'baixo' },
-            { name: 'Mochila Tática 30L',    price: 'R$189', stock: 88, status: 'ativo' },
+            { name: 'Tênis Esportivo XR-500', price: 'R$299', stock: 45, status: 'ativo' },
+            { name: 'Camiseta Algodão 220g',  price: 'R$89',  stock: 12, status: 'baixo' },
+            { name: 'Mochila Tática 30L',     price: 'R$189', stock: 88, status: 'ativo' },
           ].map(p => (
             <div key={p.name} className="bg-white/[0.03] rounded-lg px-3 py-2 flex items-center gap-2 border border-white/5">
               <div className="w-5 h-5 rounded bg-indigo-500/20 shrink-0" />
@@ -211,8 +211,7 @@ const plansData = {
 const futureIntegrations = [
   { name: 'Shopee',       icon: '🛍️', status: 'Em breve' },
   { name: 'Amazon',       icon: '📦', status: 'Em breve' },
-  { name: 'Magalu',       icon: '🏬', status: 'Em breve' },
-  { name: 'TikTok Shop',  icon: '🎵', status: 'Planejado' },
+  { name: 'Outros',       icon: '🔜', status: 'Em breve' },
   { name: 'NF-e',         icon: '🧾', status: 'Em breve' },
   { name: 'Fretes',       icon: '🚚', status: 'Planejado' },
   { name: 'WhatsApp',     icon: '💬', status: 'Planejado' },
@@ -228,7 +227,7 @@ function MockupProducts() {
         <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">2.031 anúncios</span>
       </div>
       {[
-        { name: 'Tênis Nike Air Force 1 Branco',  price: 'R$299', health: 92, status: 'Ativo' },
+        { name: 'Tênis Esportivo XR-500 Branco',   price: 'R$299', health: 92, status: 'Ativo' },
         { name: 'Camiseta Oversized Premium',      price: 'R$89',  health: 78, status: 'Ativo' },
         { name: 'Mochila Tática Militar 30L',      price: 'R$189', health: 45, status: 'Pausado' },
       ].map(p => (

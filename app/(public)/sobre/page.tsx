@@ -32,7 +32,7 @@ const integrations = [
     name: 'Mercado Livre',
     color: '#f59e0b',
     dot: 'bg-amber-400',
-    detail: 'Parceiro via API oficial MLB, OAuth 2.0',
+    detail: 'Integração ativa via API oficial MLB, OAuth 2.0',
     badge: 'Disponível',
     badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
   },
@@ -40,15 +40,15 @@ const integrations = [
     name: 'Shopee',
     color: '#f97316',
     dot: 'bg-orange-400',
-    detail: 'Parceiro registrado na Shopee Open Platform, OAuth 2.0',
-    badge: 'Disponível',
-    badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+    detail: 'Integração em desenvolvimento',
+    badge: 'Em breve',
+    badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
   },
   {
     name: 'Amazon',
     color: '#0ea5e9',
     dot: 'bg-sky-400',
-    detail: 'SP-API em desenvolvimento',
+    detail: 'Em desenvolvimento',
     badge: 'Em breve',
     badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
   },
@@ -164,7 +164,7 @@ export default function SobrePage() {
           <p className="text-sm font-semibold text-purple-600 mb-3 uppercase tracking-wider">Nossa Missão</p>
           <p className="text-lg text-slate-700 leading-relaxed">
             O Foguetim nasceu da necessidade real de vendedores de marketplace que precisavam de uma ferramenta
-            integrada, inteligente e acessível para gerenciar suas operações no Mercado Livre, Shopee e Amazon.
+            integrada, inteligente e acessível para gerenciar suas operações nos maiores marketplaces do Brasil.
           </p>
         </div>
       </section>
@@ -225,11 +225,12 @@ export default function SobrePage() {
 
           {/* English note for API evaluators */}
           <div className="mt-8 landing-card p-6 border-l-4 border-purple-400">
-            <p className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-2">For API Evaluators & Partners</p>
+            <p className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-2">For API Evaluators &amp; Partners</p>
             <p className="text-sm text-slate-600 leading-relaxed">
-              For Shopee Open Platform evaluators and API partners: Foguetim is a registered partner on the
-              Shopee Open Platform. Authentication is handled via official OAuth 2.0 flows. Test credentials
-              are provided during the partner registration process.{' '}
+              Foguetim integrates with marketplaces via official OAuth 2.0 APIs.
+              Mercado Livre is integrated via the official MercadoLibre API (MLB), using standard OAuth 2.0.
+              Other marketplaces are coming soon.
+              All OAuth tokens are stored encrypted and can be revoked by the user at any time.{' '}
               <a href="mailto:contato@foguetim.com.br" className="text-purple-600 font-semibold hover:underline">
                 Contact: contato@foguetim.com.br
               </a>
