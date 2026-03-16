@@ -1072,47 +1072,59 @@ function BulkPriceModal({
 // ─── ML Products Tab ──────────────────────────────────────────────────────────
 
 function MLProductsTab() {
-  const [items, setItems]               = useState<MLItem[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState<string | null>(null)
-  const [notConnected, setNotConnected] = useState(false)
-  const [refreshKey, setRefreshKey]     = useState(0)
-  const [searchSource, setSearchSource] = useState<string>('')
-  const [hasLocalData, setHasLocalData] = useState<boolean | null>(null)
-  const [syncing, setSyncing]           = useState(false)
-  const [syncMsg, setSyncMsg]           = useState<string | null>(null)
+  const router = useRouter()
 
-  // Search — inputValue drives the display, debouncedSearch triggers the API call
-  const [inputValue, setInputValue]     = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  // ── Unified listings state ─────────────────────────────────────────────────
+  const [ls, setLs] = useState({
+    items:          [] as MLItem[],
+    total:          0,
+    page:           1,
+    per_page:       50 as 20 | 50 | 100 | 200,
+    total_pages:    0,
+    is_loading:     true,
+    search_query:   '',
+    has_local_data: false,
+    error:          null as string | null,
+  })
 
-  // Filters
-  const [statusFilter, setStatusFilter]       = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
-  const [listingFilter, setListingFilter]     = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
-  const [stockFilter, setStockFilter]         = useState<'all' | 'low' | 'zero'>('all')
-  const [catalogTab, setCatalogTab]           = useState<'all' | 'user' | 'catalog'>('user')
-  const [freeShippingF, setFreeShippingF]     = useState(false)
-  const [flexF, setFlexF]                     = useState(false)
-  const [sortBy, setSortBy]                   = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('default')
+  const [notConnected,  setNotConnected]  = useState(false)
+  const [refreshKey,    setRefreshKey]    = useState(0)
+  const [syncing,       setSyncing]       = useState(false)
+  const [syncMsg,       setSyncMsg]       = useState<string | null>(null)
+
+  // Search: controlled input → debounced 500ms → ls.search_query
+  const [inputValue, setInputValue] = useState('')
+
+  // Server-side filters (passed to /search endpoint)
+  const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
+  const [catalogTab,   setCatalogTab]   = useState<'all' | 'user' | 'catalog'>('all')
+  const [sortBy,       setSortBy]       = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('updated_desc')
+
+  // Client-side filters (listing type, stock, shipping — not in ML API)
+  const [listingFilter,   setListingFilter]   = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
+  const [stockFilter,     setStockFilter]     = useState<'all' | 'low' | 'zero'>('all')
+  const [freeShippingF,   setFreeShippingF]   = useState(false)
+  const [flexF,           setFlexF]           = useState(false)
   const [showMoreFilters, setShowMoreFilters] = useState(false)
-  const [offset, setOffset]                   = useState(0)
-  const [limit, setLimit]                     = useState(50)
-  const [paging, setPaging]                   = useState({ total: 0, offset: 0, limit: 50 })
-  const [gotoPage, setGotoPage]               = useState('')
+  const [gotoPage,        setGotoPage]        = useState('')
 
   // Bulk actions
-  const [selectedIds, setSelectedIds]       = useState<string[]>([])
-  const [bulkSaving, setBulkSaving]         = useState(false)
-  const [showBulkPrice, setShowBulkPrice]   = useState(false)
+  const [selectedIds,   setSelectedIds]   = useState<string[]>([])
+  const [bulkSaving,    setBulkSaving]    = useState(false)
+  const [showBulkPrice, setShowBulkPrice] = useState(false)
 
-  // Debounce search input → 500ms
+  // Debounce search input → reset to page 1 and update search_query
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(inputValue), 500)
+    const t = setTimeout(() => {
+      setLs(prev => ({ ...prev, page: 1, search_query: inputValue }))
+    }, 500)
     return () => clearTimeout(t)
   }, [inputValue])
 
-  // Reset to page 0 when search changes
-  useEffect(() => { setOffset(0) }, [debouncedSearch, statusFilter])
+  // Reset to page 1 when server-side filters change
+  useEffect(() => {
+    setLs(prev => ({ ...prev, page: 1 }))
+  }, [statusFilter, catalogTab, sortBy])
 
   function openEditPage(itemId: string) {
     window.open(`/dashboard/produtos/editar/${itemId}`, '_blank')
@@ -1126,7 +1138,7 @@ function MLProductsTab() {
       const data = await res.json() as { synced?: number; errors?: number; duration_ms?: number; error?: string }
       if (!res.ok) { setSyncMsg(data.error ?? 'Erro na sincronização'); return }
       setSyncMsg(`${data.synced ?? 0} anúncios sincronizados em ${((data.duration_ms ?? 0) / 1000).toFixed(1)}s`)
-      setHasLocalData(true)
+      setLs(prev => ({ ...prev, has_local_data: true }))
       setRefreshKey(k => k + 1)
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : 'Erro na sincronização')
@@ -1135,56 +1147,77 @@ function MLProductsTab() {
     }
   }
 
+  // ── Single fetch: always calls /search, server decides local vs ML API ──────
   useEffect(() => {
-    setLoading(true)
-    setError(null)
+    setLs(prev => ({ ...prev, is_loading: true, error: null }))
     setSelectedIds([])
-    const apiStatus = statusFilter === 'all' ? 'all' : statusFilter
-    const url = debouncedSearch
-      ? `/api/mercadolivre/products/search?q=${encodeURIComponent(debouncedSearch)}&offset=${offset}&limit=${limit}&status=${apiStatus}`
-      : `/api/mercadolivre/products?offset=${offset}&limit=${limit}&status=${apiStatus}`
 
-    fetch(url)
+    const qs = new URLSearchParams({
+      q:           ls.search_query,
+      page:        String(ls.page),
+      per_page:    String(ls.per_page),
+      status:      statusFilter,
+      catalog_tab: catalogTab,
+      sort:        sortBy === 'default' ? 'updated_desc' : sortBy,
+    }).toString()
+
+    fetch(`/api/mercadolivre/products/search?${qs}`)
       .then(r => r.json())
-      .then((d: { notConnected?: boolean; error?: string; items?: MLItem[]; paging?: { total: number; offset: number; limit: number }; search_source?: string; has_local_data?: boolean }) => {
+      .then((d: {
+        notConnected?: boolean
+        error?: string
+        items?: MLItem[]
+        pagination?: { total: number; page: number; per_page: number; total_pages: number; from: number; to: number }
+        paging?: { total: number; offset: number; limit: number }
+        has_local_data?: boolean
+      }) => {
         if (d.notConnected) { setNotConnected(true); return }
-        if (d.error) { setError(d.error); return }
-        setItems(d.items ?? [])
-        setPaging(d.paging ?? { total: 0, offset, limit })
-        setSearchSource(d.search_source ?? '')
-        if (d.has_local_data !== undefined) setHasLocalData(d.has_local_data)
+        if (d.error) { setLs(prev => ({ ...prev, is_loading: false, error: d.error! })); return }
+        const total    = d.pagination?.total ?? d.paging?.total ?? 0
+        const perPage  = (d.pagination?.per_page ?? d.paging?.limit ?? ls.per_page) as 20 | 50 | 100 | 200
+        const curPage  = d.pagination?.page ?? (d.paging ? Math.floor(d.paging.offset / perPage) + 1 : ls.page)
+        setLs(prev => ({
+          ...prev,
+          items:          d.items ?? [],
+          total,
+          page:           curPage,
+          per_page:       perPage,
+          total_pages:    d.pagination?.total_pages ?? Math.max(1, Math.ceil(total / perPage)),
+          has_local_data: d.has_local_data ?? prev.has_local_data,
+          is_loading:     false,
+        }))
       })
-      .catch(e => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false))
-  }, [offset, limit, statusFilter, debouncedSearch, refreshKey])
+      .catch(e => setLs(prev => ({
+        ...prev, is_loading: false,
+        error: e instanceof Error ? e.message : String(e),
+      })))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ls.search_query, ls.page, ls.per_page, statusFilter, catalogTab, sortBy, refreshKey])
+
+  // URL state persistence
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (ls.search_query) params.set('ml_q', ls.search_query); else params.delete('ml_q')
+    if (ls.page > 1) params.set('ml_page', String(ls.page)); else params.delete('ml_page')
+    if (ls.per_page !== 50) params.set('ml_pp', String(ls.per_page)); else params.delete('ml_pp')
+    if (statusFilter !== 'active') params.set('ml_s', statusFilter); else params.delete('ml_s')
+    if (catalogTab !== 'all') params.set('ml_ct', catalogTab); else params.delete('ml_ct')
+    router.replace(`?${params.toString()}`, { scroll: false })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ls.search_query, ls.page, ls.per_page, statusFilter, catalogTab, sortBy])
 
   function updateItem(id: string, patch: Partial<MLItem>) {
-    setItems(prev => prev.map(it => it.id === id ? { ...it, ...patch } : it))
+    setLs(prev => ({ ...prev, items: prev.items.map(it => it.id === id ? { ...it, ...patch } : it) }))
   }
 
-  // Apply local filters (search is now server-side via debouncedSearch)
-  const filtered = items.filter(i => {
-    if (catalogTab === 'catalog' && !i.catalog_listing && !i.catalog_product_id)  return false
-    if (catalogTab === 'user'    && (i.catalog_listing || i.catalog_product_id))  return false
+  // Client-side filters (listing type, stock, shipping — page-scoped, don't affect total)
+  const displayed = ls.items.filter(i => {
     if (listingFilter !== 'all' && i.listing_type_id !== listingFilter) return false
     if (stockFilter === 'zero' && i.available_quantity !== 0)            return false
     if (stockFilter === 'low'  && (i.available_quantity === 0 || i.available_quantity > 5)) return false
     if (freeShippingF && !i.shipping?.free_shipping)                     return false
     if (flexF && !i.shipping?.tags?.includes('self_service_in'))         return false
     return true
-  })
-
-  // Local sort
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'price_desc')   return b.price - a.price
-    if (sortBy === 'price_asc')    return a.price - b.price
-    if (sortBy === 'stock_asc')    return a.available_quantity - b.available_quantity
-    if (sortBy === 'stock_desc')   return b.available_quantity - a.available_quantity
-    if (sortBy === 'sold_desc')    return b.sold_quantity - a.sold_quantity
-    if (sortBy === 'title_asc')    return (a.title ?? '').localeCompare(b.title ?? '', 'pt-BR')
-    if (sortBy === 'title_desc')   return (b.title ?? '').localeCompare(a.title ?? '', 'pt-BR')
-    if (sortBy === 'updated_desc') return (b.last_updated ?? '').localeCompare(a.last_updated ?? '')
-    return 0
   })
 
   // Active filter chips
@@ -1195,13 +1228,13 @@ function MLProductsTab() {
   if (stockFilter !== 'all')    chips.push({ label: stockFilter === 'zero' ? 'Sem estoque' : 'Estoque baixo', onRemove: () => setStockFilter('all') })
   if (freeShippingF)            chips.push({ label: 'Frete grátis', onRemove: () => setFreeShippingF(false) })
   if (flexF)                    chips.push({ label: 'Flex ativo', onRemove: () => setFlexF(false) })
-  if (sortBy !== 'default')     chips.push({ label: `Ordenado`, onRemove: () => setSortBy('default') })
+  if (sortBy !== 'updated_desc' && sortBy !== 'default') chips.push({ label: 'Ordenado', onRemove: () => setSortBy('updated_desc') })
 
   // Select all / deselect
-  const allSelected = sorted.length > 0 && sorted.every(i => selectedIds.includes(i.id))
+  const allSelected = displayed.length > 0 && displayed.every(i => selectedIds.includes(i.id))
   function toggleAll() {
     if (allSelected) setSelectedIds([])
-    else setSelectedIds(sorted.map(i => i.id))
+    else setSelectedIds(displayed.map(i => i.id))
   }
   function toggleOne(id: string) {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -1223,7 +1256,7 @@ function MLProductsTab() {
     setSelectedIds([])
   }
 
-  const selectedItems = sorted.filter(i => selectedIds.includes(i.id))
+  const selectedItems = displayed.filter(i => selectedIds.includes(i.id))
 
   if (notConnected) return (
     <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -1239,18 +1272,18 @@ function MLProductsTab() {
     </div>
   )
 
-  if (loading) return (
+  if (ls.is_loading && ls.items.length === 0) return (
     <div className="flex items-center justify-center py-16 gap-2 text-slate-500">
       <Loader2 className="w-5 h-5 animate-spin" />
       <span className="text-sm">Carregando anúncios do Mercado Livre...</span>
     </div>
   )
 
-  if (error) return (
+  if (ls.error && ls.items.length === 0) return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <AlertCircle className="w-8 h-8 text-red-400" />
       <p className="text-sm text-red-400 font-semibold">Erro ao carregar anúncios</p>
-      <p className="text-xs text-slate-500 max-w-sm text-center">{error}</p>
+      <p className="text-xs text-slate-500 max-w-sm text-center">{ls.error}</p>
       <button onClick={() => setRefreshKey(k => k + 1)}
         className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 text-xs font-bold hover:bg-white/10 transition-colors">
         Tentar novamente
@@ -1270,15 +1303,15 @@ function MLProductsTab() {
               placeholder="Buscar por título, ID ou SKU..."
               className="pl-9 pr-8 py-2 rounded-xl text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 w-64" />
             {inputValue && (
-              <button onClick={() => { setInputValue(''); setDebouncedSearch('') }}
+              <button onClick={() => { setInputValue(''); setLs(prev => ({ ...prev, search_query: '', page: 1 })) }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
-          {debouncedSearch && (
+          {ls.search_query && (
             <span className="text-[10px] text-slate-500 pl-1">
-              {paging.total} resultado(s) para &ldquo;{debouncedSearch}&rdquo;
+              {ls.total} resultado(s) para &ldquo;{ls.search_query}&rdquo;
             </span>
           )}
         </div>
@@ -1291,7 +1324,7 @@ function MLProductsTab() {
             { v: 'under_review', label: 'Em revisão' },
             { v: 'all',          label: 'Todos' },
           ] as const).map(s => (
-            <button key={s.v} onClick={() => { setStatusFilter(s.v); setOffset(0); setSelectedIds([]) }}
+            <button key={s.v} onClick={() => { setStatusFilter(s.v); setSelectedIds([]) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.v ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
               {s.label}
             </button>
@@ -1376,7 +1409,7 @@ function MLProductsTab() {
                   </select>
                 </div>
 
-                <button onClick={() => { setCatalogTab('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+                <button onClick={() => { setCatalogTab('all'); setFreeShippingF(false); setFlexF(false); setSortBy('updated_desc') }}
                   className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-300 border border-white/[0.06] rounded-xl transition-colors">
                   Limpar filtros
                 </button>
@@ -1392,13 +1425,13 @@ function MLProductsTab() {
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sincronizando...</>
               : <><RefreshCw className="w-3.5 h-3.5" /> Sincronizar</>}
           </button>
-          <button onClick={() => setRefreshKey(k => k + 1)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <button onClick={() => setRefreshKey(k => k + 1)} disabled={ls.is_loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all disabled:opacity-50">
+            <RefreshCw className={`w-3.5 h-3.5 ${ls.is_loading ? 'animate-spin' : ''}`} />
           </button>
           <span className="text-xs text-slate-600">
-            Mostrando <span className="text-white font-bold">{sorted.length}</span>
-            {sorted.length !== paging.total && <span className="text-slate-500"> de <span className="text-white font-bold">{paging.total}</span></span>}
+            Mostrando <span className="text-white font-bold">{displayed.length}</span>
+            {ls.total > 0 && <span className="text-slate-500"> de <span className="text-white font-bold">{ls.total}</span></span>}
           </span>
         </div>
       </div>
@@ -1413,7 +1446,7 @@ function MLProductsTab() {
               <X className="w-3 h-3" />
             </button>
           ))}
-          <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+          <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('updated_desc') }}
             className="px-2.5 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
             Limpar tudo
           </button>
@@ -1421,7 +1454,7 @@ function MLProductsTab() {
       )}
 
       {/* Sync banners */}
-      {hasLocalData === false && (
+      {ls.has_local_data === false && (
         <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -1474,12 +1507,17 @@ function MLProductsTab() {
       )}
 
       {/* Table */}
-      {sorted.length === 0 ? (
+      {!ls.is_loading && displayed.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2">
           <ShoppingBag className="w-8 h-8 text-slate-700" />
-          <p className="text-sm text-slate-500">Nenhum anúncio encontrado</p>
+          <p className="text-sm text-slate-500">
+            {ls.search_query ? `Nenhum anúncio encontrado para "${ls.search_query}"` : 'Nenhum anúncio encontrado'}
+          </p>
+          {!ls.has_local_data && (
+            <p className="text-xs text-amber-400">Sincronize seus anúncios para habilitar a busca completa</p>
+          )}
           {chips.length > 0 && (
-            <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
+            <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('updated_desc') }}
               className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
               Limpar filtros
             </button>
@@ -1549,7 +1587,7 @@ function MLProductsTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
-                {sorted.map(item => {
+                {displayed.map(item => {
                   const isSelected  = selectedIds.includes(item.id)
                   const isFlex      = item.shipping?.tags?.includes('self_service_in') ?? false
                   const isFreeShip  = item.shipping?.free_shipping ?? false
@@ -1666,16 +1704,16 @@ function MLProductsTab() {
           </div>
 
           {/* Pagination */}
-          {paging.total > 0 && (
+          {ls.total > 0 && (
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              {/* Info + limit selector */}
+              {/* Info + per_page selector */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-600">
-                  {offset + 1}–{Math.min(offset + limit, paging.total)} de {paging.total}
+                  {((ls.page - 1) * ls.per_page) + 1}–{Math.min(ls.page * ls.per_page, ls.total)} de {ls.total}
                 </span>
                 <select
-                  value={limit}
-                  onChange={e => { setLimit(Number(e.target.value)); setOffset(0) }}
+                  value={ls.per_page}
+                  onChange={e => setLs(prev => ({ ...prev, per_page: Number(e.target.value) as 20 | 50 | 100 | 200, page: 1 }))}
                   className="px-2 py-1 rounded-lg text-[10px] bg-dark-700 border border-white/[0.06] text-slate-400 focus:outline-none"
                 >
                   <option value={20}>20/pág</option>
@@ -1686,9 +1724,9 @@ function MLProductsTab() {
               </div>
 
               {/* Page buttons */}
-              {paging.total > limit && (() => {
-                const totalPages = Math.ceil(paging.total / limit)
-                const currentPage = Math.floor(offset / limit)
+              {ls.total > ls.per_page && (() => {
+                const totalPages  = ls.total_pages || Math.ceil(ls.total / ls.per_page)
+                const currentPage = ls.page - 1  // 0-indexed for rendering
                 const pages: (number | '…')[] = []
                 let prev = -1
                 Array.from({ length: totalPages }, (_, i) => i)
@@ -1701,16 +1739,16 @@ function MLProductsTab() {
                 return (
                   <div className="flex items-center gap-1 ml-auto">
                     <button
-                      onClick={() => setOffset(0)}
-                      disabled={offset === 0}
+                      onClick={() => setLs(prev => ({ ...prev, page: 1 }))}
+                      disabled={ls.page === 1}
                       className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
                       title="Primeira página"
                     >
                       «
                     </button>
                     <button
-                      onClick={() => setOffset(Math.max(0, offset - limit))}
-                      disabled={offset === 0}
+                      onClick={() => setLs(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                      disabled={ls.page === 1}
                       className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
                     >
                       ‹
@@ -1721,7 +1759,7 @@ function MLProductsTab() {
                       ) : (
                         <button
                           key={p}
-                          onClick={() => setOffset((p as number) * limit)}
+                          onClick={() => setLs(prev => ({ ...prev, page: (p as number) + 1 }))}
                           className={`min-w-[28px] h-7 px-1 rounded-lg text-xs font-semibold transition-all ${
                             p === currentPage
                               ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
@@ -1733,15 +1771,15 @@ function MLProductsTab() {
                       )
                     )}
                     <button
-                      onClick={() => setOffset(offset + limit)}
-                      disabled={offset + limit >= paging.total}
+                      onClick={() => setLs(prev => ({ ...prev, page: prev.page + 1 }))}
+                      disabled={ls.page >= totalPages}
                       className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
                     >
                       ›
                     </button>
                     <button
-                      onClick={() => setOffset((Math.ceil(paging.total / limit) - 1) * limit)}
-                      disabled={offset + limit >= paging.total}
+                      onClick={() => setLs(prev => ({ ...prev, page: totalPages }))}
+                      disabled={ls.page >= totalPages}
                       className="p-1.5 rounded-lg text-xs bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all"
                       title="Última página"
                     >
@@ -1755,10 +1793,10 @@ function MLProductsTab() {
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
                           const p = Math.max(1, Math.min(totalPages, Number(gotoPage)))
-                          if (!isNaN(p)) { setOffset((p - 1) * limit); setGotoPage('') }
+                          if (!isNaN(p)) { setLs(prev => ({ ...prev, page: p })); setGotoPage('') }
                         }
                       }}
-                      placeholder={String(currentPage + 1)}
+                      placeholder={String(ls.page)}
                       className="w-12 px-2 py-1 rounded-lg text-xs bg-dark-700 border border-white/[0.06] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/30 text-center"
                     />
                   </div>

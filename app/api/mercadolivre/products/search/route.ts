@@ -64,8 +64,10 @@ export async function GET(req: NextRequest) {
 
   const sp          = new URL(req.url).searchParams
   const raw         = (sp.get('q') ?? '').trim()
-  const offset      = Math.max(0, Number(sp.get('offset') ?? 0))
-  const limit       = Math.min(Math.max(1, Number(sp.get('limit') ?? 50)), 200) as ListingsSearchQuery['per_page']
+  const limit       = Math.min(Math.max(1, Number(sp.get('per_page') ?? sp.get('limit') ?? 50)), 200) as ListingsSearchQuery['per_page']
+  const page        = sp.get('page') ? Math.max(1, Number(sp.get('page'))) : undefined
+  const offset      = page ? (page - 1) * limit : Math.max(0, Number(sp.get('offset') ?? 0))
+  const resolvedPage = page ?? Math.floor(offset / limit) + 1
   const status      = sp.get('status') ?? 'active'
   const catalog_tab = (sp.get('catalog_tab') ?? 'all') as ListingsSearchQuery['catalog_tab']
   const sort        = (sp.get('sort') ?? 'updated_desc') as ListingsSearchQuery['sort']
@@ -78,15 +80,13 @@ export async function GET(req: NextRequest) {
     const localCount = await getLocalListingCount(user.id, supabase)
 
     if (localCount > 0) {
-      const page = Math.floor(offset / limit) + 1
-
       const result = await searchLocalListings(
         user.id,
         {
           q:           raw,
           status:      status === 'all' ? undefined : status,
           catalog_tab,
-          page,
+          page:        resolvedPage,
           per_page:    limit,
           sort,
         },
@@ -135,10 +135,12 @@ export async function GET(req: NextRequest) {
     // 1. Item ID direto (MLB...)
     if (/^MLB\d+$/i.test(raw)) {
       const items = await multiget([raw.toUpperCase()], auth)
+      const total = items.length
       return NextResponse.json({
         items,
-        paging:         { total: items.length, offset: 0, limit },
-        search_source:  'item_id',
+        paging:      { total, offset: 0, limit },
+        pagination:  { total, page: 1, per_page: limit, total_pages: 1, from: 1, to: total },
+        search_info: { query: raw, matched_by: 'item_id', source: 'ml_api' },
         has_local_data: false,
       })
     }
@@ -153,17 +155,19 @@ export async function GET(req: NextRequest) {
         const ids = skuData.results ?? []
         if (ids.length > 0) {
           const items = await multiget(ids, auth)
+          const total = skuData.paging?.total ?? items.length
           return NextResponse.json({
             items,
-            paging:         { total: skuData.paging?.total ?? items.length, offset: 0, limit: 50 },
-            search_source:  'sku',
+            paging:      { total, offset: 0, limit },
+            pagination:  { total, page: 1, per_page: limit, total_pages: Math.ceil(total / limit), from: 1, to: items.length },
+            search_info: { query: raw, matched_by: 'sku', source: 'ml_api' },
             has_local_data: false,
           })
         }
       }
     }
 
-    // 3. Paginação normal + filtro por título
+    // 3. Paginação normal (sem filtro de título — ML API não suporta)
     const statusParam = status === 'all' ? '' : `&status=${status}`
     const searchUrl   = `${ML_API_BASE}/users/${conn.ml_user_id}/items/search` +
       `?offset=${offset}&limit=${limit}${statusParam}`
@@ -177,32 +181,26 @@ export async function GET(req: NextRequest) {
       await searchRes.json()
 
     const ids    = searchData.results ?? []
-    const paging = searchData.paging ?? { total: 0, offset, limit }
+    const mlPaging = searchData.paging ?? { total: 0, offset, limit }
 
     if (ids.length === 0) {
       return NextResponse.json({
-        items: [], paging, search_source: raw ? 'title' : 'all', has_local_data: false,
+        items:       [],
+        paging:      mlPaging,
+        pagination:  { total: mlPaging.total, page: resolvedPage, per_page: limit, total_pages: Math.ceil(mlPaging.total / limit), from: 0, to: 0 },
+        search_info: { query: raw, matched_by: null, source: 'ml_api' },
+        has_local_data: false,
       })
     }
 
     const allItems = await multiget(ids, auth)
-
-    const filtered = raw
-      ? (() => {
-          const q = normalizeSearchTerm(raw)
-          return allItems.filter((item) => {
-            const title = normalizeSearchTerm(String(item.title ?? ''))
-            const id    = String(item.id ?? '').toLowerCase()
-            const sku   = String((item as Record<string, unknown>).seller_custom_field ?? '').toLowerCase()
-            return title.includes(q) || id.includes(q) || sku.includes(q)
-          })
-        })()
-      : allItems
+    const total    = mlPaging.total
 
     return NextResponse.json({
-      items:          filtered,
-      paging,
-      search_source:  raw ? 'title' : 'all',
+      items:       allItems,
+      paging:      mlPaging,
+      pagination:  { total, page: resolvedPage, per_page: limit, total_pages: Math.ceil(total / limit), from: offset + 1, to: Math.min(offset + limit, total) },
+      search_info: { query: raw, matched_by: raw ? 'title' : null, source: 'ml_api' },
       has_local_data: false,
     })
   } catch (err: unknown) {
