@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse }  from 'next/server'
 import { getAuthUser }                from '@/lib/server-auth'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
+import { normalizeSearchTerm }        from '@/lib/ml/listings/normalize-search'
 
 const BATCH = 20   // ML aceita até 20 ids por multiget
 
@@ -48,13 +49,6 @@ async function multiget(ids: string[], authHeader: string): Promise<MLItemRow[]>
   return results
 }
 
-export function normalizeSearchTerm(term: string): string {
-  return term
-    .trim()
-    .toLowerCase()
-    .replace(/[-\s]+/g, ' ')
-    .replace(/[^\w\s]/g, '')
-}
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser()
