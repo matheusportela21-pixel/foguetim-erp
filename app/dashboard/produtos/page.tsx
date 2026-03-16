@@ -1091,6 +1091,8 @@ function MLProductsTab() {
   const [refreshKey,    setRefreshKey]    = useState(0)
   const [syncing,       setSyncing]       = useState(false)
   const [syncMsg,       setSyncMsg]       = useState<string | null>(null)
+  const [lastSyncAt,    setLastSyncAt]    = useState<Date | null>(null)
+  const [syncOk,        setSyncOk]        = useState<boolean | null>(null)
 
   // Search: controlled input → debounced 500ms → ls.search_query
   const [inputValue, setInputValue] = useState('')
@@ -1098,7 +1100,7 @@ function MLProductsTab() {
   // Server-side filters (passed to /search endpoint)
   const [statusFilter, setStatusFilter] = useState<'active' | 'paused' | 'under_review' | 'all'>('active')
   const [catalogTab,   setCatalogTab]   = useState<'all' | 'user' | 'catalog'>('all')
-  const [sortBy,       setSortBy]       = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('updated_desc')
+  const [sortBy,       setSortBy]       = useState<'default' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc' | 'title_asc' | 'title_desc' | 'sold_desc' | 'updated_desc'>('default')
 
   // Client-side filters (listing type, stock, shipping — not in ML API)
   const [listingFilter,   setListingFilter]   = useState<'all' | 'gold_pro' | 'gold_special' | 'free'>('all')
@@ -1133,15 +1135,26 @@ function MLProductsTab() {
   async function handleSync() {
     setSyncing(true)
     setSyncMsg(null)
+    setSyncOk(null)
     try {
       const res  = await fetch('/api/mercadolivre/listings/sync', { method: 'POST' })
       const data = await res.json() as { synced?: number; errors?: number; duration_ms?: number; error?: string }
-      if (!res.ok) { setSyncMsg(data.error ?? 'Erro na sincronização'); return }
-      setSyncMsg(`${data.synced ?? 0} anúncios sincronizados em ${((data.duration_ms ?? 0) / 1000).toFixed(1)}s`)
-      setLs(prev => ({ ...prev, has_local_data: true }))
+      if (!res.ok) {
+        setSyncMsg(data.error ?? 'Erro na sincronização')
+        setSyncOk(false)
+        return
+      }
+      const synced = data.synced ?? 0
+      const errs   = data.errors ?? 0
+      const secs   = ((data.duration_ms ?? 0) / 1000).toFixed(1)
+      setSyncMsg(`✅ ${synced} anúncios sincronizados${errs > 0 ? ` (${errs} erros)` : ''} em ${secs}s`)
+      setSyncOk(true)
+      setLastSyncAt(new Date())
+      setLs(prev => ({ ...prev, has_local_data: synced > 0 || prev.has_local_data }))
       setRefreshKey(k => k + 1)
     } catch (e) {
-      setSyncMsg(e instanceof Error ? e.message : 'Erro na sincronização')
+      setSyncMsg(`❌ ${e instanceof Error ? e.message : 'Erro na sincronização'}`)
+      setSyncOk(false)
     } finally {
       setSyncing(false)
     }
@@ -1228,7 +1241,7 @@ function MLProductsTab() {
   if (stockFilter !== 'all')    chips.push({ label: stockFilter === 'zero' ? 'Sem estoque' : 'Estoque baixo', onRemove: () => setStockFilter('all') })
   if (freeShippingF)            chips.push({ label: 'Frete grátis', onRemove: () => setFreeShippingF(false) })
   if (flexF)                    chips.push({ label: 'Flex ativo', onRemove: () => setFlexF(false) })
-  if (sortBy !== 'updated_desc' && sortBy !== 'default') chips.push({ label: 'Ordenado', onRemove: () => setSortBy('updated_desc') })
+  if (sortBy !== 'default') chips.push({ label: 'Ordenado', onRemove: () => setSortBy('default') })
 
   // Select all / deselect
   const allSelected = displayed.length > 0 && displayed.every(i => selectedIds.includes(i.id))
@@ -1409,7 +1422,7 @@ function MLProductsTab() {
                   </select>
                 </div>
 
-                <button onClick={() => { setCatalogTab('all'); setFreeShippingF(false); setFlexF(false); setSortBy('updated_desc') }}
+                <button onClick={() => { setCatalogTab('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
                   className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-300 border border-white/[0.06] rounded-xl transition-colors">
                   Limpar filtros
                 </button>
@@ -1446,7 +1459,7 @@ function MLProductsTab() {
               <X className="w-3 h-3" />
             </button>
           ))}
-          <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('updated_desc') }}
+          <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
             className="px-2.5 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
             Limpar tudo
           </button>
@@ -1454,7 +1467,7 @@ function MLProductsTab() {
       )}
 
       {/* Sync banners */}
-      {ls.has_local_data === false && (
+      {ls.has_local_data === false && !syncing && (
         <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/[0.08] border border-amber-500/20 rounded-xl">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -1463,16 +1476,27 @@ function MLProductsTab() {
           </div>
           <button onClick={handleSync} disabled={syncing}
             className="px-3 py-1.5 text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0">
-            {syncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-            {syncing ? 'Sincronizando...' : 'Sincronizar agora'}
+            <RefreshCw className="w-3 h-3" />
+            Sincronizar agora
           </button>
         </div>
       )}
-      {syncMsg && (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-xs ${syncMsg.includes('Erro') || syncMsg.includes('erro') ? 'bg-red-500/[0.08] border-red-500/20 text-red-300' : 'bg-green-500/[0.08] border-green-500/20 text-green-300'}`}>
-          <Info className="w-4 h-4 shrink-0" />
-          {syncMsg}
-          <button onClick={() => setSyncMsg(null)} className="ml-auto p-0.5 text-slate-500 hover:text-slate-300 transition-colors">
+      {syncing && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-blue-500/[0.08] border border-blue-500/20 rounded-xl">
+          <Loader2 className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+          <span className="text-xs text-blue-300 font-semibold">Sincronizando anúncios...</span>
+          <span className="text-xs text-slate-500">Isso pode levar alguns minutos.</span>
+        </div>
+      )}
+      {syncMsg && !syncing && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-xs ${syncOk === false ? 'bg-red-500/[0.08] border-red-500/20 text-red-300' : 'bg-green-500/[0.08] border-green-500/20 text-green-300'}`}>
+          <span className="flex-1">{syncMsg}</span>
+          {lastSyncAt && (
+            <span className="text-slate-500 text-[10px] shrink-0">
+              {lastSyncAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <button onClick={() => setSyncMsg(null)} className="p-0.5 text-slate-500 hover:text-slate-300 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -1517,7 +1541,7 @@ function MLProductsTab() {
             <p className="text-xs text-amber-400">Sincronize seus anúncios para habilitar a busca completa</p>
           )}
           {chips.length > 0 && (
-            <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('updated_desc') }}
+            <button onClick={() => { setCatalogTab('all'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}
               className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
               Limpar filtros
             </button>

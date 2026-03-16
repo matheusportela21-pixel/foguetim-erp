@@ -1,13 +1,14 @@
 /**
  * Sincroniza anúncios do ML para a tabela local ml_listings.
  * Busca item_ids via /users/{uid}/items/search, hidrata em batches de 20
- * e faz upsert no Supabase.
+ * e faz upsert no Supabase usando supabaseAdmin() (bypass de RLS).
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { supabaseAdmin }       from '@/lib/supabase-admin'
 
 const BATCH    = 20
 const PAGE_SIZE = 50
-const RATE_MS  = 200   // delay entre batches para respeitar rate-limit ML
+const RATE_MS  = 150   // delay entre batches para respeitar rate-limit ML
 
 const ITEM_FIELDS =
   'id,title,status,listing_type_id,price,available_quantity,sold_quantity,' +
@@ -35,20 +36,20 @@ interface SyncOptions {
 }
 
 export interface SyncResult {
-  synced: number
+  synced:  number
   updated: number
-  errors: number
+  errors:  number
 }
 
 function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
 
 export async function syncListingsFromML(
-  userId:     string,
-  mlUserId:   string,
-  token:      string,
-  supabase:   SupabaseClient,
-  options:    SyncOptions = {},
+  userId:   string,
+  mlUserId: string,
+  token:    string,
+  options:  SyncOptions = {},
 ): Promise<SyncResult> {
+  const db       = supabaseAdmin()   // admin client — bypass de RLS
   const maxItems = options.limit  ?? 2000
   const status   = options.status ?? 'active'
   const headers  = { Authorization: `Bearer ${token}` }
@@ -82,11 +83,12 @@ export async function syncListingsFromML(
   }
 
   console.log('[Sync] Total de IDs coletados:', allItemIds.length)
+  if (allItemIds.length === 0) return { synced: 0, updated: 0, errors: 0 }
 
   /* ── 2. Hidratar em batches de 20 e fazer upsert ─────────────────────── */
   let synced = 0
   let errors = 0
-  const now = new Date().toISOString()
+  const now  = new Date().toISOString()
 
   for (let i = 0; i < allItemIds.length; i += BATCH) {
     const batch = allItemIds.slice(i, i + BATCH)
@@ -107,7 +109,7 @@ export async function syncListingsFromML(
         .filter((r) => r.code === 200 && r.body?.id)
         .map((r) => {
           const item = r.body
-          const ean = item.attributes?.find(
+          const ean  = item.attributes?.find(
             (a) => ['GTIN', 'EAN', 'UPC'].includes(a.id),
           )?.value_name ?? null
 
@@ -132,7 +134,7 @@ export async function syncListingsFromML(
 
       if (rows.length === 0) continue
 
-      const { error } = await supabase
+      const { error } = await db
         .from('ml_listings')
         .upsert(rows, { onConflict: 'user_id,item_id' })
 

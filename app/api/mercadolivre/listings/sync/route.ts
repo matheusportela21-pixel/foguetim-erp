@@ -8,7 +8,6 @@
 import { NextResponse }            from 'next/server'
 import { getAuthUser }             from '@/lib/server-auth'
 import { getMLConnection, getValidToken } from '@/lib/mercadolivre'
-import { supabaseAdmin }           from '@/lib/supabase-admin'
 import { syncListingsFromML }      from '@/lib/ml/listings/ml-listings-sync.service'
 
 export async function POST(req: Request) {
@@ -39,7 +38,6 @@ export async function POST(req: Request) {
       user.id,
       String(conn.ml_user_id),
       token,
-      supabaseAdmin(),
       { limit, status },
     )
 
