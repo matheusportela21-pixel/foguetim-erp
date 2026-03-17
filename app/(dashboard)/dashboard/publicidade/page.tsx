@@ -171,26 +171,24 @@ export default function PublicidadePage() {
   const [loading,          setLoading]          = useState(true)
   const [actionLoading,    setActionLoading]    = useState<Record<string | number, boolean>>({})
   const [toast,            setToast]            = useState<{ ok: boolean; msg: string } | null>(null)
+  const [debugInfo,        setDebugInfo]        = useState<Record<string, unknown> | null>(null)
+  const [apiError,         setApiError]         = useState<string | null>(null)
 
   /* ── Load ───────────────────────────────────────────────────────────── */
   const load = useCallback(async () => {
     setLoading(true)
+    setApiError(null)
+    setDebugInfo(null)
 
     // 1. Get advertiser
     const advRes = await fetch('/api/mercadolivre/ads/advertiser')
-    if (!advRes.ok) {
-      if (advRes.status === 404) {
-        setHasAdsAccount(false)
-      } else {
-        setHasAdsAccount(false)
-      }
-      setLoading(false)
-      return
-    }
+    const adv = await advRes.json() as Advertiser & { debug?: Record<string, unknown> }
 
-    const adv = await advRes.json() as Advertiser
-    if (adv.error === 'NO_ADS_ACCOUNT') {
+    if (adv.debug) setDebugInfo(adv.debug)
+
+    if (!advRes.ok || adv.error === 'NO_ADS_ACCOUNT') {
       setHasAdsAccount(false)
+      setApiError(adv.error === 'NO_ADS_ACCOUNT' ? null : (adv.error ?? `HTTP ${advRes.status}`))
       setLoading(false)
       return
     }
@@ -311,9 +309,22 @@ export default function PublicidadePage() {
             <p className="text-xs text-slate-500">Product Ads — Mercado Livre</p>
           </div>
         </div>
+        {apiError && (
+          <div className="mb-4 bg-red-900/20 border border-red-700/40 rounded-xl p-4">
+            <p className="text-red-400 text-sm font-medium">Erro ao conectar com ML Ads: {apiError}</p>
+          </div>
+        )}
         <div className="bg-dark-800 border border-white/[0.06] rounded-2xl">
           <NoAdsAccount />
         </div>
+        {debugInfo && (
+          <details className="mt-4">
+            <summary className="text-xs text-slate-600 cursor-pointer hover:text-slate-400">Debug info</summary>
+            <pre className="mt-2 text-xs text-slate-500 bg-dark-900 rounded-xl p-4 overflow-auto whitespace-pre-wrap break-all">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </details>
+        )}
       </div>
     )
   }
