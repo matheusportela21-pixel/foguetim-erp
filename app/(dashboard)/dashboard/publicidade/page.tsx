@@ -180,39 +180,55 @@ export default function PublicidadePage() {
     setApiError(null)
     setDebugInfo(null)
 
-    // 1. Get advertiser
-    const advRes = await fetch('/api/mercadolivre/ads/advertiser')
-    const adv = await advRes.json() as Advertiser & { debug?: Record<string, unknown> }
+    try {
+      // 1. Get advertiser
+      const advRes = await fetch('/api/mercadolivre/ads/advertiser')
 
-    if (adv.debug) setDebugInfo(adv.debug)
+      // Safely parse JSON — server may return HTML on 500
+      let adv: Advertiser & { debug?: Record<string, unknown> }
+      try {
+        adv = await advRes.json() as Advertiser & { debug?: Record<string, unknown> }
+      } catch {
+        setHasAdsAccount(false)
+        setApiError(`HTTP ${advRes.status} — resposta inválida do servidor`)
+        setLoading(false)
+        return
+      }
 
-    if (!advRes.ok || adv.error === 'NO_ADS_ACCOUNT') {
+      if (adv.debug) setDebugInfo(adv.debug)
+
+      if (!advRes.ok || adv.error === 'NO_ADS_ACCOUNT') {
+        setHasAdsAccount(false)
+        setApiError(adv.error === 'NO_ADS_ACCOUNT' ? null : (adv.error ?? `HTTP ${advRes.status}`))
+        setLoading(false)
+        return
+      }
+
+      setAdvertiser(adv)
+      setHasAdsAccount(true)
+
+      // 2. Load campaigns + items in parallel (advertiser_id vem do conn no servidor)
+      const [campRes, itemsRes] = await Promise.allSettled([
+        fetch('/api/mercadolivre/ads/campaigns'),
+        fetch('/api/mercadolivre/ads/items?limit=100'),
+      ])
+
+      if (campRes.status === 'fulfilled' && campRes.value.ok) {
+        const d = await campRes.value.json() as { campaigns: MlAdsCampaign[] }
+        setCampaigns(d.campaigns ?? [])
+      }
+
+      if (itemsRes.status === 'fulfilled' && itemsRes.value.ok) {
+        const d = await itemsRes.value.json() as { items: MlAdsItem[] }
+        setAdsItems(d.items ?? [])
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
       setHasAdsAccount(false)
-      setApiError(adv.error === 'NO_ADS_ACCOUNT' ? null : (adv.error ?? `HTTP ${advRes.status}`))
+      setApiError(msg)
+    } finally {
       setLoading(false)
-      return
     }
-
-    setAdvertiser(adv)
-    setHasAdsAccount(true)
-
-    // 2. Load campaigns + items in parallel (advertiser_id vem do conn no servidor)
-    const [campRes, itemsRes] = await Promise.allSettled([
-      fetch('/api/mercadolivre/ads/campaigns'),
-      fetch('/api/mercadolivre/ads/items?limit=100'),
-    ])
-
-    if (campRes.status === 'fulfilled' && campRes.value.ok) {
-      const d = await campRes.value.json() as { campaigns: MlAdsCampaign[] }
-      setCampaigns(d.campaigns ?? [])
-    }
-
-    if (itemsRes.status === 'fulfilled' && itemsRes.value.ok) {
-      const d = await itemsRes.value.json() as { items: MlAdsItem[] }
-      setAdsItems(d.items ?? [])
-    }
-
-    setLoading(false)
   }, [])
 
   useEffect(() => { void load() }, [load])
