@@ -1,5 +1,7 @@
 /**
  * Busca server-side de anúncios no banco local ml_listings.
+ * Usa a função SQL search_ml_listings (unaccent + pg_trgm) para busca
+ * tolerante a acentos e busca parcial.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -49,13 +51,6 @@ export interface ListingsSearchResult {
   }
 }
 
-export function normalizeSearchTerm(term: string): string {
-  return term
-    .trim()
-    .toLowerCase()
-    .replace(/[\s\-]+/g, ' ')
-}
-
 export function detectSearchType(q: string): 'item_id' | 'sku' | 'ean' | 'text' {
   const clean = q.trim().toUpperCase()
   if (clean.startsWith('MLB')) return 'item_id'
@@ -64,18 +59,23 @@ export function detectSearchType(q: string): 'item_id' | 'sku' | 'ean' | 'text' 
   return 'text'
 }
 
-const SORT_MAP: Record<
-  NonNullable<ListingsSearchQuery['sort']>,
-  { column: string; ascending: boolean }
-> = {
-  title_asc:    { column: 'title',         ascending: true  },
-  title_desc:   { column: 'title',         ascending: false },
-  price_asc:    { column: 'price',         ascending: true  },
-  price_desc:   { column: 'price',         ascending: false },
-  stock_asc:    { column: 'stock',         ascending: true  },
-  stock_desc:   { column: 'stock',         ascending: false },
-  sold_desc:    { column: 'sold_quantity', ascending: false },
-  updated_desc: { column: 'synced_at',     ascending: false },
+// Tipo interno para as linhas retornadas pelo RPC
+interface RpcRow {
+  id:               string
+  item_id:          string
+  user_product_id:  string | null
+  seller_sku:       string | null
+  ean:              string | null
+  title:            string
+  status:           string
+  listing_type:     string
+  catalog_listing:  boolean
+  price:            number
+  stock:            number
+  sold_quantity:    number
+  thumbnail:        string | null
+  synced_at:        string
+  total_count:      number
 }
 
 export async function searchLocalListings(
@@ -84,81 +84,64 @@ export async function searchLocalListings(
   supabase: SupabaseClient,
 ): Promise<ListingsSearchResult> {
   const {
-    q        = '',
-    status   = 'active',
+    q           = '',
+    status      = 'active',
     catalog_tab = 'all',
-    page     = 1,
-    per_page = 50,
-    sort     = 'updated_desc',
+    page        = 1,
+    per_page    = 50,
+    sort        = 'updated_desc',
   } = params
 
+  const p_status =
+    status && status !== 'all' ? status : null
+
+  const p_catalog_listing =
+    catalog_tab === 'user'    ? false :
+    catalog_tab === 'catalog' ? true  :
+    null
+
+  const p_query  = q.trim() || null
+  const p_offset = (page - 1) * per_page
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
-    .from('ml_listings')
-    .select('*', { count: 'exact' })
-    .eq('user_id', userId)
-
-  if (status && status !== 'all') query = query.eq('status', status)
-  if (catalog_tab === 'user')     query = query.eq('catalog_listing', false)
-  if (catalog_tab === 'catalog')  query = query.eq('catalog_listing', true)
-
-  let matchedBy: ListingsSearchResult['search_info']['matched_by'] = 'all'
-  if (q.trim()) {
-    const searchType = detectSearchType(q)
-    const normalized = normalizeSearchTerm(q)
-    matchedBy = searchType === 'text' ? 'title' : searchType
-
-    switch (searchType) {
-      case 'item_id':
-        query = query.ilike('item_id', `%${q.trim()}%`)
-        break
-      case 'ean':
-        query = query.ilike('ean', `%${q.trim()}%`)
-        break
-      case 'sku':
-        query = query.or(
-          `seller_sku.ilike.%${normalized}%,title.ilike.%${normalized}%`,
-        )
-        break
-      case 'text':
-      default:
-        query = query.ilike('title', `%${normalized}%`)
-        break
-    }
-  }
-
-  const s = SORT_MAP[sort] ?? SORT_MAP.updated_desc
-  query = query.order(s.column, { ascending: s.ascending })
-
-  const from = (page - 1) * per_page
-  const to   = from + per_page - 1
-  query = query.range(from, to)
-
-  const { data, count, error } = await query
+  const { data, error } = await (supabase as any).rpc('search_ml_listings', {
+    p_user_id:        userId,
+    p_query,
+    p_status,
+    p_catalog_listing,
+    p_sort:           sort,
+    p_limit:          per_page,
+    p_offset,
+  })
 
   if (error) throw new Error(error.message)
 
-  const total      = count ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / per_page))
+  const rows: RpcRow[] = Array.isArray(data) ? data : []
+  const total          = rows.length > 0 ? Number(rows[0].total_count) : 0
+  const totalPages     = Math.max(1, Math.ceil(total / per_page))
 
-  const items: ListingRowViewModel[] = Array.isArray(data)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ? (data as any[]).map((row: Record<string, unknown>) => ({
-        item_id:         String(row.item_id ?? ''),
-        user_product_id: row.user_product_id ? String(row.user_product_id) : undefined,
-        title:           String(row.title ?? ''),
-        thumbnail:       row.thumbnail ? String(row.thumbnail) : undefined,
-        status:          String(row.status ?? ''),
-        listing_type:    String(row.listing_type ?? ''),
-        catalog_listing: Boolean(row.catalog_listing),
-        price:           Number(row.price ?? 0),
-        stock:           Number(row.stock ?? 0),
-        sold_quantity:   Number(row.sold_quantity ?? 0),
-        seller_sku:      row.seller_sku ? String(row.seller_sku) : undefined,
-        ean:             row.ean ? String(row.ean) : undefined,
-        synced_at:       String(row.synced_at ?? ''),
-      }))
-    : []
+  const items: ListingRowViewModel[] = rows.map(row => ({
+    item_id:         row.item_id,
+    user_product_id: row.user_product_id ?? undefined,
+    title:           row.title,
+    thumbnail:       row.thumbnail ?? undefined,
+    status:          row.status,
+    listing_type:    row.listing_type,
+    catalog_listing: row.catalog_listing,
+    price:           Number(row.price),
+    stock:           Number(row.stock),
+    sold_quantity:   Number(row.sold_quantity),
+    seller_sku:      row.seller_sku ?? undefined,
+    ean:             row.ean ?? undefined,
+    synced_at:       row.synced_at,
+  }))
+
+  // Determina matched_by para search_info
+  let matchedBy: ListingsSearchResult['search_info']['matched_by'] = null
+  if (p_query) {
+    const t = detectSearchType(p_query)
+    matchedBy = t === 'text' ? 'title' : t
+  }
 
   return {
     items,
@@ -167,12 +150,12 @@ export async function searchLocalListings(
       page,
       per_page,
       total_pages: totalPages,
-      from:        total === 0 ? 0 : from + 1,
-      to:          Math.min(to + 1, total),
+      from:        total === 0 ? 0 : p_offset + 1,
+      to:          Math.min(p_offset + per_page, total),
     },
     search_info: {
       query:      q,
-      matched_by: q.trim() ? matchedBy : null,
+      matched_by: p_query ? matchedBy : null,
       source:     'local_db',
     },
   }
