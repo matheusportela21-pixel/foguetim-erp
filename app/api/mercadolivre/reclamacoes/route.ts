@@ -54,6 +54,13 @@ const STAGE_LABELS: Record<string, string> = {
 
 // ─── ML API shapes ─────────────────────────────────────────────────────────────
 
+interface MLPlayer {
+  role:               string
+  type?:              string   // 'seller' | 'buyer'
+  user_id?:           number | null
+  available_actions?: string[]
+}
+
 interface MLClaim {
   id:           string
   resource_id:  number     // order_id
@@ -62,8 +69,20 @@ interface MLClaim {
   stage:        string
   date_created: string
   last_updated: string
+  due_date?:    string
   resolution?:  string
-  players?:     unknown[]
+  players?:     MLPlayer[]
+}
+
+function getActionResponsible(players?: MLPlayer[]): 'seller' | 'buyer' | 'mediator' | null {
+  if (!players?.length) return null
+  const active = players.find(p => (p.available_actions?.length ?? 0) > 0)
+  if (!active) return null
+  const t = (active.type ?? active.role).toLowerCase()
+  if (t === 'seller' || t === 'respondent') return 'seller'
+  if (t === 'buyer'  || t === 'complainant') return 'buyer'
+  if (t.includes('mediator')) return 'mediator'
+  return null
 }
 
 interface MLClaimsSearchResponse {
@@ -102,27 +121,30 @@ export interface ClaimOrder {
 }
 
 export interface ClaimItem {
-  claim_id:     string
-  order_id:     string
-  status:       string
-  stage:        string
-  stage_label:  string
-  reason_id:    string
-  reason_label: string
-  date_created: string
-  last_updated: string
-  days_open:    number
-  urgency:      'urgent' | 'warning' | 'normal'
-  order:        ClaimOrder
-  resolution:   string
+  claim_id:           string
+  order_id:           string
+  status:             string
+  stage:              string
+  stage_label:        string
+  reason_id:          string
+  reason_label:       string
+  date_created:       string
+  last_updated:       string
+  due_date:           string
+  action_responsible: 'seller' | 'buyer' | 'mediator' | null
+  days_open:          number
+  urgency:            'urgent' | 'warning' | 'normal'
+  order:              ClaimOrder
+  resolution:         string
 }
 
 export interface ClaimsSummary {
-  total_opened:  number
-  total_returns: number
-  total_claims:  number
-  urgent:        number
-  warning:       number
+  total_opened:          number
+  total_returns:         number
+  total_claims:          number
+  urgent:                number
+  warning:               number
+  seller_action_required: number
 }
 
 // ─── Handler ───────────────────────────────────────────────────────────────────
@@ -228,19 +250,21 @@ export async function GET(req: NextRequest) {
       const days = daysOpen(claim.date_created)
 
       return {
-        claim_id:     claim.id,
-        order_id:     orderId,
-        status:       claim.status,
-        stage:        claim.stage,
-        stage_label:  STAGE_LABELS[claim.stage] ?? claim.stage,
-        reason_id:    claim.reason_id,
-        reason_label: REASON_LABELS[claim.reason_id] ?? claim.reason_id,
-        date_created: claim.date_created,
-        last_updated: claim.last_updated,
-        days_open:    days,
-        urgency:      getUrgency(days),
-        order:        orderInfo,
-        resolution:   claim.resolution ?? '',
+        claim_id:           claim.id,
+        order_id:           orderId,
+        status:             claim.status,
+        stage:              claim.stage,
+        stage_label:        STAGE_LABELS[claim.stage] ?? claim.stage,
+        reason_id:          claim.reason_id,
+        reason_label:       REASON_LABELS[claim.reason_id] ?? claim.reason_id,
+        date_created:       claim.date_created,
+        last_updated:       claim.last_updated,
+        due_date:           claim.due_date ?? '',
+        action_responsible: getActionResponsible(claim.players),
+        days_open:          days,
+        urgency:            getUrgency(days),
+        order:              orderInfo,
+        resolution:         claim.resolution ?? '',
       }
     })
 
@@ -250,11 +274,12 @@ export async function GET(req: NextRequest) {
     // ── 6. Summary ───────────────────────────────────────────────────────────
     const allOpened = claimsData.data ?? []  // total before type filter
     const summary: ClaimsSummary = {
-      total_opened:  allOpened.length,
-      total_returns: allOpened.filter(c => c.reason_id === 'PDD').length,
-      total_claims:  allOpened.filter(c => c.reason_id !== 'PDD').length,
-      urgent:        items.filter(c => c.urgency === 'urgent').length,
-      warning:       items.filter(c => c.urgency === 'warning').length,
+      total_opened:           allOpened.length,
+      total_returns:          allOpened.filter(c => c.reason_id === 'PDD').length,
+      total_claims:           allOpened.filter(c => c.reason_id !== 'PDD').length,
+      urgent:                 items.filter(c => c.urgency === 'urgent').length,
+      warning:                items.filter(c => c.urgency === 'warning').length,
+      seller_action_required: items.filter(c => c.action_responsible === 'seller').length,
     }
 
     return NextResponse.json(

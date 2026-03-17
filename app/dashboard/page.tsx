@@ -104,6 +104,7 @@ export default function DashboardPage() {
   const [mlLoading, setMlLoading] = useState(true)
   const [reputa, setReputa]     = useState<ReputaMini | null>(null)
   const [reputaLoading, setReputaLoading] = useState(true)
+  const [urgentClaims, setUrgentClaims] = useState(0)
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
@@ -123,6 +124,15 @@ export default function DashboardPage() {
       .then((d: ReputaMini) => setReputa(d))
       .catch(() => setReputa({ connected: false }))
       .finally(() => setReputaLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/mercadolivre/reclamacoes?status=opened')
+      .then(r => r.json())
+      .then((d: { summary?: { seller_action_required?: number } }) => {
+        setUrgentClaims(d.summary?.seller_action_required ?? 0)
+      })
+      .catch(() => { /* silent — dashboard não deve quebrar por isso */ })
   }, [])
 
   /* Derived KPI values */
@@ -169,6 +179,26 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
+
+        {/* ── Urgent claims alert ── */}
+        {urgentClaims > 0 && (
+          <div className="bg-red-950/40 border border-red-800 rounded-xl p-4 animate-slide-up">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-300">
+                  {urgentClaims} reclamação{urgentClaims !== 1 ? 'ões' : ''} {urgentClaims !== 1 ? 'precisam' : 'precisa'} de ação urgente
+                </p>
+                <p className="text-xs text-red-400">
+                  Responda em até 48h para proteger sua reputação
+                </p>
+              </div>
+              <Link href="/dashboard/reclamacoes" className="ml-auto shrink-0 text-sm text-red-400 hover:text-red-300 font-semibold transition-colors">
+                Ver agora →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ── KPIs ── */}
         {mlLoading ? (

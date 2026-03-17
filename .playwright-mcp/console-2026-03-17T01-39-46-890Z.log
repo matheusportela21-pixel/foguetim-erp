@@ -1,0 +1,50 @@
+[ 1187681ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/usuarios. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31854) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[ 1187685ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/notificacoes. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[ 1187686ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/logs. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[ 1187686ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/cancelamentos. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[ 1187686ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/equipe. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0

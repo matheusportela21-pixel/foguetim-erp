@@ -61,7 +61,19 @@
       "mcp__playwright__browser_network_requests",
       "Bash(find /c/Users/mathe/foguetim/app -name *.tsx -path */admin/*)",
       "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/)",
-      "Bash(find /c/Users/mathe/foguetim/app/api/admin -name *.ts)"
+      "Bash(find /c/Users/mathe/foguetim/app/api/admin -name *.ts)",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_select_option",
+      "Bash(mkdir -p \"/c/Users/mathe/foguetim/app/api/admin/users/[id]/notes\")",
+      "Bash(mkdir -p \"/c/Users/mathe/foguetim/app/api/admin/users/[id]/logs\")",
+      "Bash(mkdir -p \"/c/Users/mathe/foguetim/app/api/admin/tickets/[id]/messages\")",
+      "mcp__55eae62f-40bf-450a-aecd-a7ddd0c237d0__apply_migration",
+      "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__list_teams",
+      "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__list_deployments",
+      "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__list_projects",
+      "mcp__playwright__browser_press_key",
+      "Bash(ls -la \"/c/Users/mathe/foguetim/app/\\(public\\)/\")",
+      "Bash(grep -rn \"from ''next/image''\" \"/c/Users/mathe/foguetim/app/\\(public\\)/\")"
     ]
   }
 }

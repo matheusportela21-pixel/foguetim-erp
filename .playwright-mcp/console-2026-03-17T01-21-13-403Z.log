@@ -1,0 +1,48 @@
+[    1108ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://www.foguetim.com.br/admin/configuracoes?_rsc=s1s0h:0
+[    1109ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://www.foguetim.com.br/admin/logs?_rsc=s1s0h:0
+[  592153ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/notificacoes. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[  592156ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/cancelamentos. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[  592156ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/usuarios. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[  592156ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/admin/logs. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:45405)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58954
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31792)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:32497)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:31922)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58917)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:58457)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:65277)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:1:75104)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-690157d472cbd18c.js:0
+[  606268ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://www.foguetim.com.br/api/admin/team:0
+[  609977ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://www.foguetim.com.br/api/admin/tickets?limit=100:0
