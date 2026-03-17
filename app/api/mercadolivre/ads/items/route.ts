@@ -59,7 +59,11 @@ export async function GET(req: NextRequest) {
       `${ML_ADS}/advertisers/${advertiserId}/product_ads/ads/search?limit=${limit}&offset=${offset}`,
       { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
     )
-    const data = await res.json() as AdsItemsResponse
+    const rawText = await res.text()
+    console.log('[ads/items GET] status:', res.status, '| body:', rawText.slice(0, 300))
+
+    let data: AdsItemsResponse = {}
+    try { data = JSON.parse(rawText) as AdsItemsResponse } catch { /* non-JSON body */ }
 
     return NextResponse.json({
       items:  data.results ?? [],
@@ -68,6 +72,6 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[ads/items GET]', msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({ items: [], paging: { total: 0, limit: Number(limit), offset: Number(offset) } })
   }
 }
