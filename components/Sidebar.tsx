@@ -13,7 +13,10 @@ import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useSidebar } from '@/context/SidebarContext'
 
-const navGroups = [
+type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[] }
+type NavGroup = { label: string; items: NavItem[] }
+
+const navGroups: NavGroup[] = [
   {
     label: 'Principal',
     items: [
@@ -38,7 +41,7 @@ const navGroups = [
   {
     label: 'Análise',
     items: [
-      { href: '/dashboard/publicidade',         icon: Megaphone,   label: 'Publicidade', badge: 'Novo' },
+      { href: '/dashboard/publicidade',         icon: Megaphone,   label: 'Publicidade', badge: 'Beta', roles: ['admin', 'foguetim_support'] },
       { href: '/dashboard/performance',        icon: BarChart2,   label: 'Performance'         },
       { href: '/dashboard/relatorios',         icon: BarChart3,   label: 'Relatórios'          },
       { href: '/dashboard/reputacao',          icon: ShieldCheck, label: 'Reputação'           },
@@ -202,7 +205,9 @@ export default function Sidebar() {
             <div key={group.label}>
               <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest px-2 mb-2">{group.label}</p>
               <ul className="space-y-0.5">
-                {group.items.map(({ href, icon: Icon, label, badge }) => {
+                {group.items.filter(item =>
+                  !item.roles || item.roles.includes(profile?.role ?? '')
+                ).map(({ href, icon: Icon, label, badge }) => {
                   const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
                   const isReclamacoes = href === '/dashboard/reclamacoes'
                   return (

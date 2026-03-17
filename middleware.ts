@@ -50,6 +50,27 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── Protect /dashboard/publicidade (admin/foguetim_support only) ─────────
+  if (pathname.startsWith('/dashboard/publicidade')) {
+    if (!user) {
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/login'
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    const allowed = profile?.role === 'admin' || profile?.role === 'foguetim_support'
+    if (!allowed) {
+      const dashUrl = request.nextUrl.clone()
+      dashUrl.pathname = '/dashboard'
+      return NextResponse.redirect(dashUrl)
+    }
+  }
+
   // ── Protect /dashboard/* ─────────────────────────────────────────────────
   if (!user && pathname.startsWith('/dashboard')) {
     const loginUrl = request.nextUrl.clone()

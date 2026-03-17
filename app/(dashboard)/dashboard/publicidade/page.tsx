@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth }   from '@/lib/auth-context'
 import {
   Megaphone, RefreshCw, ExternalLink, Loader2,
   Play, Pause, TrendingUp, MousePointerClick,
@@ -162,6 +164,18 @@ function NoAdsAccount() {
 ══════════════════════════════════════════════════════════════════════════ */
 
 export default function PublicidadePage() {
+  const router  = useRouter()
+  const { profile } = useAuth()
+
+  // Client-side guard (middleware is the primary gate)
+  useEffect(() => {
+    if (profile === null) return // still loading
+    const role = profile?.role ?? ''
+    if (role !== 'admin' && role !== 'foguetim_support') {
+      router.replace('/dashboard')
+    }
+  }, [profile, router])
+
   const [advertiser,       setAdvertiser]       = useState<Advertiser | null>(null)
   const [hasAdsAccount,    setHasAdsAccount]    = useState<boolean | null>(null) // null = loading
   const [campaigns,        setCampaigns]        = useState<MlAdsCampaign[]>([])
