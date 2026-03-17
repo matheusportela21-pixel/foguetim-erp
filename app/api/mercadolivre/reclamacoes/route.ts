@@ -34,16 +34,40 @@ const getUrgency = (days: number): 'urgent' | 'warning' | 'normal' => {
 
 // ─── Reason mapping ────────────────────────────────────────────────────────────
 
+// Mapa de reason_id completo (ML retorna códigos como "PDD9939", não apenas prefixos)
 const REASON_LABELS: Record<string, string> = {
-  PDD:  'Devolução de produto',
-  INR:  'Produto não recebido',
-  PNR:  'Produto não recebido',
-  DECO: 'Produto diferente do anúncio',
-  BRK:  'Produto com defeito',
-  DEMA: 'Garantia / defeito',
+  // Devoluções (PDD)
+  PDD9939: 'Produto diferente do anunciado',
+  PDD1181: 'Produto diferente do anunciado',
+  PDD1182: 'Produto com defeito',
+  PDD1183: 'Produto avariado na entrega',
+  PDD:     'Devolução de produto',
+  // Não recebido (INR / PNR)
+  INR1169: 'Produto não recebido',
+  INR1170: 'Entregue no endereço errado',
+  PNR1169: 'Produto não recebido',
+  PNR1170: 'Entregue no endereço errado',
+  INR:     'Produto não recebido',
+  PNR:     'Produto não recebido',
+  // Outros
+  DECO:    'Produto diferente do anúncio',
+  BRK:     'Produto com defeito',
+  DEMA:    'Garantia / defeito',
 }
 
+// Fallback por prefixo de 3 caracteres se o código completo não estiver mapeado
+function getReasonLabel(reasonId: string): string {
+  if (REASON_LABELS[reasonId]) return REASON_LABELS[reasonId]
+  const prefix = reasonId.slice(0, 3).toUpperCase()
+  return REASON_LABELS[prefix] ?? reasonId
+}
+
+// Prefixos que indicam devolução de produto
+const RETURN_PREFIXES = ['PDD']
+const isReturn = (reasonId: string) => RETURN_PREFIXES.some(p => reasonId.toUpperCase().startsWith(p))
+
 const STAGE_LABELS: Record<string, string> = {
+  claim:             'Reclamação',
   opened:            'Aberta',
   waiting_seller:    'Aguardando vendedor',
   waiting_buyer:     'Aguardando comprador',
@@ -190,9 +214,9 @@ export async function GET(req: NextRequest) {
 
     // ── 2. Filtrar por tipo ──────────────────────────────────────────────────
     if (type === 'returns') {
-      rawClaims = rawClaims.filter(c => c.reason_id === 'PDD')
+      rawClaims = rawClaims.filter(c => isReturn(c.reason_id))
     } else if (type === 'claims') {
-      rawClaims = rawClaims.filter(c => c.reason_id !== 'PDD')
+      rawClaims = rawClaims.filter(c => !isReturn(c.reason_id))
     }
 
     // ── 3 → 4. Buscar detalhes dos pedidos em lotes de 5 ────────────────────
@@ -256,7 +280,7 @@ export async function GET(req: NextRequest) {
         stage:              claim.stage,
         stage_label:        STAGE_LABELS[claim.stage] ?? claim.stage,
         reason_id:          claim.reason_id,
-        reason_label:       REASON_LABELS[claim.reason_id] ?? claim.reason_id,
+        reason_label:       getReasonLabel(claim.reason_id),
         date_created:       claim.date_created,
         last_updated:       claim.last_updated,
         due_date:           claim.due_date ?? '',
@@ -275,8 +299,8 @@ export async function GET(req: NextRequest) {
     const allOpened = claimsData.data ?? []  // total before type filter
     const summary: ClaimsSummary = {
       total_opened:           allOpened.length,
-      total_returns:          allOpened.filter(c => c.reason_id === 'PDD').length,
-      total_claims:           allOpened.filter(c => c.reason_id !== 'PDD').length,
+      total_returns:          allOpened.filter(c => isReturn(c.reason_id)).length,
+      total_claims:           allOpened.filter(c => !isReturn(c.reason_id)).length,
       urgent:                 items.filter(c => c.urgency === 'urgent').length,
       warning:                items.filter(c => c.urgency === 'warning').length,
       seller_action_required: items.filter(c => c.action_responsible === 'seller').length,
