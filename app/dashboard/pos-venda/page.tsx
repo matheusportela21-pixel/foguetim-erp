@@ -34,15 +34,22 @@ interface MessageItem {
 }
 
 interface ClaimItem {
-  claim_id:    number | string
-  order_id:    number | string
-  type:        string
-  reason:      string
-  status:      string
-  opened_at:   string
-  urgency:     'urgent' | 'warning' | 'normal'
-  buyer_name?: string
-  item_title?: string
+  claim_id:     number | string
+  order_id:     number | string
+  stage:        string
+  reason_id:    string
+  reason_label: string
+  status:       string
+  date_created: string
+  last_updated: string
+  days_open:    number
+  urgency:      'urgent' | 'warning' | 'normal'
+  order?: {
+    product_title:    string
+    buyer_nickname:   string
+    total_amount:     number
+    order_date:       string
+  }
 }
 
 interface MLMessage {
@@ -151,7 +158,7 @@ function ConversationPanel({
   const productTitle = tab === 'questions'
     ? ((item as QuestionItem).item?.title ?? '')
     : tab === 'claims'
-    ? ((item as ClaimItem).item_title ?? '')
+    ? ((item as ClaimItem).order?.product_title ?? '')
     : ''
 
   async function handleAISuggest() {
@@ -256,9 +263,9 @@ function ConversationPanel({
           const c = item as ClaimItem
           return (
             <div className="space-y-1">
-              {c.item_title && <p className="text-xs text-slate-400 truncate">{c.item_title}</p>}
+              {c.order?.product_title && <p className="text-xs text-slate-400 truncate">{c.order.product_title}</p>}
               <p className="text-[10px] text-slate-600">
-                Pedido #{c.order_id} · {c.reason} · {fmtRelative(c.opened_at)}
+                Pedido #{c.order_id} · {c.reason_label} · {fmtRelative(c.date_created)}
               </p>
               <a
                 href={`https://www.mercadolivre.com.br/reclamacoes/${c.claim_id}`}
@@ -337,10 +344,10 @@ function ConversationPanel({
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
               <p className="text-xs text-red-300 font-semibold">Reclamação aberta</p>
               <p className="text-xs text-slate-400 mt-1">
-                Tipo: {(item as ClaimItem).type === 'mediations' ? 'Mediação' : 'Devolução/Reclamação'}
+                Tipo: {(item as ClaimItem).stage === 'mediations' ? 'Mediação' : 'Devolução/Reclamação'}
               </p>
               <p className="text-xs text-slate-400">
-                Motivo: {(item as ClaimItem).reason}
+                Motivo: {(item as ClaimItem).reason_label}
               </p>
             </div>
             <p className="text-xs text-slate-600 text-center">
@@ -480,7 +487,7 @@ export default function PosVendaPage() {
     } else {
       list = claims
       if (filterUnread)  list = (list as ClaimItem[]).filter(c => c.status === 'opened')
-      if (search)        list = (list as ClaimItem[]).filter(c => (c.item_title ?? '').toLowerCase().includes(search.toLowerCase()) || String(c.order_id).includes(search))
+      if (search)        list = (list as ClaimItem[]).filter(c => (c.order?.product_title ?? '').toLowerCase().includes(search.toLowerCase()) || String(c.order_id).includes(search))
       if (filterUrgent)  list = (list as ClaimItem[]).filter(c => ['critical','high'].includes(getClaimUrgency(c)))
     }
     return list
@@ -661,13 +668,13 @@ export default function PosVendaPage() {
                           return (
                             <>
                               <p className="text-xs font-medium text-slate-200 truncate">
-                                {c.item_title ?? `Pedido #${c.order_id}`}
+                                {c.order?.product_title ?? `Pedido #${c.order_id}`}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-red-900/40 text-red-400">
-                                  {c.reason}
+                                  {c.reason_label}
                                 </span>
-                                <span className="text-[10px] text-slate-600">{fmtRelative(c.opened_at)}</span>
+                                <span className="text-[10px] text-slate-600">{fmtRelative(c.date_created)}</span>
                               </div>
                             </>
                           )
