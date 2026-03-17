@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
-  AlertTriangle, BarChart2, Bell, Megaphone,
+  AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -283,6 +283,21 @@ export default function Sidebar() {
             </>
           )}
         </div>
+
+        {/* Admin button */}
+        {(profile?.role === 'admin' || profile?.role === 'foguetim_support') && (
+          <div className="px-3 pb-2">
+            <Link
+              href="/admin"
+              onClick={close}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium bg-indigo-950/50 text-indigo-400 border border-indigo-800/40 hover:bg-indigo-900/50 transition-colors"
+            >
+              <Shield className="w-3.5 h-3.5 shrink-0" />
+              <span className="flex-1">Painel Admin</span>
+              <ExternalLink className="w-3 h-3 opacity-60 shrink-0" />
+            </Link>
+          </div>
+        )}
 
         {/* User */}
         <div className="px-3 pb-4 border-t border-white/[0.06] pt-3">

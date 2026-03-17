@@ -7,6 +7,7 @@ import {
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
+  Shield, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
@@ -103,7 +104,7 @@ export default function DashboardPage() {
   const [mlLoading, setMlLoading] = useState(true)
   const [reputa, setReputa]     = useState<ReputaMini | null>(null)
   const [reputaLoading, setReputaLoading] = useState(true)
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
   const firstName = user?.user_metadata?.name?.split(' ')[0] ?? 'lá'
@@ -387,6 +388,24 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* ── Admin quick-access ── */}
+        {(profile?.role === 'admin' || profile?.role === 'foguetim_support') && (
+          <div className="animate-slide-up">
+            <Link href="/admin">
+              <div className="flex items-center gap-3 p-4 bg-indigo-950/30 border border-indigo-800/40 rounded-xl hover:bg-indigo-900/30 transition-colors">
+                <div className="p-2 bg-indigo-900/50 rounded-lg shrink-0">
+                  <Shield className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">Painel Administrativo</p>
+                  <p className="text-xs text-slate-500">Gerenciar usuários e plataforma</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+              </div>
+            </Link>
+          </div>
+        )}
 
         {/* ── Charts + Orders / Donut + Stock ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
