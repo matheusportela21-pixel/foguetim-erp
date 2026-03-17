@@ -109,14 +109,27 @@ export async function searchLocalListings(
     p_query,
     p_status,
     p_catalog_listing,
-    p_sort:           sort,
     p_limit:          per_page,
     p_offset,
   })
 
   if (error) throw new Error(error.message)
 
-  const rows: RpcRow[] = Array.isArray(data) ? data : []
+  // Ordenação client-side (a função SQL retorna synced_at DESC por padrão)
+  const sorted: RpcRow[] = (Array.isArray(data) ? [...data] : []).sort((a, b) => {
+    switch (sort) {
+      case 'price_asc':   return a.price - b.price
+      case 'price_desc':  return b.price - a.price
+      case 'stock_asc':   return a.stock - b.stock
+      case 'stock_desc':  return b.stock - a.stock
+      case 'sold_desc':   return b.sold_quantity - a.sold_quantity
+      case 'title_asc':   return a.title.localeCompare(b.title, 'pt-BR')
+      case 'title_desc':  return b.title.localeCompare(a.title, 'pt-BR')
+      default:            return 0  // updated_desc já vem ordenado do SQL
+    }
+  })
+
+  const rows: RpcRow[] = sorted
   const total          = rows.length > 0 ? Number(rows[0].total_count) : 0
   const totalPages     = Math.max(1, Math.ceil(total / per_page))
 
