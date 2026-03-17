@@ -290,10 +290,10 @@ export default function DashboardPage() {
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
-                { label: 'Perguntas Pendentes ML', val: questions, level: dotLevel(questions), href: '/dashboard/sac' },
-                { label: 'Mensagens Não Lidas',    val: 0, level: 'muted' as const, href: '/dashboard/sac' },
-                { label: 'Reclamações Pendentes',  val: 0, level: 'muted' as const, href: '/dashboard/sac' },
-                { label: 'Devoluções / Reembolsos',val: 0, level: 'muted' as const, href: '/dashboard/sac' },
+                { label: 'Perguntas Pendentes ML', val: questions, level: dotLevel(questions), href: '/dashboard/pos-venda' },
+                { label: 'Mensagens Não Lidas',    val: 0, level: 'muted' as const, href: '/dashboard/pos-venda' },
+                { label: 'Reclamações Pendentes',  val: 0, level: 'muted' as const, href: '/dashboard/pos-venda' },
+                { label: 'Devoluções / Reembolsos',val: 0, level: 'muted' as const, href: '/dashboard/pos-venda' },
               ].map(item => (
                 <Link key={item.label} href={item.href}
                   className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">

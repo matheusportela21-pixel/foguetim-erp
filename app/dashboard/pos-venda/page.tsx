@@ -7,6 +7,7 @@ import {
   Clock, ShoppingBag, ChevronRight,
 } from 'lucide-react'
 import Header from '@/components/Header'
+import { getClaimReasonLabel, getClaimSLAMessage } from '@/lib/ml/claim-reasons'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type TabType = 'questions' | 'messages' | 'claims'
@@ -265,7 +266,7 @@ function ConversationPanel({
             <div className="space-y-1">
               {c.order?.product_title && <p className="text-xs text-slate-400 truncate">{c.order.product_title}</p>}
               <p className="text-[10px] text-slate-600">
-                Pedido #{c.order_id} · {c.reason_label} · {fmtRelative(c.date_created)}
+                Pedido #{c.order_id} · {getClaimReasonLabel(c.reason_id)} · {fmtRelative(c.date_created)}
               </p>
               <a
                 href={`https://www.mercadolivre.com.br/reclamacoes/${c.claim_id}`}
@@ -347,9 +348,18 @@ function ConversationPanel({
                 Tipo: {(item as ClaimItem).stage === 'mediations' ? 'Mediação' : 'Devolução/Reclamação'}
               </p>
               <p className="text-xs text-slate-400">
-                Motivo: {(item as ClaimItem).reason_label}
+                Motivo: {getClaimReasonLabel((item as ClaimItem).reason_id)}
               </p>
             </div>
+            {(() => {
+              const sla = getClaimSLAMessage((item as ClaimItem).date_created)
+              const expired = sla.startsWith('Prazo vencido')
+              return sla ? (
+                <p className={`text-xs text-center font-medium ${expired ? 'text-red-400' : 'text-amber-400'}`}>
+                  ⏱ {sla}
+                </p>
+              ) : null
+            })()}
             <p className="text-xs text-slate-600 text-center">
               Responda diretamente no Mercado Livre para proteger sua reputação.
             </p>
@@ -672,7 +682,7 @@ export default function PosVendaPage() {
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-red-900/40 text-red-400">
-                                  {c.reason_label}
+                                  {getClaimReasonLabel(c.reason_id)}
                                 </span>
                                 <span className="text-[10px] text-slate-600">{fmtRelative(c.date_created)}</span>
                               </div>
