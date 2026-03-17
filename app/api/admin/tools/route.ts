@@ -16,7 +16,7 @@ export async function GET() {
     const [mlRes, usersRes, ticketsRes] = await Promise.all([
       db.from('marketplace_connections')
         .select('user_id, connected, updated_at')
-        .eq('marketplace', 'mercadolibre')
+        .eq('marketplace', 'mercadolivre')
         .eq('connected', true)
         .limit(1000),
       db.from('users').select('id', { count: 'exact', head: true }),

@@ -11,6 +11,13 @@ import {
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 
+const ADMIN_ROLE_LABELS: Record<string, string> = {
+  admin:            'Administrador',
+  super_admin:      'Super Admin',
+  owner:            'Proprietário',
+  foguetim_support: 'Suporte Foguetim',
+}
+
 const NAV = [
   { href: '/admin',               icon: LayoutDashboard, label: 'Visão Geral'     },
   { href: '/admin/usuarios',      icon: Users,           label: 'Usuários'         },
@@ -89,12 +96,14 @@ function AdminSidebar() {
         </Link>
         <div className="px-3 py-2.5 flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-red-600/30 flex items-center justify-center text-xs font-bold text-red-400 shrink-0">
-            {profile?.name?.[0]?.toUpperCase() ?? 'A'}
+            {(profile?.name || profile?.email)?.[0]?.toUpperCase() ?? 'A'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-300 truncate">{profile?.name ?? 'Admin'}</p>
+            <p className="text-xs font-semibold text-slate-300 truncate">
+              {profile?.name || profile?.email?.split('@')[0] || 'Admin'}
+            </p>
             <p className="text-[10px] text-red-400 uppercase tracking-wide">
-              {profile?.role ?? 'admin'}
+              {profile?.role ? (ADMIN_ROLE_LABELS[profile.role] ?? profile.role) : 'Admin'}
             </p>
           </div>
           <button onClick={handleLogout} className="p-1 text-slate-600 hover:text-red-400 transition-colors">

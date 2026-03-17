@@ -185,6 +185,12 @@ const plansData = {
       features: ['Produtos ilimitados', 'Marketplaces ilimitados', 'NF-e automática', 'Relatórios avançados com IA', 'Até 10 usuários', 'Suporte prioritário'],
       cta: 'Começar com 7 dias grátis', href: '/registro?plan=almirante',
     },
+    {
+      name: 'Missão Espacial', price: 'R$119,90', period: '/mês', note: '7 dias grátis, sem cartão',
+      badge: null as string | null, popular: false,
+      features: ['Tudo ilimitado', 'Usuários ilimitados', 'Suporte 24/7 dedicado', 'Onboarding personalizado', 'SLA premium', 'Gerente de conta dedicado'],
+      cta: 'Começar com 7 dias grátis', href: '/registro?plan=missao_espacial',
+    },
   ],
   annual: [
     {
@@ -204,6 +210,12 @@ const plansData = {
       badge: null as string | null, popular: false,
       features: ['Produtos ilimitados', 'Marketplaces ilimitados', 'NF-e automática', 'Relatórios avançados com IA', 'Até 10 usuários', 'Suporte prioritário'],
       cta: 'Começar com 7 dias grátis', href: '/registro?plan=almirante&billing=annual',
+    },
+    {
+      name: 'Missão Espacial', price: 'R$95,90', period: '/mês', note: 'cobrado anualmente · economize 20%',
+      badge: null as string | null, popular: false,
+      features: ['Tudo ilimitado', 'Usuários ilimitados', 'Suporte 24/7 dedicado', 'Onboarding personalizado', 'SLA premium', 'Gerente de conta dedicado'],
+      cta: 'Começar com 7 dias grátis', href: '/registro?plan=missao_espacial&billing=annual',
     },
   ],
 }
@@ -607,7 +619,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
             {plans.map(plan => (
               <div
                 key={plan.name}

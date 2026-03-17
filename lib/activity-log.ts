@@ -57,24 +57,25 @@ export const CATEGORY_CONFIG: Record<LogCategory, { label: string; cls: string }
 /* ── Client-side logger ─────────────────────────────────────────────────────── */
 
 /**
- * Logs a user action to the activity_logs table.
+ * Logs a user action to the activity_logs table via a server-side API route
+ * so that the real client IP can be captured from request headers.
  * Safe to call from any client component — silently fails if not configured.
  */
 export async function logActivity(params: LogActivityParams): Promise<void> {
   if (!isConfigured()) return // dev mode: skip
 
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    await supabase.from('activity_logs').insert({
-      user_id:     user.id,
-      action:      params.action,
-      category:    params.category,
-      description: params.description,
-      metadata:    params.metadata ?? {},
-      user_agent:  typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 200) : null,
-      visibility:  params.visibility ?? 'user',
+    await fetch('/api/log-activity', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action:      params.action,
+        category:    params.category,
+        description: params.description,
+        metadata:    params.metadata ?? {},
+        visibility:  params.visibility ?? 'user',
+        user_agent:  typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 200) : null,
+      }),
     })
   } catch {
     // Fail silently — logging should never interrupt the user flow

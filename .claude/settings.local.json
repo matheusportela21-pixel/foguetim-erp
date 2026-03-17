@@ -73,7 +73,8 @@
       "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__list_projects",
       "mcp__playwright__browser_press_key",
       "Bash(ls -la \"/c/Users/mathe/foguetim/app/\\(public\\)/\")",
-      "Bash(grep -rn \"from ''next/image''\" \"/c/Users/mathe/foguetim/app/\\(public\\)/\")"
+      "Bash(grep -rn \"from ''next/image''\" \"/c/Users/mathe/foguetim/app/\\(public\\)/\")",
+      "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__get_runtime_logs"
     ]
   }
 }

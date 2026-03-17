@@ -487,17 +487,19 @@ export default function ReviewsPage() {
                   <div className={`glass-card rounded-xl p-4 ${totals.items_with_negative > 0 ? 'border border-red-500/20 bg-red-500/5' : ''}`}>
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Com Negativas</p>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${totals.items_with_negative > 0 ? 'bg-red-600/15' : 'bg-slate-700/40'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${totals.items_with_negative > 0 ? 'bg-red-600/15' : totals.total_reviews === 0 ? 'bg-slate-700/40' : 'bg-slate-700/40'}`}>
                         {totals.items_with_negative > 0
                           ? <TrendingDown className="w-4 h-4 text-red-400" />
-                          : <CheckCircle2 className="w-4 h-4 text-green-400" />
+                          : <CheckCircle2 className={`w-4 h-4 ${totals.total_reviews === 0 ? 'text-slate-500' : 'text-green-400'}`} />
                         }
                       </div>
                     </div>
-                    <p className={`text-2xl font-black ${totals.items_with_negative > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    <p className={`text-2xl font-black ${totals.items_with_negative > 0 ? 'text-red-400' : totals.total_reviews === 0 ? 'text-slate-500' : 'text-green-400'}`}>
                       {totals.items_with_negative}
                     </p>
-                    {totals.items_with_negative === 0 && (
+                    {totals.total_reviews === 0 ? (
+                      <p className="text-[10px] text-slate-500 mt-0.5">Sem avaliações</p>
+                    ) : totals.items_with_negative === 0 && (
                       <p className="text-[10px] text-green-400/60 mt-0.5">Excelente!</p>
                     )}
                   </div>

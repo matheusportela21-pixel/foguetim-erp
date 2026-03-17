@@ -9,6 +9,7 @@ import {
 import Header from '@/components/Header'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type NfeStatus = 'rascunho' | 'pendente' | 'autorizada' | 'cancelada' | 'denegada' | 'erro'
@@ -112,10 +113,19 @@ function NovaNfeModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+const ADMIN_ROLES = ['admin', 'super_admin', 'owner', 'foguetim_support']
+
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export default function NfePage() {
   const { profile } = useAuth()
+  const router = useRouter()
   const userId = profile?.id ?? ''
+
+  useEffect(() => {
+    if (profile !== null && !ADMIN_ROLES.includes(profile.role)) {
+      router.replace('/dashboard')
+    }
+  }, [profile, router])
 
   const [nfes,         setNfes]         = useState<Nfe[]>([])
   const [fiscalCfg,    setFiscalCfg]    = useState<FiscalCfg | null>(null)

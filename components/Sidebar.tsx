@@ -39,7 +39,7 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',                        },
       { href: '/dashboard/reclamacoes',  icon: AlertTriangle,   label: 'Reclamações'                },
       { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição'              },
-      { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e'                  },
+      { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e',       roles: ['admin', 'super_admin', 'owner', 'foguetim_support'] },
       { href: '/dashboard/integracoes',  icon: Link2,           label: 'Integrações'              },
     ],
   },
@@ -60,7 +60,7 @@ const navGroups: NavGroup[] = [
     label: 'Gestão',
     items: [
       { href: '/dashboard/equipe',          icon: Users,       label: 'Equipe'         },
-      { href: '/dashboard/contador',        icon: Calculator,  label: 'Contador'       },
+      { href: '/dashboard/contador',        icon: Calculator,  label: 'Contador',      roles: ['admin', 'super_admin', 'owner', 'foguetim_support'] },
       { href: '/dashboard/notificacoes',    icon: Bell,        label: 'Notificações'   },
       { href: '/dashboard/configuracoes',   icon: Settings,    label: 'Configurações'  },
     ],
@@ -80,6 +80,10 @@ const badgeColors: Record<string, string> = {
 }
 
 const ROLE_LABELS: Record<string, string> = {
+  admin:               'Administrador',
+  super_admin:         'Super Admin',
+  owner:               'Proprietário',
+  foguetim_support:    'Suporte Foguetim',
   diretor:             'Diretor',
   supervisor:          'Supervisor',
   analista_produtos:   'Analista de Produtos',
@@ -146,7 +150,7 @@ export default function Sidebar() {
   const initials    = profile?.name
     ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
     : 'MP'
-  const displayName = profile?.name ?? 'Usuário'
+  const displayName = profile?.name || profile?.email?.split('@')[0] || 'Usuário'
   const displayRole = profile?.role
     ? (ROLE_LABELS[profile.role] ?? profile.role)
     : 'Administrador'

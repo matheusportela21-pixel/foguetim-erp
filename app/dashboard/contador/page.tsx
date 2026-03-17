@@ -10,6 +10,7 @@ import {
 import Header from '@/components/Header'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type DocType =
@@ -982,10 +983,19 @@ function AcessoTab({ userId }: { userId: string }) {
 /* ══════════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ══════════════════════════════════════════════════════════════════════════════ */
+const ADMIN_ROLES = ['admin', 'super_admin', 'owner', 'foguetim_support']
+
 export default function ContadorPage() {
   const { profile } = useAuth()
+  const router = useRouter()
   const userId = profile?.id ?? ''
   const now = new Date()
+
+  useEffect(() => {
+    if (profile !== null && !ADMIN_ROLES.includes(profile.role)) {
+      router.replace('/dashboard')
+    }
+  }, [profile, router])
 
   const [tab,          setTab]          = useState<TabId>('documentos')
   const [showUpload,   setShowUpload]   = useState(false)

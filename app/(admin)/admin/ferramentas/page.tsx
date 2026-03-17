@@ -249,10 +249,6 @@ export default function AdminFerramentasPage() {
             loading={pingLoading}
             result={pingResult}
           />
-          {/* Placeholder for future tools */}
-          <div className="bg-[#0d1117] border border-dashed border-white/[0.06] rounded-xl p-5 flex items-center justify-center">
-            <p className="text-xs text-slate-700 text-center">Mais ferramentas em breve</p>
-          </div>
         </div>
       </section>
     </div>

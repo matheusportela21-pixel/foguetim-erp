@@ -390,7 +390,7 @@ export default function VendasPorAnuncioPage() {
                                 <div className="flex items-center gap-2.5 max-w-xs">
                                   {item.thumbnail ? (
                                     <img
-                                      src={item.thumbnail}
+                                      src={item.thumbnail.replace('http://', 'https://')}
                                       alt=""
                                       className="w-9 h-9 rounded-lg object-cover shrink-0 bg-dark-700 border border-white/[0.06]"
                                       onError={e => { (e.currentTarget as HTMLImageElement).src = '' }}

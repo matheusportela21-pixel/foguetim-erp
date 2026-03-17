@@ -593,7 +593,7 @@ export default function PromocoesPage() {
     <div className="flex flex-col min-h-screen bg-[#03050f]">
       <Header title="Promoções" />
 
-      <main className="flex-1 p-6 max-w-5xl mx-auto w-full space-y-6">
+      <div className="flex-1 p-6 max-w-5xl mx-auto w-full space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -827,7 +827,7 @@ export default function PromocoesPage() {
             )}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Modals */}
       {showCreate && (
