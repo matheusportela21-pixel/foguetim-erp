@@ -1,0 +1,2 @@
+[    2747ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://www.foguetim.com.br/api/mercadolivre/ads/items?limit=100:0
+[    2770ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://www.foguetim.com.br/api/mercadolivre/ads/campaigns:0

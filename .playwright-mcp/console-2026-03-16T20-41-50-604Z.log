@@ -1,0 +1,1 @@
+[    1531ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://fcuifpzbbozwodtrespp.supabase.co/rest/v1/accounting_documents?select=id%2Ctype%2Cname%2Cdescription%2Cfile_url%2Cfile_size%2Cmime_type%2Ccompetencia_mes%2Ccompetencia_ano%2Cvalor%2Ctags%2Ccreated_at&user_id=eq.&order=created_at.desc:0

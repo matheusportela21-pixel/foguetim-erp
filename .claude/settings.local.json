@@ -56,7 +56,12 @@
       "Bash(wc -l \"C:/Users/mathe/foguetim/app/dashboard/produtos/editar/[item_id]/page.tsx\" \"C:/Users/mathe/foguetim/app/\\(dashboard\\)/dashboard/produtos/editar/[item_id]/page.tsx\")",
       "Bash(rm \"C:/Users/mathe/foguetim/app/dashboard/produtos/editar/[item_id]/page.tsx\")",
       "Bash(rmdir \"C:/Users/mathe/foguetim/app/dashboard/produtos/editar/[item_id]\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep -rn .tagsb C:/Users/mathe/foguetim/lib/ C:/Users/mathe/foguetim/app/ C:/Users/mathe/foguetim/components/ --include=*.ts --include=*.tsx)",
+      "mcp__playwright__browser_network_requests",
+      "Bash(find /c/Users/mathe/foguetim/app -name *.tsx -path */admin/*)",
+      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/)",
+      "Bash(find /c/Users/mathe/foguetim/app/api/admin -name *.ts)"
     ]
   }
 }

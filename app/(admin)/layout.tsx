@@ -6,17 +6,19 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, CreditCard, XCircle,
   FileText, Bell, Settings, LogOut, Shield, ChevronRight,
+  Ticket, UserCog,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 
 const NAV = [
-  { href: '/admin',                  icon: LayoutDashboard, label: 'Visão Geral'          },
-  { href: '/admin/usuarios',         icon: Users,           label: 'Usuários'              },
-  { href: '/admin/cancelamentos',    icon: XCircle,         label: 'Cancelamentos'         },
-  { href: '/admin/notificacoes',     icon: Bell,            label: 'Notificações'          },
-  { href: '/admin/logs',             icon: FileText,        label: 'Logs do Sistema'       },
-  { href: '/admin/configuracoes',    icon: Settings,        label: 'Configurações Admin'   },
+  { href: '/admin',               icon: LayoutDashboard, label: 'Visão Geral'     },
+  { href: '/admin/usuarios',      icon: Users,           label: 'Usuários'         },
+  { href: '/admin/equipe',        icon: UserCog,         label: 'Equipe'           },
+  { href: '/admin/tickets',       icon: Ticket,          label: 'Tickets'          },
+  { href: '/admin/cancelamentos', icon: XCircle,         label: 'Cancelamentos'    },
+  { href: '/admin/notificacoes',  icon: Bell,            label: 'Notificações'     },
+  { href: '/admin/logs',          icon: FileText,        label: 'Logs do Sistema'  },
 ]
 
 function AdminSidebar() {

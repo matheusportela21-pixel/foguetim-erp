@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Header from '@/components/Header'
-import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search } from 'lucide-react'
+import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2 } from 'lucide-react'
 
 const faqs = [
   {
@@ -47,9 +47,58 @@ const tutorials = [
   { icon: Video,   title: 'Gerando Listagens',       dur: '5 min',  done: false },
 ]
 
+type TicketCategory = 'bug' | 'feature_request' | 'billing' | 'integration' | 'account' | 'performance' | 'other'
+
+const TICKET_CATEGORIES: { value: TicketCategory; label: string }[] = [
+  { value: 'bug',             label: 'Bug / Erro'          },
+  { value: 'feature_request', label: 'Sugestão'            },
+  { value: 'billing',         label: 'Cobrança / Plano'    },
+  { value: 'integration',     label: 'Integração (ML/etc)' },
+  { value: 'account',         label: 'Minha conta'         },
+  { value: 'performance',     label: 'Performance'         },
+  { value: 'other',           label: 'Outro'               },
+]
+
 export default function AjudaPage() {
   const [open, setOpen]     = useState<number | null>(null)
   const [search, setSearch] = useState('')
+
+  // Ticket modal
+  const [showTicket, setShowTicket]   = useState(false)
+  const [ticketTitle, setTicketTitle] = useState('')
+  const [ticketDesc, setTicketDesc]   = useState('')
+  const [ticketCat, setTicketCat]     = useState<TicketCategory>('other')
+  const [sending, setSending]         = useState(false)
+  const [ticketMsg, setTicketMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function handleSendTicket() {
+    if (!ticketTitle.trim() || !ticketDesc.trim()) return
+    setSending(true)
+    setTicketMsg(null)
+    try {
+      const res = await fetch('/api/admin/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title:       ticketTitle.trim(),
+          description: ticketDesc.trim(),
+          category:    ticketCat,
+        }),
+      })
+      if (res.ok) {
+        setTicketMsg({ ok: true, text: 'Ticket aberto! Nossa equipe entrará em contato em breve.' })
+        setTicketTitle(''); setTicketDesc(''); setTicketCat('other')
+        setTimeout(() => { setShowTicket(false); setTicketMsg(null) }, 2500)
+      } else {
+        const d = await res.json() as { error?: string }
+        setTicketMsg({ ok: false, text: `Erro: ${d.error ?? 'tente novamente'}` })
+      }
+    } catch {
+      setTicketMsg({ ok: false, text: 'Erro de conexão. Tente novamente.' })
+    } finally {
+      setSending(false)
+    }
+  }
 
   const filtered = faqs.filter(f =>
     !search || f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase())
@@ -145,6 +194,18 @@ export default function AjudaPage() {
                     </div>
                   </button>
                 ))}
+                <button
+                  onClick={() => setShowTicket(true)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600/20 flex items-center justify-center shrink-0">
+                    <Ticket className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-white">Abrir Ticket</p>
+                    <p className="text-[10px] text-slate-500">Resposta em até 24h</p>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -159,6 +220,79 @@ export default function AjudaPage() {
           </div>
         </div>
       </div>
+
+      {/* Ticket modal */}
+      {showTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md bg-dark-900 border border-white/[0.08] rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-sm font-bold text-white">Abrir Ticket de Suporte</h3>
+              </div>
+              <button onClick={() => { setShowTicket(false); setTicketMsg(null) }}
+                className="p-1 text-slate-600 hover:text-slate-300 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Assunto *</label>
+                <input
+                  value={ticketTitle}
+                  onChange={e => setTicketTitle(e.target.value)}
+                  placeholder="Ex: Erro ao conectar Mercado Livre"
+                  className="w-full px-3 py-2 text-sm bg-dark-700 border border-white/[0.08] rounded-xl text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-600/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Categoria</label>
+                <select
+                  value={ticketCat}
+                  onChange={e => setTicketCat(e.target.value as TicketCategory)}
+                  className="w-full px-3 py-2 text-sm bg-dark-700 border border-white/[0.08] rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-600/40"
+                >
+                  {TICKET_CATEGORIES.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Descrição *</label>
+                <textarea
+                  value={ticketDesc}
+                  onChange={e => setTicketDesc(e.target.value)}
+                  rows={4}
+                  placeholder="Descreva o problema com o máximo de detalhes possível..."
+                  className="w-full px-3 py-2 text-sm bg-dark-700 border border-white/[0.08] rounded-xl text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-600/40 resize-none"
+                />
+              </div>
+            </div>
+
+            {ticketMsg && (
+              <p className={`text-xs px-3 py-2 rounded-lg ${ticketMsg.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                {ticketMsg.text}
+              </p>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => { setShowTicket(false); setTicketMsg(null) }}
+                className="flex-1 px-4 py-2 text-sm text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.07] transition-all">
+                Cancelar
+              </button>
+              <button
+                onClick={handleSendTicket}
+                disabled={!ticketTitle.trim() || !ticketDesc.trim() || sending}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all disabled:opacity-50"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ticket className="w-4 h-4" />}
+                {sending ? 'Enviando...' : 'Enviar Ticket'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
