@@ -1,5 +1,5 @@
 /**
- * GET /api/mercadolivre/ads/campaigns?limit=&offset=
+ * GET /api/mercadolivre/ads/campaigns?limit=&offset=&date_from=&date_to=
  * Lista campanhas do Product Ads. advertiser_id = ml_user_id da conexão.
  */
 import { NextRequest, NextResponse }         from 'next/server'
@@ -43,8 +43,12 @@ const EMPTY = (limit: number, offset: number) => ({
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const limit  = Number(searchParams.get('limit')  ?? '50')
-  const offset = Number(searchParams.get('offset') ?? '0')
+  const limit    = Number(searchParams.get('limit')     ?? '50')
+  const offset   = Number(searchParams.get('offset')    ?? '0')
+  const today    = new Date().toISOString().split('T')[0]
+  const thirtyAgo = new Date(Date.now() - 30 * 86400_000).toISOString().split('T')[0]
+  const dateFrom = searchParams.get('date_from') ?? thirtyAgo
+  const dateTo   = searchParams.get('date_to')   ?? today
 
   try {
     const user = await getAuthUser()
@@ -59,12 +63,14 @@ export async function GET(req: NextRequest) {
     const advertiserId = conn.ml_user_id
     if (!advertiserId) return NextResponse.json(EMPTY(limit, offset))
 
-    const res = await fetch(
-      `${ML_ADS}/advertisers/${advertiserId}/product_ads/campaigns?limit=${limit}&offset=${offset}`,
-      { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
-    )
+    const url = `${ML_ADS}/advertisers/${advertiserId}/product_ads/campaigns?date_from=${dateFrom}&date_to=${dateTo}&limit=${limit}&offset=${offset}`
+    console.log('[ads/campaigns GET] url:', url)
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}`, 'api-version': '2' },
+    })
     const rawText = await res.text()
-    console.log('[ads/campaigns GET] status:', res.status, '| body:', rawText.slice(0, 300))
+    console.log('[ads/campaigns GET] status:', res.status, '| body:', rawText.slice(0, 500))
 
     let data: CampaignsResponse = {}
     try { data = JSON.parse(rawText) as CampaignsResponse } catch { /* non-JSON */ }
