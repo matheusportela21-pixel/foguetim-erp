@@ -7,7 +7,7 @@ import {
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
-  Shield, ChevronRight, MessageSquare,
+  Shield, ChevronRight, MessageSquare, Archive,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
@@ -105,6 +105,7 @@ export default function DashboardPage() {
   const [reputa, setReputa]     = useState<ReputaMini | null>(null)
   const [reputaLoading, setReputaLoading] = useState(true)
   const [urgentClaims, setUrgentClaims] = useState(0)
+  const [rupturasCount, setRupturasCount] = useState(0)
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
@@ -138,6 +139,15 @@ export default function DashboardPage() {
         setUrgentClaims(d.summary?.seller_action_required ?? 0)
       })
       .catch(() => { /* silent — dashboard não deve quebrar por isso */ })
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/mercadolivre/estoque')
+      .then(r => r.json())
+      .then((d: { summary?: { ruptura?: number } }) => {
+        setRupturasCount(d.summary?.ruptura ?? 0)
+      })
+      .catch(() => { /* silent */ })
   }, [])
 
   /* Derived KPI values */
@@ -203,6 +213,22 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+        )}
+
+        {/* ── Ruptura de estoque alert ── */}
+        {rupturasCount > 0 && (
+          <Link href="/dashboard/estoque?filter=ruptura">
+            <div className="flex items-center gap-3 p-4 bg-red-950/30 border border-red-800/40 rounded-xl hover:bg-red-900/30 transition-colors">
+              <Archive className="w-5 h-5 text-red-400 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">
+                  {rupturasCount} anúncio{rupturasCount !== 1 ? 's' : ''} com estoque zerado
+                </p>
+                <p className="text-xs text-red-400 mt-0.5">Clique para ver e atualizar</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-red-600 shrink-0" />
+            </div>
+          </Link>
         )}
 
         {/* ── KPIs ── */}
