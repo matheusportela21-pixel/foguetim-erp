@@ -160,17 +160,69 @@ async function handleMessageWebhook(payload: MLWebhookPayload, userId: string): 
 async function handleShipmentWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
   const db         = supabaseAdmin()
   const shipmentId = payload.resource.split('/').pop()
+  if (!shipmentId) return
 
-  await db.from('activity_logs').insert({
-    user_id:     userId,
-    action:      'webhook_shipment',
-    category:    'orders',
-    description: `Status de envio atualizado: ${shipmentId}`,
-    metadata:    { shipment_id: shipmentId },
-    visibility:  'user',
-  })
+  // Tentar buscar status atual do envio via ML API
+  let statusLabel  = 'atualizado'
+  let notifType: 'info' | 'warning' | 'success' = 'info'
 
-  console.log('[Webhook] Envio processado:', shipmentId)
+  try {
+    const { data: conn } = await db
+      .from('marketplace_connections')
+      .select('data')
+      .eq('user_id', userId)
+      .eq('marketplace', 'mercadolivre')
+      .maybeSingle()
+
+    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    if (token) {
+      const r = await fetch(
+        `https://api.mercadolibre.com/shipments/${shipmentId}`,
+        { headers: { Authorization: `Bearer ${token}`, 'x-format-new': 'true' } },
+      )
+      if (r.ok) {
+        const shipment = await r.json() as Record<string, unknown>
+        const status = String(shipment.status ?? '')
+        const STATUS_LABELS: Record<string, string> = {
+          pending:       'Aguardando pagamento',
+          handling:      'Aguardando despacho',
+          ready_to_ship: 'Pronto para enviar',
+          shipped:       'Em trânsito',
+          delivered:     'Entregue',
+          not_delivered: 'Não entregue',
+          cancelled:     'Cancelado',
+        }
+        statusLabel = STATUS_LABELS[status] ?? status
+        if (status === 'delivered')     notifType = 'success'
+        if (status === 'not_delivered') notifType = 'warning'
+        if (status === 'ready_to_ship') notifType = 'info'
+      }
+    }
+  } catch {
+    // Se falhar, prosseguir com label genérico
+  }
+
+  await Promise.all([
+    db.from('notifications').insert({
+      user_id:    userId,
+      title:      'Envio atualizado',
+      message:    `Envio #${shipmentId}: ${statusLabel}`,
+      type:       notifType,
+      category:   'orders',
+      action_url: '/dashboard/expedicao',
+      read:       false,
+    }),
+    db.from('activity_logs').insert({
+      user_id:     userId,
+      action:      'webhook_shipment',
+      category:    'orders',
+      description: `Envio ${shipmentId}: ${statusLabel}`,
+      metadata:    { shipment_id: shipmentId },
+      visibility:  'user',
+    }),
+  ])
+
+  console.log('[Webhook] Envio processado:', shipmentId, statusLabel)
 }
 
 async function handleItemWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {

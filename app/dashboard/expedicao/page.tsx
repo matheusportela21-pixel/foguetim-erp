@@ -1,147 +1,506 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
-import { Send, Package, Printer, QrCode, Clock, CheckCircle, Truck, MapPin } from 'lucide-react'
+import {
+  Package, Printer, Truck, CheckCircle, AlertTriangle,
+  RefreshCw, Search, X, ExternalLink, Clock, MapPin, User,
+} from 'lucide-react'
 
-const shipments = [
-  { id: '#ML-48291', produto: 'Óleo Capilar Fio Cabana 100ml',      cliente: 'Ana Beatriz Sousa',  destino: 'Fortaleza, CE',    plat: 'ML',  status: 'aguardando', rastreio: null,          peso: '0.18 kg', prazo: '3 dias' },
-  { id: '#ML-48260', produto: 'Hidratante Corporal Zalike 200ml',   cliente: 'Antônio Vieira Neto', destino: 'Fortaleza, CE',    plat: 'ML',  status: 'aguardando', rastreio: null,          peso: '0.22 kg', prazo: '3 dias' },
-  { id: '#ML-48211', produto: 'Castilla Condicionador Coco 400ml',  cliente: 'Sebastião Pinheiro',  destino: 'Itapipoca, CE',    plat: 'ML',  status: 'aguardando', rastreio: null,          peso: '0.42 kg', prazo: '4 dias' },
+/* ── Types ───────────────────────────────────────────────────────────────── */
+interface OrderItem {
+  title:      string
+  quantity:   number
+  unit_price: number
+  thumbnail?: string
+}
+
+interface ShipmentData {
+  id:              number | string
+  status:          string
+  substatus?:      string
+  tracking_number?: string
+  date_created?:   string
+  last_updated?:   string
+  service_id?:     number
+  logistic_type?:  string
+  destination?:    string
+}
+
+interface ShipmentItem {
+  order_id:     number | string
+  order_status: string
+  date_created: string
+  total_amount: number
+  buyer: {
+    nickname?:   string
+    first_name?: string
+    last_name?:  string
+  }
+  order_items: OrderItem[]
+  shipment:    ShipmentData | null
+}
+
+interface TrackingEvent {
+  status:      string
+  substatus?:  string
+  date:        string
+  description?: string
+}
+
+interface CarrierData {
+  name?:        string
+  tracking_url?: string
+  [k: string]:  unknown
+}
+
+interface DetailData {
+  shipment: Record<string, unknown>
+  history:  TrackingEvent[]
+  carrier:  CarrierData | null
+}
+
+/* ── Status config ───────────────────────────────────────────────────────── */
+const STATUS_CFG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+  pending:       { label: 'Ag. pagamento',    color: 'text-slate-400',  bg: 'bg-slate-400/10',  icon: '⏳' },
+  handling:      { label: 'Ag. despacho',     color: 'text-amber-400',  bg: 'bg-amber-400/10',  icon: '📦' },
+  ready_to_ship: { label: 'Pronto p/ enviar', color: 'text-blue-400',   bg: 'bg-blue-400/10',   icon: '🚀' },
+  shipped:       { label: 'Em trânsito',      color: 'text-indigo-400', bg: 'bg-indigo-400/10', icon: '🚚' },
+  delivered:     { label: 'Entregue',         color: 'text-green-400',  bg: 'bg-green-400/10',  icon: '✅' },
+  not_delivered: { label: 'Não entregue',     color: 'text-red-400',    bg: 'bg-red-400/10',    icon: '❌' },
+  cancelled:     { label: 'Cancelado',        color: 'text-slate-500',  bg: 'bg-slate-500/10',  icon: '🚫' },
+}
+
+const TAB_STATUSES: Record<string, string[]> = {
+  urgente:        ['handling', 'ready_to_ship'],
+  pronto:         ['ready_to_ship'],
+  em_transito:    ['shipped'],
+  entregues:      ['delivered'],
+  problemas:      ['not_delivered'],
+}
+
+function statusCfg(status: string) {
+  return STATUS_CFG[status] ?? { label: status, color: 'text-slate-400', bg: 'bg-slate-400/10', icon: '📦' }
+}
+
+function getHoursSince(iso: string) {
+  return (Date.now() - new Date(iso).getTime()) / 3_600_000
+}
+
+function getUrgency(item: ShipmentItem): boolean {
+  const s = item.shipment
+  if (!s) return false
+  if (s.status === 'handling' && item.date_created) {
+    return getHoursSince(item.date_created) > 20
+  }
+  if (s.status === 'ready_to_ship' && s.last_updated) {
+    return getHoursSince(s.last_updated) > 12
+  }
+  return false
+}
+
+function buyerName(buyer: ShipmentItem['buyer']) {
+  if (buyer.first_name || buyer.last_name)
+    return `${buyer.first_name ?? ''} ${buyer.last_name ?? ''}`.trim()
+  return buyer.nickname ?? '—'
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+}
+
+/* ── Tracking Modal ──────────────────────────────────────────────────────── */
+function TrackingModal({
+  shipmentId,
+  onClose,
+}: {
+  shipmentId: number | string
+  onClose: () => void
+}) {
+  const [data, setData]       = useState<DetailData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/mercadolivre/shipments/${shipmentId}`)
+      .then(r => r.json())
+      .then((d: { connected?: boolean; error?: string } & DetailData) => {
+        if (d.error) { setError(d.error); return }
+        setData(d as DetailData)
+      })
+      .catch(e => setError(String(e)))
+      .finally(() => setLoading(false))
+  }, [shipmentId])
+
+  const trackingNumber = data?.shipment?.tracking_number as string | undefined
+  const carrier        = data?.carrier
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="bg-[#111318] border border-white/[0.1] rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div>
+            <p className="text-sm font-bold text-white">Tracking — Envio #{shipmentId}</p>
+            {trackingNumber && (
+              <p className="text-xs text-slate-500 mt-0.5 font-mono">{trackingNumber}</p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-600 hover:text-slate-300 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+          {loading && (
+            <div className="flex items-center justify-center py-10 text-sm text-slate-500 animate-pulse">
+              Carregando...
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-red-400 py-6 justify-center">
+              <AlertTriangle className="w-4 h-4" /> {error}
+            </div>
+          )}
+
+          {!loading && !error && data && (
+            <>
+              {/* Carrier info */}
+              {(carrier?.name || carrier?.tracking_url) && (
+                <div className="flex items-center justify-between bg-white/[0.03] rounded-xl p-4">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Transportadora</p>
+                    <p className="text-sm font-semibold text-white">{carrier.name ?? '—'}</p>
+                  </div>
+                  {carrier.tracking_url && (
+                    <a
+                      href={carrier.tracking_url as string}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition-all"
+                    >
+                      <ExternalLink className="w-3 h-3" /> Rastrear
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Timeline */}
+              {data.history.length > 0 ? (
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">Histórico</p>
+                  <div className="relative pl-4">
+                    <div className="absolute left-1.5 top-1 bottom-1 w-px bg-white/[0.06]" />
+                    <div className="space-y-4">
+                      {data.history.map((ev, i) => {
+                        const cfg = statusCfg(ev.status)
+                        return (
+                          <div key={i} className="relative flex items-start gap-3">
+                            <span className={`absolute -left-2.5 mt-0.5 text-sm`}>{cfg.icon}</span>
+                            <div className="ml-2">
+                              <p className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</p>
+                              {ev.description && (
+                                <p className="text-[11px] text-slate-500 mt-0.5">{ev.description}</p>
+                              )}
+                              <p className="text-[10px] text-slate-600 mt-0.5">{fmtDate(ev.date)}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-600 text-center py-4">Nenhum histórico disponível</p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Shipment Card ───────────────────────────────────────────────────────── */
+function ShipmentCard({ item }: { item: ShipmentItem }) {
+  const [trackingOpen, setTrackingOpen] = useState(false)
+  const urgent  = getUrgency(item)
+  const s       = item.shipment
+  const cfg     = statusCfg(s?.status ?? 'pending')
+  const mainItem = item.order_items[0]
+  const extraQty = item.order_items.length > 1 ? item.order_items.length - 1 : 0
+
+  return (
+    <>
+      <div className={`bg-[#111318] border rounded-xl p-4 transition-all hover:border-white/[0.1] ${urgent ? 'border-amber-500/30' : 'border-white/[0.06]'}`}>
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="text-[11px] font-mono text-slate-500 shrink-0">#{item.order_id}</span>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
+              {cfg.icon} {cfg.label}
+            </span>
+            {urgent && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
+                ⚡ URGENTE
+              </span>
+            )}
+          </div>
+          <span className="text-[11px] text-slate-600 shrink-0 whitespace-nowrap">
+            {fmtDate(item.date_created)}
+          </span>
+        </div>
+
+        {/* Product */}
+        <p className="text-sm font-semibold text-white truncate mb-1">
+          {mainItem?.title ?? '—'}
+          {mainItem?.quantity > 1 && (
+            <span className="ml-1 text-[11px] text-slate-500">× {mainItem.quantity}</span>
+          )}
+          {extraQty > 0 && (
+            <span className="ml-1 text-[11px] text-slate-500">+{extraQty} item(s)</span>
+          )}
+        </p>
+
+        {/* Buyer + destination */}
+        <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
+          <span className="flex items-center gap-1">
+            <User className="w-3 h-3" /> {buyerName(item.buyer)}
+          </span>
+          {s?.destination && (
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> {s.destination}
+            </span>
+          )}
+        </div>
+
+        {/* Tracking number */}
+        {s?.tracking_number && (
+          <p className="text-[11px] font-mono text-cyan-400 mb-3">
+            🔖 {s.tracking_number}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {(s?.status === 'ready_to_ship' || s?.status === 'handling') && s?.id && (
+            <a
+              href={`/api/mercadolivre/shipments/${s.id}/label`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg transition-all"
+            >
+              <Printer className="w-3.5 h-3.5" /> Etiqueta PDF
+            </a>
+          )}
+          {s?.id && (
+            <button
+              onClick={() => setTrackingOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-all"
+            >
+              <Truck className="w-3.5 h-3.5" /> Ver tracking
+            </button>
+          )}
+        </div>
+      </div>
+
+      {trackingOpen && s?.id && (
+        <TrackingModal shipmentId={s.id} onClose={() => setTrackingOpen(false)} />
+      )}
+    </>
+  )
+}
+
+/* ── Main Page ───────────────────────────────────────────────────────────── */
+const TABS = [
+  { key: 'todos',       label: '📋 Todos'         },
+  { key: 'urgente',     label: '⚡ Urgente'        },
+  { key: 'pronto',      label: '🚀 Pronto p/ enviar' },
+  { key: 'em_transito', label: '🚚 Em trânsito'   },
+  { key: 'entregues',   label: '✅ Entregues'      },
+  { key: 'problemas',   label: '❌ Problemas'      },
 ]
 
-const statusMap: Record<string, { label: string; cls: string; icon: React.ElementType }> = {
-  aguardando: { label: 'Aguardando',  cls: 'text-amber-400 bg-amber-400/10 ring-1 ring-amber-400/20',   icon: Clock        },
-  etiquetado: { label: 'Etiquetado',  cls: 'text-blue-400 bg-blue-400/10 ring-1 ring-blue-400/20',      icon: QrCode       },
-  coletado:   { label: 'Coletado',    cls: 'text-purple-400 bg-purple-400/10 ring-1 ring-purple-400/20', icon: Truck        },
-  entregue:   { label: 'Entregue',    cls: 'text-green-400 bg-green-400/10 ring-1 ring-green-400/20',   icon: CheckCircle  },
-}
-
-const platClr: Record<string, string> = {
-  ML:  'text-amber-400 bg-amber-400/10',
-  SP:  'text-orange-400 bg-orange-400/10',
-  AMZ: 'text-cyan-400 bg-cyan-400/10',
-  VIA: 'text-blue-400 bg-blue-400/10',
-}
-
 export default function ExpedicaoPage() {
-  const aguardando = shipments.filter(s => s.status === 'aguardando').length
-  const etiquetado = shipments.filter(s => s.status === 'etiquetado').length
-  const coletado   = shipments.filter(s => s.status === 'coletado').length
+  const [items, setItems]       = useState<ShipmentItem[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [connected, setConnected] = useState<boolean | null>(null)
+  const [tab, setTab]           = useState('todos')
+  const [search, setSearch]     = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/mercadolivre/shipments')
+      const d   = await res.json() as { connected?: boolean; items?: ShipmentItem[] }
+      if (d.connected === false) {
+        setConnected(false)
+      } else {
+        setConnected(true)
+        setItems(d.items ?? [])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  /* Filter */
+  const filtered = items.filter(item => {
+    const s = item.shipment
+
+    if (tab === 'urgente') {
+      if (!getUrgency(item)) return false
+    } else if (tab !== 'todos') {
+      const statuses = TAB_STATUSES[tab] ?? []
+      if (!statuses.includes(s?.status ?? '')) return false
+    }
+
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      const matchOrder  = String(item.order_id).includes(q)
+      const matchBuyer  = buyerName(item.buyer).toLowerCase().includes(q)
+      const matchTitle  = item.order_items.some(i => i.title?.toLowerCase().includes(q))
+      const matchTrack  = s?.tracking_number?.toLowerCase().includes(q) ?? false
+      if (!matchOrder && !matchBuyer && !matchTitle && !matchTrack) return false
+    }
+
+    return true
+  })
+
+  /* KPIs */
+  const kpiDespacho  = items.filter(i => i.shipment?.status === 'handling' || i.shipment?.status === 'ready_to_ship').length
+  const kpiTransito  = items.filter(i => i.shipment?.status === 'shipped').length
+  const kpiUrgentes  = items.filter(i => getUrgency(i)).length
+
+  /* Tab counts */
+  function tabCount(key: string) {
+    if (key === 'todos')   return items.length
+    if (key === 'urgente') return kpiUrgentes
+    const statuses = TAB_STATUSES[key] ?? []
+    return items.filter(i => statuses.includes(i.shipment?.status ?? '')).length
+  }
 
   return (
     <div>
-      <Header title="Expedição" subtitle="Gerencie envios e etiquetas" />
+      <Header title="Expedição" subtitle="Envios, tracking e etiquetas" />
 
-      <div className="p-6 space-y-6">
-        {/* Dev banner */}
-        <div className="dash-card p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-              <Clock className="w-4 h-4 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-amber-400" style={{ fontFamily: 'Sora, sans-serif' }}>Módulo em Desenvolvimento</p>
-              <p className="text-xs text-slate-500">Impressão de etiquetas e integração com transportadoras em breve.</p>
-            </div>
-            <span className="ml-auto text-[10px] bg-amber-900/30 text-amber-400 px-2 py-1 rounded-full font-bold shrink-0">Q2 2026</span>
-          </div>
-        </div>
+      <div className="p-6 space-y-5">
 
-        {/* Stats */}
+        {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total hoje',   val: shipments.length, color: 'text-purple-400' },
-            { label: 'Aguardando',   val: aguardando,       color: 'text-amber-400'  },
-            { label: 'Etiquetados',  val: etiquetado,       color: 'text-blue-400'   },
-            { label: 'Coletados',    val: coletado,         color: 'text-green-400'  },
-          ].map(s => (
-            <div key={s.label} className="dash-card p-4 rounded-2xl">
-              <p className="text-xs text-slate-600 mb-1">{s.label}</p>
-              <p className={`text-2xl font-bold ${s.color}`} style={{ fontFamily: 'Sora, sans-serif' }}>{s.val}</p>
+            { label: 'Ag. despacho',  val: kpiDespacho, color: 'text-amber-400',  icon: Package },
+            { label: 'Em trânsito',   val: kpiTransito, color: 'text-indigo-400', icon: Truck },
+            { label: 'Urgentes',      val: kpiUrgentes, color: 'text-red-400',    icon: AlertTriangle },
+            { label: 'Total',         val: items.length, color: 'text-slate-300', icon: CheckCircle },
+          ].map(kpi => (
+            <div key={kpi.label} className="bg-[#111318] border border-white/[0.06] rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <kpi.icon className="w-4 h-4 text-slate-500" />
+                <p className="text-[11px] text-slate-500">{kpi.label}</p>
+              </div>
+              <p className={`text-2xl font-bold ${kpi.color}`} style={{ fontFamily: 'Sora, sans-serif' }}>
+                {loading ? <span className="inline-block w-6 h-6 bg-white/[0.06] rounded animate-pulse" /> : kpi.val}
+              </p>
             </div>
           ))}
         </div>
 
-        {/* Shipment list */}
-        <div className="dash-card rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-            <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Envios do Dia
-              <span className="text-xs text-amber-400 font-normal ml-2">— dados de exemplo</span>
-            </p>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 transition-all">
-              <Printer className="w-3.5 h-3.5" /> Imprimir etiquetas
-            </button>
-          </div>
-
-          <div className="divide-y divide-white/[0.04]">
-            {shipments.map(s => {
-              const st   = statusMap[s.status]
-              const Icon = st.icon
+        {/* Tabs + Search */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex gap-1 flex-wrap flex-1">
+            {TABS.map(t => {
+              const count = tabCount(t.key)
               return (
-                <div key={s.id} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
-                  <div className="w-9 h-9 rounded-xl bg-dark-700 flex items-center justify-center shrink-0">
-                    <Package className="w-4 h-4 text-slate-500" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-mono text-slate-500">{s.id}</span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${platClr[s.plat] ?? ''}`}>{s.plat}</span>
-                    </div>
-                    <p className="text-xs font-medium text-white truncate mt-0.5">{s.produto}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <MapPin className="w-3 h-3 text-slate-600" />
-                      <p className="text-[10px] text-slate-600">{s.cliente} · {s.destino}</p>
-                    </div>
-                  </div>
-
-                  <div className="hidden md:flex items-center gap-4 text-xs shrink-0">
-                    <div className="text-center">
-                      <p className="text-[9px] text-slate-600 mb-0.5">Peso</p>
-                      <p className="text-xs font-semibold text-slate-300">{s.peso}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[9px] text-slate-600 mb-0.5">Prazo</p>
-                      <p className="text-xs font-semibold text-slate-300">{s.prazo}</p>
-                    </div>
-                    {s.rastreio && (
-                      <div className="text-center">
-                        <p className="text-[9px] text-slate-600 mb-0.5">Rastreio</p>
-                        <p className="text-[10px] font-mono text-cyan-400">{s.rastreio}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${st.cls}`}>
-                    <Icon className="w-3 h-3" />{st.label}
-                  </span>
-
-                  <button className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/[0.06] transition-all shrink-0">
-                    <Printer className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                    tab === t.key
+                      ? 'bg-white/10 text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {t.label}
+                  {count > 0 && (
+                    <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                      tab === t.key ? 'bg-white/20 text-white' : 'bg-white/[0.06] text-slate-500'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
               )
             })}
           </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar pedido, comprador..."
+                className="pl-8 pr-3 py-1.5 text-xs bg-[#111318] border border-white/[0.08] rounded-lg text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/40 w-52"
+              />
+            </div>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="p-2 text-slate-500 hover:text-slate-200 bg-white/[0.04] border border-white/[0.06] rounded-lg transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
-        {/* Features coming */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { icon: QrCode,  title: 'Geração de Etiquetas', desc: 'Gere etiquetas de envio para Correios, Melhor Envio, Loggi e mais com um clique.' },
-            { icon: Send,    title: 'Envio em Massa',       desc: 'Processe dezenas de pedidos de uma só vez e imprima todas as etiquetas de uma vez.' },
-            { icon: Truck,   title: 'Rastreamento',         desc: 'Acompanhe o status de todos os envios em tempo real sem sair do painel.' },
-          ].map(f => (
-            <div key={f.title} className="dash-card p-5 rounded-2xl">
-              <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
-                <f.icon className="w-[18px] h-[18px] text-purple-400" />
+        {/* Content */}
+        {connected === false ? (
+          <div className="bg-[#111318] border border-white/[0.06] rounded-xl p-10 flex flex-col items-center gap-3 text-center">
+            <Package className="w-10 h-10 text-slate-700" />
+            <p className="text-sm font-semibold text-slate-400">Conta Mercado Livre não conectada</p>
+            <p className="text-xs text-slate-600">
+              Acesse{' '}
+              <a href="/dashboard/configuracoes" className="text-indigo-400 hover:underline">Configurações</a>
+              {' '}para conectar sua conta.
+            </p>
+          </div>
+        ) : loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-[#111318] border border-white/[0.06] rounded-xl p-4 space-y-2 animate-pulse">
+                <div className="flex gap-2">
+                  <div className="h-4 w-24 bg-white/[0.04] rounded" />
+                  <div className="h-4 w-20 bg-white/[0.04] rounded" />
+                </div>
+                <div className="h-4 w-3/4 bg-white/[0.04] rounded" />
+                <div className="h-3 w-1/2 bg-white/[0.04] rounded" />
               </div>
-              <p className="font-bold text-white text-sm mb-2">{f.title}</p>
-              <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-[#111318] border border-white/[0.06] rounded-xl p-10 flex flex-col items-center gap-2 text-center">
+            <Clock className="w-8 h-8 text-slate-700" />
+            <p className="text-sm text-slate-500">
+              {search ? 'Nenhum envio encontrado para esta busca' : 'Nenhum envio nesta categoria'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filtered.map(item => (
+              <ShipmentCard key={`${item.order_id}-${item.shipment?.id}`} item={item} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
