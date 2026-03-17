@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History, FileText,
+  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History, FileText, Mail,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import EmpresaSection     from './components/EmpresaSection'
@@ -10,6 +10,7 @@ import ContaSection       from './components/ContaSection'
 import ImpressaoSection   from './components/ImpressaoSection'
 import FiscalSection      from './components/FiscalSection'
 import NotifSection       from './components/NotifSection'
+import EmailPrefsSection  from './components/EmailPrefsSection'
 import SegurancaSection   from './components/SegurancaSection'
 import PlanoSection       from './components/PlanoSection'
 import DangerSection      from './components/DangerSection'
@@ -22,6 +23,7 @@ type SectionId =
   | 'impressao'
   | 'fiscal'
   | 'notificacoes'
+  | 'email_prefs'
   | 'seguranca'
   | 'plano'
   | 'historico'
@@ -41,6 +43,7 @@ const MENU: MenuItem[] = [
   { id: 'impressao',     icon: Printer,      label: 'Impressão', badge: 'Em breve' },
   { id: 'fiscal',        icon: FileText,     label: 'Fiscal e NF-e'       },
   { id: 'notificacoes',  icon: Bell,         label: 'Notificações'        },
+  { id: 'email_prefs',   icon: Mail,         label: 'Emails (opt-in)'     },
   { id: 'seguranca',     icon: ShieldCheck,  label: 'Segurança'           },
   { id: 'plano',         icon: CreditCard,   label: 'Plano e Assinatura'  },
   { id: 'historico',     icon: History,      label: 'Histórico'           },
@@ -55,6 +58,7 @@ function SectionContent({ id }: { id: SectionId }) {
     case 'impressao':    return <ImpressaoSection />
     case 'fiscal':       return <FiscalSection />
     case 'notificacoes': return <NotifSection />
+    case 'email_prefs':  return <EmailPrefsSection />
     case 'seguranca':    return <SegurancaSection />
     case 'plano':        return <PlanoSection />
     case 'historico':    return <HistoricoSection />

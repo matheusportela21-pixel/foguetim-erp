@@ -3,6 +3,10 @@
  * Chamado em background após o endpoint retornar 200 para o ML.
  */
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { sendEmail } from '@/lib/email/email.service'
+import { newOrderTemplate }    from '@/lib/email/templates/new-order'
+import { newClaimTemplate }    from '@/lib/email/templates/new-claim'
+import { newQuestionTemplate } from '@/lib/email/templates/new-question'
 
 export interface MLWebhookPayload {
   _id?:            string
@@ -12,6 +16,28 @@ export interface MLWebhookPayload {
   application_id?: number
   sent?:           string
   attempts?:       number
+}
+
+/* ── Email helper ─────────────────────────────────────────────────────────── */
+
+async function sendEmailIfEnabled(
+  userId:    string,
+  prefKey:   string,
+  emailData: { subject: string; html: string },
+): Promise<void> {
+  const db = supabaseAdmin()
+  const { data: user } = await db
+    .from('users')
+    .select('email, email_prefs')
+    .eq('id', userId)
+    .single()
+
+  if (!user?.email) return
+
+  const prefs = (user.email_prefs ?? {}) as Record<string, boolean>
+  if (!prefs[prefKey]) return // opt-in: desativado por padrão
+
+  await sendEmail({ to: user.email, ...emailData })
 }
 
 /* ── Entry point ──────────────────────────────────────────────────────────── */
@@ -104,6 +130,48 @@ async function handleOrderWebhook(payload: MLWebhookPayload, userId: string): Pr
     }),
   ])
 
+  // Tentar buscar dados do pedido para o email
+  try {
+    const { data: conn } = await db
+      .from('marketplace_connections')
+      .select('data')
+      .eq('user_id', userId)
+      .eq('marketplace', 'mercadolivre')
+      .maybeSingle()
+
+    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    if (token) {
+      const r = await fetch(
+        `https://api.mercadolibre.com/orders/${orderId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      if (r.ok) {
+        const order = await r.json() as Record<string, unknown>
+        const buyer    = (order.buyer as Record<string, unknown>) ?? {}
+        const items    = (order.order_items as Record<string, unknown>[]) ?? []
+        const firstItem = (items[0]?.item as Record<string, unknown>) ?? {}
+        const shipping  = (order.shipping as Record<string, unknown>) ?? {}
+        const receiver  = (shipping.receiver_address as Record<string, unknown>) ?? {}
+        const city      = ((receiver.city as Record<string, unknown>)?.name as string) ?? ''
+        const state     = ((receiver.state as Record<string, unknown>)?.name as string) ?? ''
+        const { data: sellerUser } = await db.from('users').select('name').eq('id', userId).single()
+
+        await sendEmailIfEnabled(userId, 'new_order', newOrderTemplate({
+          sellerName:   (sellerUser?.name as string) || 'vendedor',
+          orderId,
+          productTitle: (firstItem.title as string) || 'Produto',
+          quantity:     (items[0]?.quantity as number) || 1,
+          price:        (order.total_amount as number) || 0,
+          buyerName:    `${buyer.first_name ?? ''} ${buyer.last_name ?? ''}`.trim() || (buyer.nickname as string) || '—',
+          city,
+          state,
+        }))
+      }
+    }
+  } catch {
+    // Falha no email não deve quebrar o webhook
+  }
+
   console.log('[Webhook] Pedido processado:', orderId)
 }
 
@@ -121,11 +189,47 @@ async function handleQuestionWebhook(payload: MLWebhookPayload, userId: string):
     read:       false,
   })
 
+  // Tentar buscar dados da pergunta para o email
+  try {
+    const { data: conn } = await supabaseAdmin()
+      .from('marketplace_connections')
+      .select('data')
+      .eq('user_id', userId)
+      .eq('marketplace', 'mercadolivre')
+      .maybeSingle()
+
+    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    if (token && questionId) {
+      const r = await fetch(
+        `https://api.mercadolibre.com/questions/${questionId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      if (r.ok) {
+        const q    = await r.json() as Record<string, unknown>
+        const item = (q.item_id as string) || ''
+        let itemTitle = item
+        if (item) {
+          const ir = await fetch(`https://api.mercadolibre.com/items/${item}?attributes=title`, { headers: { Authorization: `Bearer ${token}` } })
+          if (ir.ok) { const id = await ir.json() as Record<string, unknown>; itemTitle = (id.title as string) || item }
+        }
+        const { data: sellerUser } = await supabaseAdmin().from('users').select('name').eq('id', userId).single()
+        await sendEmailIfEnabled(userId, 'new_question', newQuestionTemplate({
+          sellerName:   (sellerUser?.name as string) || 'vendedor',
+          questionId:   questionId,
+          questionText: (q.text as string) || '',
+          itemTitle,
+        }))
+      }
+    }
+  } catch {
+    // Falha no email não deve quebrar o webhook
+  }
+
   console.log('[Webhook] Pergunta processada:', questionId)
 }
 
 async function handleClaimWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
-  const db     = supabaseAdmin()
+  const db      = supabaseAdmin()
   const claimId = payload.resource.split('/').pop()
 
   await db.from('notifications').insert({
@@ -137,6 +241,39 @@ async function handleClaimWebhook(payload: MLWebhookPayload, userId: string): Pr
     action_url: '/dashboard/reclamacoes',
     read:       false,
   })
+
+  // Tentar buscar dados da reclamação para o email
+  try {
+    const { data: conn } = await db
+      .from('marketplace_connections')
+      .select('data')
+      .eq('user_id', userId)
+      .eq('marketplace', 'mercadolivre')
+      .maybeSingle()
+
+    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    if (token && claimId) {
+      const r = await fetch(
+        `https://api.mercadolibre.com/claims/${claimId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      if (r.ok) {
+        const claim = await r.json() as Record<string, unknown>
+        const reason   = (claim.reason_id as string) || 'Motivo não informado'
+        const { data: sellerUser } = await db.from('users').select('name').eq('id', userId).single()
+        await sendEmailIfEnabled(userId, 'new_claim', newClaimTemplate({
+          sellerName:        (sellerUser?.name as string) || 'vendedor',
+          claimId,
+          productTitle:      'Produto da reclamação',
+          reason,
+          deadline:          '48 horas',
+          affectsReputation: true,
+        }))
+      }
+    }
+  } catch {
+    // Falha no email não deve quebrar o webhook
+  }
 
   console.log('[Webhook] Reclamação processada:', claimId)
 }
