@@ -1,13 +1,13 @@
 /**
- * GET /api/mercadolivre/ads/campaigns?advertiser_id=&limit=&offset=
- * Lista campanhas do Product Ads com métricas.
+ * GET /api/mercadolivre/ads/campaigns?limit=&offset=
+ * Lista campanhas do Product Ads. advertiser_id = ml_user_id da conexão.
  * Header api-version: 2 obrigatório.
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
-import { mlFetch }                   from '@/lib/mercadolivre'
+import { NextRequest, NextResponse }         from 'next/server'
+import { getAuthUser }                       from '@/lib/server-auth'
+import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
-const ADS_HEADERS = { 'api-version': '2' }
+const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
 
 export interface MlAdsCampaign {
   id:               number
@@ -34,28 +34,32 @@ export interface MlAdsCampaign {
 
 interface CampaignsResponse {
   results?: MlAdsCampaign[]
-  paging?: { total: number; limit: number; offset: number }
+  paging?:  { total: number; limit: number; offset: number }
 }
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { searchParams } = req.nextUrl
-  const advertiserId = searchParams.get('advertiser_id')
-  const limit        = searchParams.get('limit')  ?? '50'
-  const offset       = searchParams.get('offset') ?? '0'
-
-  if (!advertiserId) {
-    return NextResponse.json({ error: 'advertiser_id obrigatório' }, { status: 400 })
+  const conn = await getMLConnection(user.id)
+  if (!conn?.connected) {
+    return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
   }
 
+  const token = await getValidToken(user.id)
+  if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+
+  const { searchParams } = req.nextUrl
+  const limit  = searchParams.get('limit')  ?? '50'
+  const offset = searchParams.get('offset') ?? '0'
+  const advertiserId = conn.ml_user_id
+
   try {
-    const data = await mlFetch<CampaignsResponse>(
-      user.id,
-      `/advertising/MLB/advertisers/${advertiserId}/product_ads/campaigns?limit=${limit}&offset=${offset}`,
-      { headers: ADS_HEADERS },
+    const res = await fetch(
+      `${ML_ADS}/advertisers/${advertiserId}/product_ads/campaigns?limit=${limit}&offset=${offset}`,
+      { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
     )
+    const data = await res.json() as CampaignsResponse
 
     return NextResponse.json({
       campaigns: data.results ?? [],

@@ -1,14 +1,15 @@
 /**
- * GET   /api/mercadolivre/ads/items/[item_id]?advertiser_id=&ad_id=
+ * GET   /api/mercadolivre/ads/items/[item_id]?ad_id=
  * PATCH /api/mercadolivre/ads/items/[item_id]
- *       Body: { advertiser_id: number, ad_id: string | number, status: 'active' | 'paused' }
+ *       Body: { ad_id?: string | number, status: 'active' | 'paused' }
+ * advertiser_id = ml_user_id da conexão (resolvido no servidor)
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
-import { mlFetch }                   from '@/lib/mercadolivre'
-import type { MlAdsItem }            from '../route'
+import { NextRequest, NextResponse }         from 'next/server'
+import { getAuthUser }                       from '@/lib/server-auth'
+import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
+import type { MlAdsItem }                   from '../route'
 
-const ADS_HEADERS = { 'api-version': '2' }
+const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
 
 type Params = { params: { item_id: string } }
 
@@ -16,20 +17,21 @@ export async function GET(req: NextRequest, { params }: Params) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const advertiserId = req.nextUrl.searchParams.get('advertiser_id')
-  const adId         = req.nextUrl.searchParams.get('ad_id') ?? params.item_id
+  const conn = await getMLConnection(user.id)
+  if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
 
-  if (!advertiserId) {
-    return NextResponse.json({ error: 'advertiser_id obrigatório' }, { status: 400 })
-  }
+  const token = await getValidToken(user.id)
+  if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+
+  const adId = req.nextUrl.searchParams.get('ad_id') ?? params.item_id
 
   try {
-    const ad = await mlFetch<MlAdsItem>(
-      user.id,
-      `/advertising/MLB/advertisers/${advertiserId}/product_ads/ads/${adId}`,
-      { headers: ADS_HEADERS },
+    const res = await fetch(
+      `${ML_ADS}/advertisers/${conn.ml_user_id}/product_ads/ads/${adId}`,
+      { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
     )
-    return NextResponse.json(ad)
+    const data = await res.json() as MlAdsItem
+    return NextResponse.json(data)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[ads/items/[id] GET]', msg)
@@ -41,16 +43,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: { advertiser_id: number; ad_id?: string | number; status: 'active' | 'paused' }
+  const conn = await getMLConnection(user.id)
+  if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
+
+  const token = await getValidToken(user.id)
+  if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+
+  let body: { ad_id?: string | number; status: 'active' | 'paused' }
   try {
-    body = await req.json() as { advertiser_id: number; ad_id?: string | number; status: 'active' | 'paused' }
+    body = await req.json() as { ad_id?: string | number; status: 'active' | 'paused' }
   } catch {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  if (!body.advertiser_id) {
-    return NextResponse.json({ error: 'advertiser_id obrigatório' }, { status: 400 })
-  }
   if (body.status !== 'active' && body.status !== 'paused') {
     return NextResponse.json({ error: 'status deve ser active ou paused' }, { status: 400 })
   }
@@ -58,16 +63,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const adId = body.ad_id ?? params.item_id
 
   try {
-    const updated = await mlFetch<MlAdsItem>(
-      user.id,
-      `/advertising/MLB/advertisers/${body.advertiser_id}/product_ads/ads/${adId}`,
+    const res = await fetch(
+      `${ML_ADS}/advertisers/${conn.ml_user_id}/product_ads/ads/${adId}`,
       {
         method:  'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'api-version': '2', 'Content-Type': 'application/json' },
         body:    JSON.stringify({ status: body.status }),
-        headers: ADS_HEADERS,
       },
     )
-    return NextResponse.json(updated)
+    const data = await res.json() as MlAdsItem
+    return NextResponse.json(data)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[ads/items/[id] PATCH]', msg)

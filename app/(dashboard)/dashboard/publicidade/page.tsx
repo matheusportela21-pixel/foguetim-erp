@@ -196,10 +196,10 @@ export default function PublicidadePage() {
     setAdvertiser(adv)
     setHasAdsAccount(true)
 
-    // 2. Load campaigns + items in parallel
+    // 2. Load campaigns + items in parallel (advertiser_id vem do conn no servidor)
     const [campRes, itemsRes] = await Promise.allSettled([
-      fetch(`/api/mercadolivre/ads/campaigns?advertiser_id=${adv.advertiser_id}`),
-      fetch(`/api/mercadolivre/ads/items?advertiser_id=${adv.advertiser_id}&limit=100`),
+      fetch('/api/mercadolivre/ads/campaigns'),
+      fetch('/api/mercadolivre/ads/items?limit=100'),
     ])
 
     if (campRes.status === 'fulfilled' && campRes.value.ok) {
@@ -232,7 +232,7 @@ export default function PublicidadePage() {
       const res = await fetch(`/api/mercadolivre/ads/campaigns/${campaign.id}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ advertiser_id: advertiser.advertiser_id, status: newStatus }),
+        body:    JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error('Erro ao atualizar campanha')
       setCampaigns(prev => prev.map(c =>
@@ -256,7 +256,7 @@ export default function PublicidadePage() {
       const res = await fetch(`/api/mercadolivre/ads/items/${item.item_id}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ advertiser_id: advertiser.advertiser_id, ad_id: adId, status: newStatus }),
+        body:    JSON.stringify({ ad_id: adId, status: newStatus }),
       })
       if (!res.ok) throw new Error('Erro ao atualizar anúncio')
       setAdsItems(prev => prev.map(i =>
