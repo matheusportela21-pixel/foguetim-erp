@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/context/ThemeContext'
+import { ChatWidget } from '@/components/ai/ChatWidget'
 
 export const metadata: Metadata = {
   title: {
@@ -37,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </DashboardPlanGate>
             </main>
           </div>
+          <ChatWidget />
         </SidebarProvider>
       </PlanProvider>
     </ThemeProvider>
