@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { maskEmail } from '@/lib/mask-email'
 import {
   Search, RefreshCw, ChevronLeft, ChevronRight,
   X, Plug, PlugZap, CheckCircle2, XCircle,
@@ -103,7 +104,7 @@ function UserDrawer({ userId, onClose }: { userId: string; onClose: () => void }
             </div>
             <div>
               <p className="text-sm font-semibold text-white">{String(u?.name ?? '—')}</p>
-              <p className="text-xs text-slate-500">{String(u?.email ?? '—')}</p>
+              <p className="text-xs text-slate-500">{u?.email ? maskEmail(String(u.email)) : '—'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-slate-200 transition-colors">
@@ -395,7 +396,7 @@ export default function AdminUsuariosPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-200">{u.name || '—'}</p>
-                      <p className="text-[11px] text-slate-600">{u.email}</p>
+                      <p className="text-[11px] text-slate-600">{maskEmail(u.email)}</p>
                     </div>
                   </div>
                 </td>

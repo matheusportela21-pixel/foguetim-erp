@@ -164,13 +164,13 @@ export default function ConciliacaoPage() {
               <div className="relative">
                 <button
                   onClick={() => setPeriodOpen(v => !v)}
-                  disabled={loadingP}
+                  disabled={loadingP || (!loadingP && periods.length === 0)}
                   className="flex items-center gap-2 px-4 py-2 bg-[#111318] border border-white/[0.08] rounded-xl text-sm font-medium text-white hover:border-white/[0.15] transition-all disabled:opacity-50"
                 >
                   {loadingP
                     ? <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
                     : <Scale className="w-4 h-4 text-slate-500" />}
-                  <span>{selectedKey ? periodLabel(selectedKey) : 'Selecionar período'}</span>
+                  <span>{loadingP ? 'Carregando...' : !loadingP && periods.length === 0 ? 'Nenhum período disponível' : selectedKey ? periodLabel(selectedKey) : 'Selecionar período'}</span>
                   <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
                 </button>
 

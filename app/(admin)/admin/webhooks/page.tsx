@@ -267,14 +267,13 @@ export default function AdminWebhooksPage() {
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Configuração</p>
         <div className="flex items-center gap-3">
           <code className="flex-1 text-xs text-green-400 bg-green-900/10 border border-green-800/20 px-3 py-2 rounded-lg font-mono">
-            POST https://foguetim.com.br/api/webhooks/mercadolivre
+            POST https://www.foguetim.com.br/api/webhooks/mercadolivre
           </code>
         </div>
         <p className="text-xs text-slate-600">
           Configure esta URL no{' '}
           <span className="text-slate-400">ML Developer Center</span>
           {' '}para os tópicos: orders_v2, questions, claims, messages, shipments, items, payments.
-          Consulte <code className="text-slate-400">WEBHOOK_SETUP.md</code> para instruções completas.
         </p>
       </div>
     </div>

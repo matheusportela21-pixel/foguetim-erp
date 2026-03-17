@@ -128,7 +128,7 @@ function DocumentosTab({ userId }: { userId: string }) {
   const [deleting,  setDeleting]  = useState<string | null>(null)
 
   const load = async () => {
-    if (!isConfigured()) { setLoading(false); return }
+    if (!userId || !isConfigured()) { setLoading(false); return }
     const { data } = await supabase
       .from('accounting_documents')
       .select('id,type,name,description,file_url,file_size,mime_type,competencia_mes,competencia_ano,valor,tags,created_at')
@@ -138,7 +138,7 @@ function DocumentosTab({ userId }: { userId: string }) {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [userId]) // eslint-disable-line
+  useEffect(() => { if (userId) load() }, [userId]) // eslint-disable-line
 
   const handleDelete = async (id: string) => {
     if (!confirm('Excluir documento?')) return
@@ -470,7 +470,7 @@ function NfeSaidaTab({ userId }: { userId: string }) {
   const [ano,     setAno]     = useState(now.getFullYear())
 
   useEffect(() => {
-    if (!isConfigured()) { setLoading(false); return }
+    if (!userId || !isConfigured()) { setLoading(false); return }
     const start = `${ano}-${String(mes).padStart(2, '0')}-01`
     const endMes = mes === 12 ? 1 : mes + 1
     const endAno = mes === 12 ? ano + 1 : ano
@@ -592,7 +592,7 @@ function NfeEntradaTab({ userId }: { userId: string }) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = async () => {
-    if (!isConfigured()) { setLoading(false); return }
+    if (!userId || !isConfigured()) { setLoading(false); return }
     const { data } = await supabase
       .from('accounting_documents')
       .select('id,type,name,description,file_url,file_size,valor,competencia_mes,competencia_ano,tags,created_at')
@@ -819,7 +819,7 @@ function AcessoTab({ userId }: { userId: string }) {
   const [revoking, setRevoking] = useState<string | null>(null)
 
   const load = async () => {
-    if (!isConfigured()) { setLoading(false); return }
+    if (!userId || !isConfigured()) { setLoading(false); return }
     const { data } = await supabase
       .from('accountant_access')
       .select('id,accountant_email,accountant_name,permissions,status,invited_at,accepted_at,expires_at')

@@ -284,12 +284,14 @@ export default function FinanceiroPage() {
           <div className="relative">
             <button
               onClick={() => setPeriodOpen(o => !o)}
-              disabled={periodsLoading}
+              disabled={periodsLoading || (!periodsLoading && periods.length === 0)}
               className="flex items-center gap-2 px-4 py-2 bg-dark-800 border border-white/[0.08] rounded-xl text-sm text-slate-200 hover:border-purple-500/40 transition-all disabled:opacity-50"
             >
               {periodsLoading
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" /><span className="text-slate-500">Carregando...</span></>
-                : <><span>{selectedKey ? periodLabel(selectedKey) : 'Selecionar período'}</span></>
+                : !periodsLoading && periods.length === 0
+                  ? <span className="text-slate-500">Nenhum período disponível</span>
+                  : <><span>{selectedKey ? periodLabel(selectedKey) : 'Selecionar período'}</span></>
               }
               <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
             </button>

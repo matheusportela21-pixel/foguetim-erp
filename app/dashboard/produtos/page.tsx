@@ -1944,9 +1944,10 @@ export default function ProdutosPage() {
   useEffect(() => {
     if (!user || user.id === 'dev-user') return
     setDbLoading(true)
+    const timeout = setTimeout(() => setDbLoading(false), 30_000)
     getProducts(user.id)
       .then(data => setAllProdutos(data))
-      .finally(() => setDbLoading(false))
+      .finally(() => { clearTimeout(timeout); setDbLoading(false) })
   }, [user?.id])
 
   const [search,      setSearch]      = useState('')

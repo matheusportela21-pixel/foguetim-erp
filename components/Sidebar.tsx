@@ -38,7 +38,7 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/pos-venda',     icon: MessageSquare,   label: 'Pós-Venda',    badge: 'Novo'  },
       { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',                        },
       { href: '/dashboard/reclamacoes',  icon: AlertTriangle,   label: 'Reclamações'                },
-      { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição', badge: 'Dev'  },
+      { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição'              },
       { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e'                  },
       { href: '/dashboard/integracoes',  icon: Link2,           label: 'Integrações'              },
     ],

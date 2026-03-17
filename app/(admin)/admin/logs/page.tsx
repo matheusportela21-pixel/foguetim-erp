@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw, Search, FileText } from 'lucide-react'
+import { maskEmail } from '@/lib/mask-email'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface ActivityLog {
@@ -159,7 +160,7 @@ export default function AdminLogsPage() {
                   {l.user ? (
                     <>
                       <p className="text-xs font-semibold text-slate-300">{l.user.name || '—'}</p>
-                      <p className="text-[10px] text-slate-600">{l.user.email}</p>
+                      <p className="text-[10px] text-slate-600">{maskEmail(l.user.email)}</p>
                     </>
                   ) : (
                     <span className="text-xs text-slate-700">—</span>

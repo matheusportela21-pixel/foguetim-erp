@@ -150,7 +150,7 @@ export default function NfePage() {
     setRefreshing(false)
   }
 
-  useEffect(() => { load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (userId) load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasCert = !!fiscalCfg?.certificado_path
 
