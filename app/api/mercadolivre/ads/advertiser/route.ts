@@ -1,23 +1,25 @@
 /**
  * GET /api/mercadolivre/ads/advertiser
- * Busca o advertiser_id real via /advertisers/search.
- * Fallback: usa ml_user_id diretamente.
+ * Diagnóstico: testa múltiplos endpoints ML Ads para encontrar o correto.
  */
 import { NextResponse }                      from 'next/server'
 import { getAuthUser }                       from '@/lib/server-auth'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
-const ML_ADS  = 'https://api.mercadolibre.com/advertising/MLB'
-const ML_BASE = 'https://api.mercadolibre.com/advertising'
-
-async function adsGet(token: string, url: string) {
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, 'api-version': '2' },
-  })
-  const text = await res.text()
-  let body: unknown = null
-  try { body = JSON.parse(text) } catch { /* non-JSON */ }
-  return { status: res.status, body, text: text.slice(0, 500) }
+async function probe(token: string, url: string): Promise<{ url: string; status: number; body: string; headers: string }> {
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}`, 'api-version': '2' },
+    })
+    const body = await res.text()
+    const ct = res.headers.get('content-type') ?? ''
+    console.log(`[probe] ${url} → ${res.status} | ct: ${ct} | body: ${body.slice(0, 200)}`)
+    return { url, status: res.status, body: body.slice(0, 400), headers: ct }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error(`[probe] ${url} → error: ${msg}`)
+    return { url, status: -1, body: msg, headers: '' }
+  }
 }
 
 export async function GET() {
@@ -26,75 +28,62 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const conn = await getMLConnection(user.id)
-    if (!conn?.connected) {
-      return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
-    }
+    if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
 
     const token = await getValidToken(user.id)
     if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
-    const mlUserId = conn.ml_user_id
-    if (!mlUserId) {
-      return NextResponse.json({ error: 'ml_user_id não encontrado' }, { status: 400 })
-    }
+    const id = conn.ml_user_id
+    if (!id) return NextResponse.json({ error: 'ml_user_id ausente' }, { status: 400 })
 
-    console.log('[Ads/advertiser] ml_user_id:', mlUserId)
-
-    // ── 1. Tentar busca oficial do advertiser_id ──────────────────────────
-    const searchResult = await adsGet(token, `${ML_ADS}/advertisers/search?user_id=${mlUserId}`)
-    console.log('[Ads/advertiser] search status:', searchResult.status, '| body:', searchResult.text)
-
-    // Também tentar sem prefixo MLB
-    const searchResult2 = await adsGet(token, `${ML_BASE}/advertisers/search?user_id=${mlUserId}`)
-    console.log('[Ads/advertiser] search2 status:', searchResult2.status, '| body:', searchResult2.text)
-
-    // ── 2. Extrair advertiser_id real do search ───────────────────────────
-    type SearchBody = { results?: { advertiser_id?: number | string }[]; advertiser_id?: number | string }
-    let realAdvertiserId: number | string = mlUserId
-
-    const sb = searchResult.body as SearchBody | null
-    if (sb?.results?.[0]?.advertiser_id) {
-      realAdvertiserId = sb.results[0].advertiser_id
-      console.log('[Ads/advertiser] advertiser_id from search:', realAdvertiserId)
-    } else if (sb?.advertiser_id) {
-      realAdvertiserId = sb.advertiser_id
-      console.log('[Ads/advertiser] advertiser_id direct:', realAdvertiserId)
-    } else {
-      const sb2 = searchResult2.body as SearchBody | null
-      if (sb2?.results?.[0]?.advertiser_id) {
-        realAdvertiserId = sb2.results[0].advertiser_id
-        console.log('[Ads/advertiser] advertiser_id from search2:', realAdvertiserId)
-      }
-    }
-
-    // ── 3. Testar campanhas com o advertiser_id encontrado ────────────────
     const today = new Date().toISOString().split('T')[0]
     const from  = new Date(Date.now() - 30 * 86400_000).toISOString().split('T')[0]
 
-    const campTest = await adsGet(
-      token,
-      `${ML_ADS}/advertisers/${realAdvertiserId}/product_ads/campaigns?date_from=${from}&date_to=${today}&limit=1`,
-    )
-    console.log('[Ads/advertiser] campaigns test status:', campTest.status, '| body:', campTest.text)
+    // Testar todos os formatos possíveis de endpoint em paralelo
+    const probes = await Promise.all([
+      // 1. Endpoint sem MLB (base), sem datas
+      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}/product_ads/campaigns`),
+      // 2. Endpoint sem MLB, com datas
+      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}/product_ads/campaigns?date_from=${from}&date_to=${today}`),
+      // 3. Endpoint com MLB, sem datas
+      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns`),
+      // 4. Endpoint com MLB, com datas
+      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns?date_from=${from}&date_to=${today}`),
+      // 5. Search por user_id sem MLB
+      probe(token, `https://api.mercadolibre.com/advertising/advertisers/search?user_id=${id}`),
+      // 6. Usuário ML (scope check)
+      probe(token, `https://api.mercadolibre.com/users/${id}`),
+    ])
 
-    if (campTest.status === 403 || campTest.status === 404) {
-      return NextResponse.json({
-        error:   'NO_ADS_ACCOUNT',
-        message: 'Sem conta de Product Ads ou sem permissão',
-        debug:   { mlUserId, realAdvertiserId, searchStatus: searchResult.status, campStatus: campTest.status, campBody: campTest.text },
-      })
+    // Encontrar o primeiro que retornou dados úteis (status 200 + body não vazio)
+    const working = probes.find(p => p.status === 200 && p.body.trim().length > 2)
+
+    if (working?.body.includes('"results"') || working?.body.includes('"id"')) {
+      // Extrair advertiser_id do resultado, se possível
+      try {
+        const parsed = JSON.parse(working.body) as { results?: { advertiser_id?: number }[]; advertiser_id?: number }
+        const advertiserId = parsed.results?.[0]?.advertiser_id ?? parsed.advertiser_id ?? id
+        return NextResponse.json({
+          advertiser_id:   advertiserId,
+          advertiser_name: '',
+          account_name:    '',
+          site_id:         'MLB',
+          debug:           { id, probes },
+        })
+      } catch { /* continue */ }
     }
 
+    // Retornar diagnóstico completo mesmo sem dados
     return NextResponse.json({
-      advertiser_id:   realAdvertiserId,
+      advertiser_id:   id,
       advertiser_name: '',
       account_name:    '',
       site_id:         'MLB',
-      debug:           { mlUserId, realAdvertiserId, searchStatus: searchResult.status, campStatus: campTest.status, campBody: campTest.text },
+      debug:           { id, probes },
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[Ads/advertiser] unhandled error:', msg)
+    console.error('[Ads/advertiser] error:', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
