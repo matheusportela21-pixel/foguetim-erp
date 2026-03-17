@@ -42,6 +42,10 @@ export async function GET() {
     return NextResponse.json({ promotions, total: data.paging?.total ?? promotions.length })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
+    // ML retorna 404 quando o vendedor não tem promoções — tratar como lista vazia
+    if (msg.includes('404')) {
+      return NextResponse.json({ promotions: [], total: 0 })
+    }
     console.error('[promocoes] GET error:', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
