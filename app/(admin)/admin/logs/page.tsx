@@ -17,17 +17,19 @@ interface ActivityLog {
 }
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
-const CATEGORY_COLORS: Record<string, string> = {
-  auth:        'text-blue-400',
-  products:    'text-orange-400',
-  integrations:'text-green-400',
-  financial:   'text-purple-400',
-  settings:    'text-slate-400',
-  admin:       'text-red-400',
-  support:     'text-cyan-400',
+const CATEGORY_CFG: Record<string, { color: string; icon: string; label: string }> = {
+  auth:          { color: 'text-blue-400',   icon: '🔐', label: 'Auth'         },
+  products:      { color: 'text-orange-400', icon: '✏️',  label: 'Produtos'     },
+  integrations:  { color: 'text-green-400',  icon: '🔗', label: 'Integrações'  },
+  financial:     { color: 'text-purple-400', icon: '💳', label: 'Financeiro'   },
+  settings:      { color: 'text-slate-400',  icon: '⚙️',  label: 'Config.'      },
+  admin:         { color: 'text-red-400',    icon: '🔧', label: 'Admin'        },
+  support:       { color: 'text-cyan-400',   icon: '🎧', label: 'Suporte'      },
+  error:         { color: 'text-red-400',    icon: '⚠️',  label: 'Erro'         },
+  impersonation: { color: 'text-yellow-400', icon: '👤', label: 'Impersonação' },
 }
 
-const CATEGORIES = ['auth', 'products', 'integrations', 'financial', 'settings', 'admin', 'support']
+const CATEGORIES = Object.keys(CATEGORY_CFG)
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
@@ -110,9 +112,10 @@ export default function AdminLogsPage() {
         <select value={category} onChange={e => { setCategory(e.target.value); setPage(1) }}
           className="px-3 py-2 text-sm bg-[#111318] border border-white/[0.08] rounded-lg text-slate-400 focus:outline-none">
           <option value="">Todas as categorias</option>
-          {CATEGORIES.map(c => (
-            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-          ))}
+          {CATEGORIES.map(c => {
+            const cfg = CATEGORY_CFG[c]
+            return <option key={c} value={c}>{cfg.icon} {cfg.label}</option>
+          })}
         </select>
       </div>
 
@@ -163,9 +166,14 @@ export default function AdminLogsPage() {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs font-medium ${CATEGORY_COLORS[l.category] ?? 'text-slate-500'}`}>
-                    {l.category}
-                  </span>
+                  {(() => {
+                    const cfg = CATEGORY_CFG[l.category]
+                    return (
+                      <span className={`text-xs font-medium ${cfg?.color ?? 'text-slate-500'}`}>
+                        {cfg?.icon} {cfg?.label ?? l.category}
+                      </span>
+                    )
+                  })()}
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-600 font-mono">
                   {l.ip_address || '—'}

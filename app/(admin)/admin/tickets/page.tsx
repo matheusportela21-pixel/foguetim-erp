@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Ticket, Clock, CheckCircle2, AlertTriangle, Circle, ChevronDown } from 'lucide-react'
+import { RefreshCw, Ticket, Clock, CheckCircle2, Circle, ChevronDown } from 'lucide-react'
+import { SLAIndicator } from '@/components/admin/SLAIndicator'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type TicketStatus   = 'open' | 'in_progress' | 'waiting_user' | 'resolved' | 'closed'
@@ -190,11 +191,10 @@ export default function AdminTicketsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {t.priority !== 'medium' && (
-                    <span className={`text-[10px] font-bold ${priorityCfg.color}`}>
-                      {priorityCfg.label}
-                    </span>
-                  )}
+                  <SLAIndicator priority={t.priority} createdAt={t.created_at} status={t.status} />
+                  <span className={`text-[10px] font-bold ${priorityCfg.color}`}>
+                    {priorityCfg.label}
+                  </span>
                   {t.assignee && (
                     <span className="text-[10px] text-slate-500">{t.assignee.name}</span>
                   )}

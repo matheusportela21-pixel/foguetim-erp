@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Users, UserCheck, UserPlus, TrendingDown,
   Plug, PlugZap, RefreshCw, Calendar,
+  Ticket, AlertCircle, FlaskConical,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
@@ -14,6 +15,7 @@ interface StatsData {
     active_30d: number
     new_today:  number
     new_month:  number
+    trial:      number
   }
   plans: Record<string, number>
   health: {
@@ -21,6 +23,8 @@ interface StatsData {
     cancel_rate_pct: number
     ml_connected:    number
     no_integration:  number
+    open_tickets:    number
+    tickets_today:   number
   }
   recent_users:   RecentUser[]
   recent_cancels: RecentCancel[]
@@ -140,10 +144,10 @@ export default function AdminPage() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Usuários</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard icon={Users}    label="Total cadastrados" value={data.users.total}      color="text-white" />
-              <KpiCard icon={UserCheck} label="Ativos (30 dias)"  value={data.users.active_30d} color="text-green-400" />
-              <KpiCard icon={UserPlus}  label="Novos hoje"        value={data.users.new_today}  color="text-blue-400" />
-              <KpiCard icon={Calendar}  label="Novos este mês"    value={data.users.new_month}  color="text-purple-400" />
+              <KpiCard icon={Users}       label="Total cadastrados" value={data.users.total}      color="text-white" />
+              <KpiCard icon={UserCheck}   label="Ativos (30 dias)"  value={data.users.active_30d} color="text-green-400" />
+              <KpiCard icon={UserPlus}    label="Novos hoje"        value={data.users.new_today}  color="text-blue-400" />
+              <KpiCard icon={FlaskConical} label="Contas trial"     value={data.users.trial ?? 0} color="text-cyan-400" sub="plano explorador" />
             </div>
           </section>
 
@@ -195,10 +199,16 @@ export default function AdminPage() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Saúde do Sistema</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard icon={TrendingDown} label="Cancelamentos/mês" value={data.health.cancel_month}    color="text-red-400" />
+              <KpiCard icon={TrendingDown} label="Cancelamentos/mês" value={data.health.cancel_month}         color="text-red-400" />
               <KpiCard icon={TrendingDown} label="Taxa cancelamento"  value={`${data.health.cancel_rate_pct}%`} color="text-orange-400" />
-              <KpiCard icon={Plug}        label="ML conectado"       value={data.health.ml_connected}    color="text-green-400" />
-              <KpiCard icon={PlugZap}     label="Sem integração"     value={data.health.no_integration}  color="text-slate-400" />
+              <KpiCard icon={Plug}         label="ML conectado"       value={data.health.ml_connected}         color="text-green-400" />
+              <KpiCard icon={PlugZap}      label="Sem integração"     value={data.health.no_integration}       color="text-slate-400" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KpiCard icon={Ticket}       label="Tickets abertos"   value={data.health.open_tickets ?? 0}    color="text-blue-400" />
+              <KpiCard icon={AlertCircle}  label="Tickets hoje"      value={data.health.tickets_today ?? 0}   color="text-yellow-400" />
+              <KpiCard icon={Calendar}     label="Novos este mês"    value={data.users.new_month}             color="text-purple-400" />
+              <KpiCard icon={UserCheck}    label="Ativos (30 dias)"  value={data.users.active_30d}            color="text-green-400" sub={`${data.users.total > 0 ? Math.round((data.users.active_30d / data.users.total) * 100) : 0}% do total`} />
             </div>
           </section>
 

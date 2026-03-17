@@ -23,7 +23,7 @@ function fmtDate(iso: string) {
 }
 
 const ROLE_ICONS: Partial<Record<FoguetimRole, React.ElementType>> = {
-  owner: Crown,
+  super_admin: Crown,
 }
 
 /* ── Component ───────────────────────────────────────────────────────────── */
@@ -37,7 +37,7 @@ export default function AdminEquipePage() {
   // Invite form
   const [invEmail, setInvEmail] = useState('')
   const [invName, setInvName]   = useState('')
-  const [invRole, setInvRole]   = useState<FoguetimRole>('viewer')
+  const [invRole, setInvRole]   = useState<FoguetimRole>('support_junior')
   const [invNotes, setInvNotes] = useState('')
   const [inviting, setInviting] = useState(false)
 
@@ -69,7 +69,7 @@ export default function AdminEquipePage() {
     if (res.ok) {
       setMsg({ ok: true, text: 'Membro adicionado com sucesso!' })
       setShowInvite(false)
-      setInvEmail(''); setInvName(''); setInvRole('viewer'); setInvNotes('')
+      setInvEmail(''); setInvName(''); setInvRole('support_junior'); setInvNotes('')
       load()
     } else {
       setMsg({ ok: false, text: `Erro: ${data.error}` })
@@ -172,7 +172,7 @@ export default function AdminEquipePage() {
             ) : filtered.map(m => {
               const cfg = ROLE_LABELS[m.role]
               const RoleIcon = ROLE_ICONS[m.role]
-              const isOwner  = m.role === 'owner'
+              const isOwner  = m.role === 'super_admin'
               return (
                 <tr key={m.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-4 py-3">
@@ -210,7 +210,7 @@ export default function AdminEquipePage() {
                           onChange={e => handleRoleChange(m.id, e.target.value as FoguetimRole)}
                           className="px-2 py-1 text-xs bg-[#1a1f2e] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
                         >
-                          {ROLES.filter(r => r !== 'owner').map(r => (
+                          {ROLES.filter(r => r !== 'super_admin').map(r => (
                             <option key={r} value={r}>{ROLE_LABELS[r].label}</option>
                           ))}
                         </select>
@@ -282,7 +282,7 @@ export default function AdminEquipePage() {
                 <label className="block text-xs text-slate-500 mb-1">Cargo *</label>
                 <select value={invRole} onChange={e => setInvRole(e.target.value as FoguetimRole)}
                   className="w-full px-3 py-2 text-sm bg-[#1a1f2e] border border-white/[0.1] rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/40">
-                  {ROLES.filter(r => r !== 'owner').map(r => (
+                  {ROLES.filter(r => r !== 'super_admin').map(r => (
                     <option key={r} value={r}>{ROLE_LABELS[r].label} — {ROLE_LABELS[r].description}</option>
                   ))}
                 </select>

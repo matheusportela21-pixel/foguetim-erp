@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Users, CreditCard, XCircle,
-  FileText, Bell, Settings, LogOut, Shield, ChevronRight,
-  Ticket, UserCog,
+  LayoutDashboard, Users, XCircle,
+  FileText, Bell, LogOut, Shield, ChevronRight,
+  Ticket, UserCog, Wrench,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
@@ -19,6 +19,7 @@ const NAV = [
   { href: '/admin/cancelamentos', icon: XCircle,         label: 'Cancelamentos'    },
   { href: '/admin/notificacoes',  icon: Bell,            label: 'Notificações'     },
   { href: '/admin/logs',          icon: FileText,        label: 'Logs do Sistema'  },
+  { href: '/admin/ferramentas',   icon: Wrench,          label: 'Ferramentas'      },
 ]
 
 function AdminSidebar() {
