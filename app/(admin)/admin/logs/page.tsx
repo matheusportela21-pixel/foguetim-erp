@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { RefreshCw, Search, FileText } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import {
+  RefreshCw, Search, FileText,
+  Lock, Pencil, Link, CreditCard, Settings, Wrench, Headphones, AlertTriangle, UserCog,
+} from 'lucide-react'
 import { maskEmail } from '@/lib/mask-email'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -18,16 +21,16 @@ interface ActivityLog {
 }
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
-const CATEGORY_CFG: Record<string, { color: string; icon: string; label: string }> = {
-  auth:          { color: 'text-blue-400',   icon: '🔐', label: 'Auth'         },
-  products:      { color: 'text-orange-400', icon: '✏️',  label: 'Produtos'     },
-  integrations:  { color: 'text-green-400',  icon: '🔗', label: 'Integrações'  },
-  financial:     { color: 'text-purple-400', icon: '💳', label: 'Financeiro'   },
-  settings:      { color: 'text-slate-400',  icon: '⚙️',  label: 'Config.'      },
-  admin:         { color: 'text-red-400',    icon: '🔧', label: 'Admin'        },
-  support:       { color: 'text-cyan-400',   icon: '🎧', label: 'Suporte'      },
-  error:         { color: 'text-red-400',    icon: '⚠️',  label: 'Erro'         },
-  impersonation: { color: 'text-yellow-400', icon: '👤', label: 'Impersonação' },
+const CATEGORY_CFG: Record<string, { color: string; icon: React.ElementType; label: string }> = {
+  auth:          { color: 'text-blue-400',   icon: Lock,          label: 'Auth'         },
+  products:      { color: 'text-orange-400', icon: Pencil,        label: 'Produtos'     },
+  integrations:  { color: 'text-green-400',  icon: Link,          label: 'Integrações'  },
+  financial:     { color: 'text-purple-400', icon: CreditCard,    label: 'Financeiro'   },
+  settings:      { color: 'text-slate-400',  icon: Settings,      label: 'Config.'      },
+  admin:         { color: 'text-red-400',    icon: Wrench,        label: 'Admin'        },
+  support:       { color: 'text-cyan-400',   icon: Headphones,    label: 'Suporte'      },
+  error:         { color: 'text-red-400',    icon: AlertTriangle, label: 'Erro'         },
+  impersonation: { color: 'text-yellow-400', icon: UserCog,       label: 'Impersonação' },
 }
 
 const CATEGORIES = Object.keys(CATEGORY_CFG)
@@ -121,7 +124,7 @@ export default function AdminLogsPage() {
           <option value="">Todas as categorias</option>
           {CATEGORIES.map(c => {
             const cfg = CATEGORY_CFG[c]
-            return <option key={c} value={c}>{cfg.icon} {cfg.label}</option>
+            return <option key={c} value={c}>{cfg.label}</option>
           })}
         </select>
       </div>
@@ -176,8 +179,9 @@ export default function AdminLogsPage() {
                   {(() => {
                     const cfg = CATEGORY_CFG[l.category]
                     return (
-                      <span className={`text-xs font-medium ${cfg?.color ?? 'text-slate-500'}`}>
-                        {cfg?.icon} {cfg?.label ?? l.category}
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium ${cfg?.color ?? 'text-slate-500'}`}>
+                        {cfg?.icon && <cfg.icon className="w-3 h-3" />}
+                        {cfg?.label ?? l.category}
                       </span>
                     )
                   })()}

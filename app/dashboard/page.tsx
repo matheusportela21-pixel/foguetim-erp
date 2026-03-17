@@ -97,6 +97,15 @@ function KpiSkeleton() {
   )
 }
 
+/* ── KPI Tooltip ───────────────────────────────────────────────────────── */
+function KpiTooltip({ text }: { text: string }) {
+  return (
+    <div className="absolute bottom-full left-0 mb-1.5 px-2.5 py-1.5 rounded-lg bg-[#1a1f2e] border border-white/[0.10] text-[11px] text-slate-300 whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl">
+      {text}
+    </div>
+  )
+}
+
 /* ── Page ──────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const [infoTab, setInfoTab]   = useState<'avisos' | 'updates'>('avisos')
@@ -253,15 +262,18 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
             {[
-              { label: 'Faturamento 30d',   value: revenue,  sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro' },
-              { label: 'Pedidos 30d',       value: orders,   sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos'    },
-              { label: 'Anúncios Ativos',   value: active,   sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos'   },
-              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Ver Central Pós-Venda' : 'Nenhuma pendente', icon: MessageSquare, color: questions > 0 ? 'text-orange-400 bg-orange-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/pos-venda' },
+              { label: 'Faturamento 30d',   value: revenue,   sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro', tooltip: 'Receita bruta dos últimos 30 dias no Mercado Livre' },
+              { label: 'Pedidos 30d',       value: orders,    sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos',    tooltip: 'Total de pedidos recebidos nos últimos 30 dias' },
+              { label: 'Anúncios Ativos',   value: active,    sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos',   tooltip: 'Total de anúncios ativos sincronizados' },
+              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Ver Central Pós-Venda' : 'Nenhuma pendente', icon: MessageSquare, color: questions > 0 ? 'text-orange-400 bg-orange-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/pos-venda', tooltip: 'Perguntas não respondidas dos seus compradores no ML' },
             ].map(k => (
               <Link key={k.label} href={k.href}
                 className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight">{k.label}</p>
+                  <div className="relative">
+                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
+                    <KpiTooltip text={k.tooltip} />
+                  </div>
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
                     <k.icon className="w-3.5 h-3.5" />
                   </div>

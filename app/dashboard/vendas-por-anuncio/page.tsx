@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import Header from '@/components/Header'
+import ExportCSVButton from '@/components/ExportCSVButton'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -244,6 +245,21 @@ export default function VendasPorAnuncioPage() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+
+          <ExportCSVButton
+            data={data as unknown as Record<string, unknown>[]}
+            filename="vendas-por-anuncio"
+            columns={[
+              { key: 'item_id',         label: 'ID Anúncio'      },
+              { key: 'title',           label: 'Título'          },
+              { key: 'total_vendas',    label: 'Qtd Vendas'      },
+              { key: 'receita_bruta',   label: 'Receita Bruta'   },
+              { key: 'taxas_ml',        label: 'Taxas ML'        },
+              { key: 'receita_liquida', label: 'Receita Líquida' },
+              { key: 'ticket_medio',    label: 'Ticket Médio'    },
+              { key: 'participacao',    label: 'Participação %'  },
+            ]}
+          />
 
           {!loading && totalPedidos > 0 && (
             <span className="text-xs text-slate-600">

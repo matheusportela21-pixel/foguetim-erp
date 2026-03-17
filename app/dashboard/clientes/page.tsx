@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Link from 'next/link'
 import {
   Users, Search, Star, RefreshCw, X, ChevronDown,
   ShoppingBag, TrendingUp, UserCheck, Loader2, AlertCircle,
   Plus, Trash2, Package, MapPin, Clock, Calendar,
-  Zap, RotateCcw,
+  Zap, RotateCcw, ExternalLink,
 } from 'lucide-react'
 import Header from '@/components/Header'
 
@@ -395,6 +396,23 @@ function CustomerRow({ c, onClick }: { c: Customer; onClick: () => void }) {
           )}
         </div>
       </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Link href="/dashboard/pedidos"
+            className="text-[10px] text-slate-500 hover:text-purple-400 transition-colors whitespace-nowrap"
+            onClick={e => e.stopPropagation()}>
+            Ver pedidos
+          </Link>
+          {c.nickname && (
+            <a href={`https://www.mercadolibre.com/perfil/${c.nickname}`}
+              target="_blank" rel="noopener noreferrer"
+              className="text-[10px] text-slate-500 hover:text-cyan-400 transition-colors"
+              onClick={e => e.stopPropagation()}>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+      </td>
     </tr>
   )
 }
@@ -635,18 +653,20 @@ export default function ClientesPage() {
 
         {/* ── Empty state ──────────────────────────────────────────────────── */}
         {isEmpty && (
-          <div className="dash-card rounded-2xl p-12 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-dark-700 border border-white/[0.06] flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-slate-700" />
+          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
+              <Users className="w-6 h-6 text-slate-600" />
             </div>
-            <p className="text-sm font-semibold text-slate-400 mb-2">Seus clientes aparecerão aqui</p>
-            <p className="text-xs text-slate-600 max-w-xs mb-5">
-              Clique em "Sincronizar com ML" para importar seus compradores dos últimos 90 dias.
-            </p>
+            <div className="max-w-sm">
+              <p className="text-sm font-semibold text-slate-300 mb-1">Nenhum cliente encontrado</p>
+              <p className="text-xs text-slate-500">
+                Seus clientes aparecerão aqui após suas primeiras vendas no Mercado Livre. Sincronize para importar compradores.
+              </p>
+            </div>
             <button onClick={handleSync} disabled={syncing}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold text-white transition-all disabled:opacity-50">
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Sincronizando...' : 'Sincronizar agora'}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600/20 text-purple-400 text-xs font-bold hover:bg-purple-600/30 transition-colors border border-purple-600/30">
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              Sincronizar clientes
             </button>
           </div>
         )}
@@ -655,8 +675,36 @@ export default function ClientesPage() {
         {!isEmpty && (
           <div className="dash-card rounded-2xl overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-white/[0.06] text-left">
+                      {['Cliente', 'Cidade', 'Pedidos', 'Total gasto', 'Ticket médio', 'Último pedido', 'Rating', 'Tags', ''].map(h => (
+                        <th key={h} className={`px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${['Pedidos', 'Total gasto', 'Ticket médio'].includes(h) ? 'text-right' : ''}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-white/[0.06]" />
+                            <div className="h-3 bg-white/[0.06] rounded w-28" />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-16" /></td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-8 ml-auto" /></td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-20 ml-auto" /></td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-16 ml-auto" /></td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-16" /></td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-20" /></td>
+                        <td className="px-4 py-3"><div className="h-3 bg-white/[0.06] rounded w-12" /></td>
+                        <td className="px-4 py-3" />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : customers.length === 0 ? (
               <div className="flex flex-col items-center text-center py-16">
@@ -669,7 +717,7 @@ export default function ClientesPage() {
                   <table className="w-full text-sm min-w-[700px]">
                     <thead>
                       <tr className="border-b border-white/[0.06] text-left">
-                        {['Cliente', 'Cidade', 'Pedidos', 'Total gasto', 'Ticket médio', 'Último pedido', 'Rating', 'Tags'].map(h => (
+                        {['Cliente', 'Cidade', 'Pedidos', 'Total gasto', 'Ticket médio', 'Último pedido', 'Rating', 'Tags', ''].map(h => (
                           <th key={h} className={`px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${['Pedidos', 'Total gasto', 'Ticket médio'].includes(h) ? 'text-right' : ''}`}>{h}</th>
                         ))}
                       </tr>

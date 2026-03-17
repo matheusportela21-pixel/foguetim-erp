@@ -12,6 +12,7 @@ import {
   BarChart2, Zap, Calendar, ShoppingCart, DollarSign,
   AlertCircle, Link2, Star, Clock,
 } from 'lucide-react'
+import Link from 'next/link'
 import Header from '@/components/Header'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
@@ -303,7 +304,7 @@ export default function PerformancePage() {
               ) : (
                 <>
                   {/* Receita Bruta */}
-                  <div className="dash-card rounded-2xl p-5">
+                  <Link href="/dashboard/financeiro" className="dash-card rounded-2xl p-5 hover:border-violet-600/20 transition-all">
                     <div className="flex items-center gap-2 mb-3">
                       <DollarSign className="w-4 h-4 text-violet-400 shrink-0" />
                       <p className="text-xs text-slate-500 truncate">Receita Bruta</p>
@@ -315,10 +316,10 @@ export default function PerformancePage() {
                       <VarBadge pct={summary?.variacao_receita ?? 0} />
                       <span className="text-[11px] text-slate-600">vs período anterior</span>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Total Pedidos */}
-                  <div className="dash-card rounded-2xl p-5">
+                  <Link href="/dashboard/pedidos" className="dash-card rounded-2xl p-5 hover:border-blue-600/20 transition-all">
                     <div className="flex items-center gap-2 mb-3">
                       <ShoppingCart className="w-4 h-4 text-blue-400 shrink-0" />
                       <p className="text-xs text-slate-500 truncate">Total de Pedidos</p>
@@ -330,10 +331,10 @@ export default function PerformancePage() {
                       <VarBadge pct={summary?.variacao_pedidos ?? 0} />
                       <span className="text-[11px] text-slate-600">vs período anterior</span>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Ticket Médio */}
-                  <div className="dash-card rounded-2xl p-5">
+                  <Link href="/dashboard/pedidos" className="dash-card rounded-2xl p-5 hover:border-cyan-600/20 transition-all">
                     <div className="flex items-center gap-2 mb-3">
                       <Star className="w-4 h-4 text-cyan-400 shrink-0" />
                       <p className="text-xs text-slate-500 truncate">Ticket Médio</p>
@@ -344,7 +345,7 @@ export default function PerformancePage() {
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] text-slate-600">por pedido</span>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Melhor Dia */}
                   <div className="dash-card rounded-2xl p-5">

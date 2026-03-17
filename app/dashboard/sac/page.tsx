@@ -121,7 +121,7 @@ function MLQuestionsTab() {
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
         <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20">
-          Responder — Em breve
+          Responda diretamente no ML
         </span>
       </div>
 
@@ -225,7 +225,7 @@ function MLQuestionsTab() {
                     <div className="flex items-center gap-2 mb-3">
                       <HelpCircle className="w-4 h-4 text-amber-400" />
                       <p className="text-xs font-semibold text-white">Responder esta pergunta</p>
-                      <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">Em breve</span>
+                      <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">Via ML</span>
                     </div>
                     <button
                       onClick={suggestSACResponse}
@@ -254,11 +254,11 @@ function MLQuestionsTab() {
                       </div>
                     )}
                     <textarea disabled
-                      placeholder="Funcionalidade de resposta estará disponível em breve..."
+                      placeholder="Use a sugestão de IA acima e responda diretamente no Mercado Livre."
                       className="w-full bg-dark-800/50 border border-white/[0.06] rounded-xl p-3 text-xs text-slate-500 resize-none h-20 cursor-not-allowed opacity-50" />
                     <button disabled
                       className="mt-2 px-4 py-2 rounded-xl bg-purple-600/30 text-purple-400 text-xs font-bold cursor-not-allowed opacity-50 flex items-center gap-1.5">
-                      <Send className="w-3.5 h-3.5" /> Responder (em breve)
+                      <Send className="w-3.5 h-3.5" /> Responder via ML
                     </button>
                   </div>
                 )}

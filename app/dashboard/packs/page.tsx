@@ -295,11 +295,20 @@ export default function PacksPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-[#111318] border border-white/[0.06] rounded-xl p-10 flex flex-col items-center gap-2 text-center">
-            <AlertCircle className="w-8 h-8 text-slate-700" />
-            <p className="text-sm text-slate-500">
-              {search ? 'Nenhum pack encontrado para esta busca' : `Nenhum pack nos últimos ${days} dias`}
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
+              <Package className="w-6 h-6 text-slate-600" />
+            </div>
+            <div className="max-w-sm">
+              <p className="text-sm font-semibold text-slate-300 mb-1">
+                {search ? 'Nenhum pack encontrado para esta busca' : 'Nenhum pack encontrado'}
+              </p>
+              <p className="text-xs text-slate-500">
+                {search
+                  ? 'Tente buscar por outro comprador, produto ou número de pack.'
+                  : 'Packs são criados automaticamente pelo Mercado Livre quando um comprador faz múltiplas compras em um mesmo pedido. Eles aparecem aqui automaticamente.'}
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

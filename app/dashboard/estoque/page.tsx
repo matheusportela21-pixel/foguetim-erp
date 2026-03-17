@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
+import ExportCSVButton from '@/components/ExportCSVButton'
 import {
   AlertTriangle, Package, RefreshCw, Search, ExternalLink,
   CheckCircle2, Loader2, Link2, Archive,
@@ -205,6 +206,18 @@ export default function EstoquePage() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+
+          <ExportCSVButton
+            data={items as unknown as Record<string, unknown>[]}
+            filename="estoque"
+            columns={[
+              { key: 'item_id',            label: 'ID Anúncio' },
+              { key: 'title',              label: 'Título'      },
+              { key: 'stock',              label: 'Estoque'     },
+              { key: 'level',              label: 'Nível'       },
+              { key: 'seller_sku',         label: 'SKU'         },
+            ]}
+          />
         </div>
 
         {/* ── Table ─────────────────────────────────────────────────────── */}
