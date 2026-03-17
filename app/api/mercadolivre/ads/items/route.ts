@@ -1,7 +1,6 @@
 /**
  * GET /api/mercadolivre/ads/items?limit=&offset=
  * Lista anúncios no Product Ads. advertiser_id = ml_user_id da conexão.
- * Header api-version: 2 obrigatório.
  */
 import { NextRequest, NextResponse }         from 'next/server'
 import { getAuthUser }                       from '@/lib/server-auth'
@@ -37,24 +36,29 @@ interface AdsItemsResponse {
   paging?:  { total: number; limit: number; offset: number }
 }
 
+const EMPTY = (limit: number, offset: number) => ({
+  items: [] as MlAdsItem[],
+  paging: { total: 0, limit, offset },
+})
+
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const conn = await getMLConnection(user.id)
-  if (!conn?.connected) {
-    return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
-  }
-
-  const token = await getValidToken(user.id)
-  if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
   const { searchParams } = req.nextUrl
-  const limit  = searchParams.get('limit')  ?? '50'
-  const offset = searchParams.get('offset') ?? '0'
-  const advertiserId = conn.ml_user_id
+  const limit  = Number(searchParams.get('limit')  ?? '50')
+  const offset = Number(searchParams.get('offset') ?? '0')
 
   try {
+    const user = await getAuthUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const conn = await getMLConnection(user.id)
+    if (!conn?.connected) return NextResponse.json(EMPTY(limit, offset))
+
+    const token = await getValidToken(user.id)
+    if (!token) return NextResponse.json(EMPTY(limit, offset))
+
+    const advertiserId = conn.ml_user_id
+    if (!advertiserId) return NextResponse.json(EMPTY(limit, offset))
+
     const res = await fetch(
       `${ML_ADS}/advertisers/${advertiserId}/product_ads/ads/search?limit=${limit}&offset=${offset}`,
       { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
@@ -63,15 +67,15 @@ export async function GET(req: NextRequest) {
     console.log('[ads/items GET] status:', res.status, '| body:', rawText.slice(0, 300))
 
     let data: AdsItemsResponse = {}
-    try { data = JSON.parse(rawText) as AdsItemsResponse } catch { /* non-JSON body */ }
+    try { data = JSON.parse(rawText) as AdsItemsResponse } catch { /* non-JSON */ }
 
     return NextResponse.json({
       items:  data.results ?? [],
-      paging: data.paging  ?? { total: 0, limit: Number(limit), offset: Number(offset) },
+      paging: data.paging  ?? { total: 0, limit, offset },
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[ads/items GET]', msg)
-    return NextResponse.json({ items: [], paging: { total: 0, limit: Number(limit), offset: Number(offset) } })
+    return NextResponse.json(EMPTY(limit, offset))
   }
 }
