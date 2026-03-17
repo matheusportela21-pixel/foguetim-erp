@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
-  AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink,
+  AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -31,7 +31,8 @@ const navGroups: NavGroup[] = [
     label: 'Operação',
     items: [
       { href: '/dashboard/pedidos',      icon: ShoppingCart,    label: 'Pedidos'                 },
-      { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',          badge: 'Novo'  },
+      { href: '/dashboard/pos-venda',     icon: MessageSquare,   label: 'Pós-Venda',    badge: 'Novo'  },
+      { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',                        },
       { href: '/dashboard/reclamacoes',  icon: AlertTriangle,   label: 'Reclamações'                },
       { href: '/dashboard/expedicao',    icon: Send,            label: 'Expedição', badge: 'Dev'  },
       { href: '/dashboard/nfe',          icon: FileCheck,       label: 'NF-e'                  },
@@ -210,6 +211,7 @@ export default function Sidebar() {
                 ).map(({ href, icon: Icon, label, badge }) => {
                   const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
                   const isReclamacoes = href === '/dashboard/reclamacoes'
+                  const isPosVenda    = href === '/dashboard/pos-venda'
                   return (
                     <li key={href}>
                       <Link
@@ -230,6 +232,11 @@ export default function Sidebar() {
                         )}
                         {isReclamacoes && claimCount > 0 && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-900/40 text-red-400 ring-1 ring-red-700/40 animate-pulse">
+                            {claimCount}
+                          </span>
+                        )}
+                        {isPosVenda && claimCount > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-900/40 text-orange-400 ring-1 ring-orange-700/40 animate-pulse">
                             {claimCount}
                           </span>
                         )}

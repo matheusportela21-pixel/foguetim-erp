@@ -7,7 +7,7 @@ import {
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
-  Shield, ChevronRight,
+  Shield, ChevronRight, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
@@ -195,7 +195,7 @@ export default function DashboardPage() {
               { label: 'Faturamento 30d',   value: revenue,  sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro' },
               { label: 'Pedidos 30d',       value: orders,   sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos'    },
               { label: 'Anúncios Ativos',   value: active,   sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos'   },
-              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Responder no SAC' : 'Nenhuma pendente', icon: MessageCircle, color: questions > 0 ? 'text-red-400 bg-red-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/sac' },
+              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Ver Central Pós-Venda' : 'Nenhuma pendente', icon: MessageSquare, color: questions > 0 ? 'text-orange-400 bg-orange-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/pos-venda' },
             ].map(k => (
               <Link key={k.label} href={k.href}
                 className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
