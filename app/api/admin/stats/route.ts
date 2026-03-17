@@ -40,7 +40,7 @@ export async function GET() {
     db.from('cancellation_requests').select('id', { count: 'exact', head: true }).gte('created_at', bom),
     db.from('marketplace_connections')
       .select('user_id', { count: 'exact', head: true })
-      .eq('marketplace', 'mercadolibre')
+      .eq('marketplace', 'mercadolivre')
       .eq('connected', true),
     db.from('users')
       .select('id, name, email, plan, role, created_at, cancelled_at')

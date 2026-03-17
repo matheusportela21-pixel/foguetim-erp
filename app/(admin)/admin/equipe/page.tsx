@@ -102,7 +102,11 @@ export default function AdminEquipePage() {
           <h1 className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
             Equipe Foguetim
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">{members.length} membro(s) na equipe interna</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {loading
+              ? <span className="inline-block h-3.5 w-28 bg-slate-700 animate-pulse rounded align-middle" />
+              : `${members.length} membro(s) na equipe interna`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} disabled={loading}

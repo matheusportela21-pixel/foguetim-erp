@@ -324,7 +324,11 @@ export default function AdminUsuariosPage() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Usuários</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{total} usuários cadastrados</p>
+        <p className="text-sm text-slate-500 mt-0.5">
+          {loading
+            ? <span className="inline-block h-3.5 w-28 bg-slate-700 animate-pulse rounded align-middle" />
+            : `${total} usuários cadastrados`}
+        </p>
       </div>
 
       {/* Filters */}

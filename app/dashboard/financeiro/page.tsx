@@ -1,19 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import {
-  DollarSign, TrendingUp, TrendingDown, ArrowUpRight,
-  ArrowDownRight, CreditCard, Wallet, BarChart3,
+  DollarSign, TrendingUp, TrendingDown, CreditCard, Wallet, BarChart3, Loader2, Link2,
 } from 'lucide-react'
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface FinanceiroData {
+  connected:        boolean
+  pedidos:          number
+  receita_bruta:    number
+  taxas_ml:         number
+  receita_liquida:  number
+  ticket_medio:     number
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const fmtBRL = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 function KpiCard({
-  title, value, icon: Icon, color,
+  title, value, sub, icon: Icon, color, loading,
 }: {
-  title: string; value: string;
+  title: string; value: string; sub?: string;
   icon: React.ElementType; color: 'blue' | 'green' | 'red' | 'purple'
+  loading?: boolean
 }) {
   const colorMap = {
     blue:   'from-neon-blue/20   to-transparent border-neon-blue/20   text-neon-blue',
@@ -26,9 +42,13 @@ function KpiCard({
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-xl bg-gradient-to-br ${colorMap[color]}`}><Icon className="w-4 h-4" /></div>
       </div>
-      <p className="text-2xl font-bold text-white font-mono">{value}</p>
+      {loading ? (
+        <div className="h-8 w-28 bg-white/[0.06] animate-pulse rounded mb-1" />
+      ) : (
+        <p className="text-2xl font-bold text-white font-mono">{value}</p>
+      )}
       <p className="text-xs text-slate-400 mt-1">{title}</p>
-      <p className="text-[10px] text-slate-600 font-mono mt-0.5">Nenhum dado ainda</p>
+      {sub && <p className="text-[10px] text-slate-600 font-mono mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -45,8 +65,21 @@ function EmptyChart({ message }: { message: string }) {
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function Financeiro() {
-  const [period, setPeriod] = useState<'mes' | 'trimestre' | 'ano'>('mes')
-  const [view, setView] = useState<'visao-geral' | 'plataformas' | 'fluxo'>('visao-geral')
+  const [period,  setPeriod]  = useState<'mes' | 'trimestre' | 'ano'>('mes')
+  const [view,    setView]    = useState<'visao-geral' | 'plataformas' | 'fluxo'>('visao-geral')
+  const [data,    setData]    = useState<FinanceiroData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/mercadolivre/financeiro?period=${period}`)
+      .then(r => r.json())
+      .then((d: FinanceiroData) => setData(d))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [period])
+
+  const connected = data?.connected ?? false
 
   return (
     <div className="min-h-screen">
@@ -89,13 +122,59 @@ export default function Financeiro() {
           </div>
         </div>
 
+        {/* ML não conectado */}
+        {!loading && !connected && (
+          <div className="flex flex-col items-center justify-center gap-4 mt-16">
+            <div className="w-14 h-14 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
+              <Link2 className="w-6 h-6 text-slate-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-slate-300 font-semibold">Mercado Livre não conectado</p>
+              <p className="text-slate-600 text-sm mt-1">Conecte sua conta para ver os dados financeiros.</p>
+            </div>
+            <a href="/dashboard/integracoes" className="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-colors">
+              Conectar agora
+            </a>
+          </div>
+        )}
+
+        {/* Loading spinner */}
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-6 text-slate-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Carregando dados financeiros...</span>
+          </div>
+        )}
+
         {/* KPI cards */}
+        {(loading || connected) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard title="Receita bruta"         value="R$ 0,00" icon={DollarSign} color="blue"   />
-          <KpiCard title="Lucro líquido"          value="R$ 0,00" icon={TrendingUp}  color="green"  />
-          <KpiCard title="Custo total (CMV)"      value="R$ 0,00" icon={TrendingDown} color="red"  />
-          <KpiCard title="Despesas operacionais"  value="R$ 0,00" icon={CreditCard}  color="purple" />
+          <KpiCard
+            title="Receita bruta"
+            value={connected ? fmtBRL(data?.receita_bruta ?? 0) : 'R$ 0,00'}
+            sub={connected && data ? `${data.pedidos} pedidos` : undefined}
+            icon={DollarSign} color="blue" loading={loading}
+          />
+          <KpiCard
+            title="Receita líquida"
+            value={connected ? fmtBRL(data?.receita_liquida ?? 0) : 'R$ 0,00'}
+            sub={connected && data ? `após taxas ML` : undefined}
+            icon={TrendingUp} color="green" loading={loading}
+          />
+          <KpiCard
+            title="Taxas ML"
+            value={connected ? fmtBRL(data?.taxas_ml ?? 0) : 'R$ 0,00'}
+            sub={connected && data ? `principal custo` : undefined}
+            icon={TrendingDown} color="red" loading={loading}
+          />
+          <KpiCard
+            title="Ticket médio"
+            value={connected ? fmtBRL(data?.ticket_medio ?? 0) : 'R$ 0,00'}
+            sub={connected && data ? `por pedido` : undefined}
+            icon={CreditCard} color="purple" loading={loading}
+          />
         </div>
+        )}
 
         {/* ─── Visão Geral ─── */}
         {view === 'visao-geral' && (

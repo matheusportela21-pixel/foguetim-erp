@@ -108,7 +108,12 @@ export default function DashboardPage() {
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
-  const firstName = user?.user_metadata?.name?.split(' ')[0] ?? 'lá'
+  const firstName = (
+    user?.user_metadata?.name?.split(' ')[0] ||
+    profile?.name?.split(' ')[0] ||
+    user?.email?.split('@')[0] ||
+    'vendedor'
+  )
 
   useEffect(() => {
     fetch('/api/mercadolivre/metrics')
