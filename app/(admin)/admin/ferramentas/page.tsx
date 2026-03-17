@@ -74,7 +74,7 @@ function ToolCard({
             : <XCircle className="w-3.5 h-3.5 shrink-0" />
           }
           <span>{result.message}</span>
-          {result.ts && <span className="ml-auto text-[10px] opacity-60 font-mono">{new Date(result.ts).toLocaleTimeString('pt-BR')}</span>}
+          {result.ts && <span className="ml-auto text-[10px] opacity-60 font-mono">{new Date(result.ts).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>}
         </div>
       )}
     </div>
@@ -164,7 +164,7 @@ export default function AdminFerramentasPage() {
                 <p className="text-xs text-slate-600 mt-1">contas conectadas</p>
                 {data?.ml.last_sync && (
                   <p className="text-[10px] text-slate-700 mt-1 font-mono">
-                    sync: {new Date(data.ml.last_sync).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    sync: {new Date(data.ml.last_sync).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}
                   </p>
                 )}
               </>

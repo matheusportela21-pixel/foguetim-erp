@@ -7,10 +7,12 @@ import {
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
-  Shield, ChevronRight, MessageSquare, Archive, Activity,
+  Shield, ChevronRight, MessageSquare, Archive, Activity, Calendar,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
+import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
+import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
 
 /* ── ML Metrics type ────────────────────────────────────────────────── */
 interface MLMetrics {
@@ -56,12 +58,6 @@ const changelog = [
 ]
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
-function greeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'Bom dia'
-  if (h < 18) return 'Boa tarde'
-  return 'Boa noite'
-}
 
 function fmtBRL(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -116,6 +112,9 @@ export default function DashboardPage() {
   const [urgentClaims, setUrgentClaims] = useState(0)
   const [rupturasCount, setRupturasCount] = useState(0)
   const [healthScore, setHealthScore] = useState<number | null>(null)
+  const [greeting, setGreeting] = useState('Olá')       // neutral until hydrated
+  const [todayStr,  setTodayStr] = useState('')
+  const [nextHoliday, setNextHoliday] = useState<{ nome: string; icone: string; days: number } | null>(null)
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
@@ -125,6 +124,14 @@ export default function DashboardPage() {
     user?.email?.split('@')[0] ||
     'vendedor'
   )
+
+  // Set greeting, date and next holiday client-side using Brasília timezone (avoids SSR UTC mismatch)
+  useEffect(() => {
+    setGreeting(getGreeting())
+    setTodayStr(formatBrasiliaDate())
+    const next = getUpcomingEvents().find(e => daysUntil(e.data) >= 0 && daysUntil(e.data) <= 30)
+    if (next) setNextHoliday({ nome: next.nome, icone: next.icone, days: daysUntil(next.data) })
+  }, [])
 
   useEffect(() => {
     fetch('/api/mercadolivre/metrics')
@@ -210,8 +217,8 @@ export default function DashboardPage() {
         <div className="animate-slide-up">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h1 suppressHydrationWarning className="text-2xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-                {greeting()}, {firstName}! 👋
+              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
+                {greeting}, {firstName}! 👋
               </h1>
               <p className="text-sm text-slate-500 mt-1">
                 {ml?.connected
@@ -219,9 +226,9 @@ export default function DashboardPage() {
                   : 'Conecte seus canais de venda para ver seus dados em tempo real.'}
               </p>
             </div>
-            <p suppressHydrationWarning className="text-xs text-slate-600 shrink-0">
-              {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
+            {todayStr && (
+              <p className="text-xs text-slate-600 shrink-0">{todayStr}</p>
+            )}
           </div>
         </div>
 
@@ -279,6 +286,22 @@ export default function DashboardPage() {
                 </p>
               </div>
               <ChevronRight className={`w-4 h-4 shrink-0 ${healthScore < 50 ? 'text-red-600' : 'text-yellow-600'}`} />
+            </div>
+          </Link>
+        )}
+
+        {/* ── Próxima data comemorativa ── */}
+        {nextHoliday && (
+          <Link href="/dashboard/calendario">
+            <div className="flex items-center gap-3 p-4 bg-purple-950/30 border border-purple-800/40 rounded-xl hover:bg-purple-900/30 transition-colors">
+              <Calendar className="w-5 h-5 text-purple-400 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">
+                  {nextHoliday.icone} {nextHoliday.nome} em {nextHoliday.days} dia{nextHoliday.days !== 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-purple-400 mt-0.5">Clique para planejar sua promoção</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-purple-600 shrink-0" />
             </div>
           </Link>
         )}

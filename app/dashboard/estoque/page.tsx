@@ -371,7 +371,7 @@ export default function EstoquePage() {
           <p className="text-[11px] text-slate-700 flex items-center gap-1">
             <Loader2 className="w-2.5 h-2.5 opacity-0" />
             Última sincronização:{' '}
-            {new Date(items[0].synced_at!).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+            {new Date(items[0].synced_at!).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}
             {' · '}
             <Link href="/dashboard/listagens" className="text-purple-600 hover:text-purple-400 underline">
               Sincronizar agora

@@ -19,7 +19,7 @@ interface TeamMember {
 const ROLES = Object.keys(ROLE_HIERARCHY) as FoguetimRole[]
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'America/Sao_Paulo' })
 }
 
 const ROLE_ICONS: Partial<Record<FoguetimRole, React.ElementType>> = {

@@ -51,7 +51,7 @@ interface RecentCancel {
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'America/Sao_Paulo' })
 }
 
 const PLAN_COLORS: Record<string, string> = {

@@ -42,10 +42,10 @@ const PLANS    = ['explorador', 'piloto', 'comandante', 'almirante', 'enterprise
 const ROLES    = ['operador', 'supervisor', 'analista_produtos', 'analista_financeiro', 'suporte', 'diretor', 'admin', 'foguetim_support']
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'America/Sao_Paulo' })
 }
 function fmtDatetime(iso: string) {
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 }
 
 /* ── Drawer component ────────────────────────────────────────────────────── */
