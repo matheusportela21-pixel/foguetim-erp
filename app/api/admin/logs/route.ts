@@ -7,7 +7,7 @@ import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 export async function GET(req: NextRequest) {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status ?? 403 })
 
   const { searchParams } = req.nextUrl
   const limit    = Number(searchParams.get('limit')    ?? '50')

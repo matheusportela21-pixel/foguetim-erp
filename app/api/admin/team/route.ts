@@ -8,7 +8,7 @@ import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 export async function GET() {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status ?? 403 })
 
   try {
     const { data, error } = await supabaseAdmin()
@@ -31,7 +31,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status ?? 403 })
 
   try {
     const body = await req.json() as {

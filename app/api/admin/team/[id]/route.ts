@@ -11,7 +11,7 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status ?? 403 })
 
   try {
     const body = await req.json() as { role?: string; notes?: string; is_active?: boolean }
@@ -37,7 +37,7 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   const guard = await requireAdmin()
-  if (guard) return guard
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status ?? 403 })
 
   try {
     const { error } = await supabaseAdmin()
