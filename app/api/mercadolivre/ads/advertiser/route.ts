@@ -1,25 +1,13 @@
 /**
  * GET /api/mercadolivre/ads/advertiser
- * Diagnóstico avançado: testa variações com e sem api-version header.
+ * Verifica acesso ao ML Product Ads usando ml_user_id como advertiser_id.
+ * Detecta quando o token não tem escopo de publicidade (200 + empty body).
  */
 import { NextResponse }                      from 'next/server'
 import { getAuthUser }                       from '@/lib/server-auth'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
-async function probe(token: string, url: string, extraHeaders?: Record<string, string>) {
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, ...extraHeaders },
-    })
-    const body = await res.text()
-    const ct = res.headers.get('content-type') ?? ''
-    console.log(`[probe] ${url} → ${res.status} | body(200): ${body.slice(0, 200)}`)
-    return { url, status: res.status, body: body.slice(0, 400), ct }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    return { url, status: -1, body: msg, ct: '' }
-  }
-}
+const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
 
 export async function GET() {
   try {
@@ -35,30 +23,44 @@ export async function GET() {
     const id = conn.ml_user_id
     if (!id) return NextResponse.json({ error: 'ml_user_id ausente' }, { status: 400 })
 
-    // Verificar escopo do token atual
-    const tokenScope = await probe(token, `https://api.mercadolibre.com/oauth/token/info`, { 'api-version': '2' })
+    console.log('[Ads/advertiser] ml_user_id:', id)
 
-    const probes = await Promise.all([
-      // Sem api-version header (antigo formato)
-      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns?limit=1`),
-      // Com api-version: 2
-      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns?limit=1`, { 'api-version': '2' }),
-      // Endpoint de detalhes do advertiser
-      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}`, { 'api-version': '2' }),
-      // Sem MLB, sem api-version
-      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}/product_ads/campaigns?limit=1`),
-      // Check token scope via users/me
-      probe(token, `https://api.mercadolibre.com/users/me`),
-      // ML Ads advertiser por site
-      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}`, { 'api-version': '2' }),
-    ])
+    // Testar acesso às campanhas
+    const res = await fetch(
+      `${ML_ADS}/advertisers/${id}/product_ads/campaigns?limit=1`,
+      { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
+    )
+    const body = await res.text()
+    console.log('[Ads/advertiser] campaigns status:', res.status, '| body len:', body.length, '| body:', body.slice(0, 200))
+
+    // 200 + body vazio = token sem escopo de publicidade
+    if (res.status === 200 && body.trim() === '') {
+      return NextResponse.json({
+        error:   'NO_ADS_SCOPE',
+        message: 'Token sem permissão de publicidade. Reconecte o Mercado Livre em Integrações para conceder acesso ao Product Ads.',
+        debug:   { id, status: res.status, bodyLen: body.length },
+      })
+    }
+
+    if (res.status === 403 || res.status === 404) {
+      return NextResponse.json({
+        error:   'NO_ADS_ACCOUNT',
+        message: 'Sem conta de Product Ads ativa.',
+        debug:   { id, status: res.status },
+      })
+    }
+
+    // Parse para verificar se tem dados
+    let parsed: { results?: unknown[] } = {}
+    try { parsed = JSON.parse(body) as { results?: unknown[] } } catch { /* ok */ }
+
+    console.log('[Ads/advertiser] campaigns results count:', parsed.results?.length ?? 0)
 
     return NextResponse.json({
       advertiser_id:   id,
       advertiser_name: '',
       account_name:    '',
       site_id:         'MLB',
-      debug:           { id, tokenScope, probes },
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

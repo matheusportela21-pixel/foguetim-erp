@@ -197,9 +197,13 @@ export default function PublicidadePage() {
 
       if (adv.debug) setDebugInfo(adv.debug)
 
-      if (!advRes.ok || adv.error === 'NO_ADS_ACCOUNT') {
+      if (!advRes.ok || adv.error === 'NO_ADS_ACCOUNT' || adv.error === 'NO_ADS_SCOPE') {
         setHasAdsAccount(false)
-        setApiError(adv.error === 'NO_ADS_ACCOUNT' ? null : (adv.error ?? `HTTP ${advRes.status}`))
+        setApiError(
+          adv.error === 'NO_ADS_ACCOUNT' ? null :
+          adv.error === 'NO_ADS_SCOPE'   ? 'Token sem permissão de publicidade. Reconecte o ML em Integrações.' :
+          (adv.error ?? `HTTP ${advRes.status}`)
+        )
         setLoading(false)
         return
       }

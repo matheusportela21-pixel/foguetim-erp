@@ -65,6 +65,8 @@ export function getAuthorizationUrl(state?: string): string {
     response_type: 'code',
     client_id:     appId,
     redirect_uri:  redirectUri,
+    // Solicita escopos de publicidade para ML Product Ads
+    scope:         'offline_access read_campaigns write_campaigns',
   })
   if (state) params.set('state', state)
   const url = `${ML_AUTH_URL}?${params.toString()}`
