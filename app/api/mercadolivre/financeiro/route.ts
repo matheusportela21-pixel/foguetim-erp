@@ -35,13 +35,16 @@ export async function GET(req: NextRequest) {
   const token = await getValidToken(user.id)
   if (!token) return NextResponse.json({ connected: false, error: 'Token inválido' })
 
-  const sp     = new URL(req.url).searchParams
-  const period = sp.get('period') ?? 'mes'
-  const days   = PERIOD_DAYS[period] ?? 30
+  const sp        = new URL(req.url).searchParams
+  const period    = sp.get('period') ?? 'mes'
+  const days      = PERIOD_DAYS[period] ?? 30
+  // Suporte a date_from/date_to explícitos (ex.: para alinhar com períodos de billing)
+  const dateFromParam = sp.get('date_from')
+  const dateToParam   = sp.get('date_to')
 
   const auth     = { Authorization: `Bearer ${token}` }
   const mlId     = conn.ml_user_id
-  const dateFrom = new Date(Date.now() - days * 86_400_000).toISOString()
+  const dateFrom = dateFromParam ?? new Date(Date.now() - days * 86_400_000).toISOString()
 
   // ── Busca paginada de pedidos ─────────────────────────────────────────────
   const allOrders: Record<string, unknown>[] = []
@@ -53,7 +56,8 @@ export async function GET(req: NextRequest) {
     const r = await fetch(
       `${ML_API_BASE}/orders/search?seller=${mlId}&sort=date_desc` +
       `&limit=${ORDERS_LIMIT}&offset=${offset}` +
-      `&order.date_created.from=${dateFrom}`,
+      `&order.date_created.from=${dateFrom}` +
+      (dateToParam ? `&order.date_created.to=${dateToParam}` : ''),
       { headers: auth },
     )
     if (!r.ok) break
