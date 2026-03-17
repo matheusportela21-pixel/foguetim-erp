@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, Calculator, FileText, TrendingUp,
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
-  AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink, MessageSquare, Tag, Scale, Archive,
+  AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink, MessageSquare, Tag, Scale, Archive, Activity,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -49,6 +49,7 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/publicidade',         icon: Megaphone,   label: 'Publicidade', badge: 'Beta', roles: ['admin', 'foguetim_support'] },
       { href: '/dashboard/performance',        icon: BarChart2,   label: 'Performance'         },
       { href: '/dashboard/relatorios',         icon: BarChart3,   label: 'Relatórios'          },
+      { href: '/dashboard/saude',              icon: Activity,    label: 'Saúde da Conta'     },
       { href: '/dashboard/reputacao',          icon: ShieldCheck, label: 'Reputação'           },
       { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp,  label: 'Vendas por Anúncio'  },
       { href: '/dashboard/concorrentes',       icon: Users,       label: 'Concorrentes'        },

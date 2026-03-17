@@ -7,7 +7,7 @@ import {
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
-  Shield, ChevronRight, MessageSquare, Archive,
+  Shield, ChevronRight, MessageSquare, Archive, Activity,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
@@ -115,6 +115,7 @@ export default function DashboardPage() {
   const [reputaLoading, setReputaLoading] = useState(true)
   const [urgentClaims, setUrgentClaims] = useState(0)
   const [rupturasCount, setRupturasCount] = useState(0)
+  const [healthScore, setHealthScore] = useState<number | null>(null)
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
@@ -155,6 +156,26 @@ export default function DashboardPage() {
       .then(r => r.json())
       .then((d: { summary?: { ruptura?: number } }) => {
         setRupturasCount(d.summary?.ruptura ?? 0)
+      })
+      .catch(() => { /* silent */ })
+  }, [])
+
+  useEffect(() => {
+    // Use sessionStorage cache if available (15min TTL) — avoid extra ML call
+    try {
+      const raw = sessionStorage.getItem('ml_saude_cache')
+      if (raw) {
+        const cached = JSON.parse(raw) as { data: { score?: number }; ts: number }
+        if (Date.now() - cached.ts < 15 * 60 * 1000 && typeof cached.data.score === 'number') {
+          setHealthScore(cached.data.score)
+          return
+        }
+      }
+    } catch { /* ignore */ }
+    fetch('/api/mercadolivre/saude')
+      .then(r => r.json())
+      .then((d: { score?: number; connected?: boolean }) => {
+        if (d.connected && typeof d.score === 'number') setHealthScore(d.score)
       })
       .catch(() => { /* silent */ })
   }, [])
@@ -236,6 +257,28 @@ export default function DashboardPage() {
                 <p className="text-xs text-red-400 mt-0.5">Clique para ver e atualizar</p>
               </div>
               <ChevronRight className="w-4 h-4 text-red-600 shrink-0" />
+            </div>
+          </Link>
+        )}
+
+        {/* ── Health score alert ── */}
+        {healthScore !== null && healthScore < 70 && (
+          <Link href="/dashboard/saude">
+            <div className={`flex items-center gap-3 p-4 rounded-xl border hover:opacity-90 transition-opacity ${
+              healthScore < 50
+                ? 'bg-red-950/30 border-red-800/40'
+                : 'bg-yellow-950/20 border-yellow-800/40'
+            }`}>
+              <Activity className={`w-5 h-5 shrink-0 ${healthScore < 50 ? 'text-red-400' : 'text-yellow-400'}`} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">
+                  {healthScore < 50 ? 'Atenção: sua conta precisa de cuidados urgentes' : 'Atenção: sua conta precisa de cuidados'}
+                </p>
+                <p className={`text-xs mt-0.5 ${healthScore < 50 ? 'text-red-400' : 'text-yellow-400'}`}>
+                  Score de saúde: {healthScore}/100 — Clique para ver detalhes e alertas
+                </p>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 ${healthScore < 50 ? 'text-red-600' : 'text-yellow-600'}`} />
             </div>
           </Link>
         )}
