@@ -7,6 +7,7 @@ import {
   BarChart3, TrendingUp, Package, Users, DollarSign, ShoppingCart,
   Star, Zap, FileDown, Clock, RefreshCw, AlertCircle,
 } from 'lucide-react'
+import ExportCSVButton from '@/components/ExportCSVButton'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface PeriodWithSummary {
@@ -205,13 +206,26 @@ export default function RelatoriosPage() {
               </p>
               <p className="text-xs text-slate-500 mt-0.5">Dados reais dos últimos 90 dias</p>
             </div>
-            <button
-              onClick={loadAll}
-              disabled={isLoading}
-              className="p-2 text-slate-500 hover:text-slate-200 bg-white/[0.04] border border-white/[0.06] rounded-lg transition-all disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <ExportCSVButton
+                data={vendasData as unknown as Record<string, unknown>[]}
+                filename="relatorio-vendas"
+                columns={[
+                  { key: 'item_id',       label: 'ID Anúncio'      },
+                  { key: 'title',         label: 'Título'          },
+                  { key: 'total_vendas',  label: 'Qtd Vendas'      },
+                  { key: 'receita_bruta', label: 'Receita Bruta'   },
+                  { key: 'taxas_ml',      label: 'Taxas ML'        },
+                ]}
+              />
+              <button
+                onClick={loadAll}
+                disabled={isLoading}
+                className="p-2 text-slate-500 hover:text-slate-200 bg-white/[0.04] border border-white/[0.06] rounded-lg transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
 
           {mlConnected === false ? (

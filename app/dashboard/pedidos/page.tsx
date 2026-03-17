@@ -13,6 +13,7 @@ import {
   PEDIDOS, STATUS_META, MKT_META,
   type Pedido, type PedidoStatus, type MKTPedido,
 } from './_data'
+import ExportCSVButton from '@/components/ExportCSVButton'
 
 // ─── ML ORDER TYPES ──────────────────────────────────────────────────────────
 
@@ -149,10 +150,31 @@ function MLOrdersTab() {
               {d}d
             </button>
           ))}
-          <button onClick={() => setRefreshKey(k => k + 1)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-1">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <button onClick={() => setRefreshKey(k => k + 1)} disabled={loading}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-1 disabled:opacity-50">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          <ExportCSVButton
+            data={orders.map(o => ({
+              id:        o.id,
+              data:      o.date_created,
+              comprador: o.buyer.nickname,
+              produto:   o.order_items[0]?.title ?? '',
+              valor:     o.total_amount,
+              status:    o.status,
+              envio:     o.shipping?.status ?? '',
+            }))}
+            filename="pedidos"
+            columns={[
+              { key: 'id',        label: 'Nº Pedido'  },
+              { key: 'data',      label: 'Data'        },
+              { key: 'comprador', label: 'Comprador'   },
+              { key: 'produto',   label: 'Produto'     },
+              { key: 'valor',     label: 'Valor'       },
+              { key: 'status',    label: 'Status'      },
+              { key: 'envio',     label: 'Envio'       },
+            ]}
+          />
         </div>
 
         <span className="text-xs text-slate-600">
