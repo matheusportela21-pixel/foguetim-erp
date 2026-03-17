@@ -45,7 +45,11 @@ function LoginForm() {
         setError('Email ou senha inválidos. Verifique os dados e tente novamente.')
         setLoading(false)
       } else {
-        void logActivity({ action: 'login', category: 'auth', description: 'Login realizado com sucesso' })
+        void fetch('/api/auth/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', category: 'auth', description: 'Login realizado com sucesso' }),
+        })
         // Hard redirect — garante que a cookie de sessão está presente no próximo request
         const redirect = searchParams.get('redirect') ?? '/dashboard'
         window.location.href = redirect

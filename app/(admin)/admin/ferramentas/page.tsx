@@ -150,7 +150,7 @@ export default function AdminFerramentasPage() {
               <Plug className="w-4 h-4 text-green-400" />
               <p className="text-xs text-slate-500">Mercado Livre</p>
               {!loading && data && (
-                <StatusDot ok={data.ml.status === 'ok'} />
+                <StatusDot ok={data.ml.connected > 0} />
               )}
             </div>
             {loading ? (

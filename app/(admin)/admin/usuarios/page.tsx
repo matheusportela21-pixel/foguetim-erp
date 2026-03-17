@@ -403,9 +403,11 @@ export default function AdminUsuariosPage() {
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-400">{u.role}</td>
                 <td className="px-4 py-3">
-                  {u.ml_connected
-                    ? <Plug className="w-3.5 h-3.5 text-green-400" />
-                    : <PlugZap className="w-3.5 h-3.5 text-slate-700" />}
+                  <span title={u.ml_connected ? 'Mercado Livre conectado' : 'Mercado Livre não conectado'}>
+                    {u.ml_connected
+                      ? <Plug className="w-3.5 h-3.5 text-green-400" />
+                      : <PlugZap className="w-3.5 h-3.5 text-slate-700" />}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{fmtDate(u.created_at)}</td>
                 <td className="px-4 py-3">

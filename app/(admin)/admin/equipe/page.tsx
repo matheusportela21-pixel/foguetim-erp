@@ -202,7 +202,12 @@ export default function AdminEquipePage() {
                   </td>
                   <td className="px-4 py-3">
                     {isOwner ? (
-                      <span className="text-[10px] text-slate-700 italic">—</span>
+                      <span
+                        className="text-[10px] text-slate-600 italic"
+                        title="Proprietário da plataforma — ações restritas"
+                      >
+                        Proprietário
+                      </span>
                     ) : (
                       <div className="flex items-center gap-2">
                         <select

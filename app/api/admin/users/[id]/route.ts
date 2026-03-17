@@ -4,8 +4,9 @@
  * Restrito a admin e foguetim_support.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin }  from '@/lib/admin-guard'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAdmin }      from '@/lib/admin-guard'
+import { supabaseAdmin }     from '@/lib/supabase-admin'
+import { logAdminAction }    from '@/lib/admin-logger'
 
 type Params = { params: { id: string } }
 
@@ -124,13 +125,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
-  // Registrar no audit log
-  await db.from('admin_actions').insert({
+  // Registrar no audit log (non-fatal)
+  void db.from('admin_actions').insert({
     admin_id:       guard.userId,
     action:         body.plan ? 'change_plan' : body.role ? 'change_role' : 'change_status',
     target_user_id: id,
     details:        { ...details, reason: body.reason ?? null },
   })
+
+  // Registrar em activity_logs com visibilidade admin
+  const actionLabel = body.plan ? `Plano alterado para ${body.plan}` : body.role ? `Cargo alterado para ${body.role}` : details.action === 'suspended' ? 'Conta suspensa' : 'Conta reativada'
+  if (guard.userId) {
+    void logAdminAction({
+      userId:      guard.userId,
+      action:      body.plan ? 'admin.user.change_plan' : body.role ? 'admin.user.change_role' : 'admin.user.change_status',
+      category:    'admin',
+      description: `[Admin] ${actionLabel} — usuário ${id}`,
+      metadata:    { ...details, reason: body.reason ?? null, target_user_id: id },
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }

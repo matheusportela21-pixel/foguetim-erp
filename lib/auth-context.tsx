@@ -97,7 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!configured) return
-    await logActivity({ action: 'logout', category: 'auth', description: 'Sessão encerrada' })
+    void fetch('/api/auth/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logout', category: 'auth', description: 'Sessão encerrada' }),
+    })
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
