@@ -157,9 +157,23 @@ export default function EmailPrefsSection() {
         ) : (
           EMAIL_PREFS_CONFIG.map(item => (
             <div key={item.key} className="flex items-center justify-between px-5 py-3.5">
-              <div className="pr-4">
+              <div className="pr-4 flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-200">{item.label}</p>
                 <p className="text-xs text-slate-600 mt-0.5">{item.description}</p>
+                {item.key === 'weekly_summary' && (
+                  <button
+                    onClick={async () => {
+                      const res  = await fetch('/api/email/weekly-summary', { method: 'POST' })
+                      const data = await res.json() as { success?: boolean; message?: string }
+                      alert(data.success
+                        ? '✅ Resumo semanal enviado! Verifique sua caixa.'
+                        : '❌ ' + (data.message ?? 'Erro ao enviar'))
+                    }}
+                    className="mt-1.5 text-xs text-indigo-400 hover:text-indigo-300 underline transition-colors"
+                  >
+                    Enviar resumo agora (teste)
+                  </button>
+                )}
               </div>
               {saving === item.key ? (
                 <Loader2 className="w-4 h-4 text-slate-500 animate-spin shrink-0" />
