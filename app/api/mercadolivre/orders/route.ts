@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
       const shipping = (o.shipping as Record<string, unknown>) ?? {}
       return {
         id:           o.id,
+        pack_id:      o.pack_id ?? null,
         status:       o.status,
         date_created: o.date_created,
         date_closed:  o.date_closed,

@@ -18,6 +18,7 @@ import {
 
 interface MLOrder {
   id: number
+  pack_id: string | number | null
   status: string
   date_created: string
   date_closed: string | null
@@ -206,6 +207,16 @@ function MLOrdersTab() {
                         <p className="text-white font-semibold">{order.buyer.nickname}</p>
                         {order.buyer.first_name && (
                           <p className="text-[10px] text-slate-600">{order.buyer.first_name} {order.buyer.last_name ?? ''}</p>
+                        )}
+                        {order.pack_id && (
+                          <a
+                            href="/dashboard/packs"
+                            className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors"
+                            title={`Pack #${order.pack_id}`}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            🛒 Pack #{order.pack_id}
+                          </a>
                         )}
                       </td>
                       <td className="py-3 px-3 max-w-[200px]">

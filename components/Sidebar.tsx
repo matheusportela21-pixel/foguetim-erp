@@ -31,6 +31,7 @@ const navGroups: NavGroup[] = [
     label: 'Operação',
     items: [
       { href: '/dashboard/pedidos',      icon: ShoppingCart,    label: 'Pedidos'                 },
+      { href: '/dashboard/packs',        icon: Package,         label: 'Packs'                   },
       { href: '/dashboard/promocoes',    icon: Tag,             label: 'Promoções'               },
       { href: '/dashboard/pos-venda',     icon: MessageSquare,   label: 'Pós-Venda',    badge: 'Novo'  },
       { href: '/dashboard/sac',           icon: MessagesSquare,  label: 'SAC',                        },
