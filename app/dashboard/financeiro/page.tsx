@@ -5,9 +5,10 @@ import Header from '@/components/Header'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
+import Link from 'next/link'
 import {
   DollarSign, TrendingUp, TrendingDown, Gift, Loader2, Link2,
-  ChevronDown, FileText, List, BarChart3, Info, RefreshCw, ExternalLink,
+  ChevronDown, FileText, List, BarChart3, Info, RefreshCw, ExternalLink, Scale, ArrowRight,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -361,6 +362,21 @@ export default function FinanceiroPage() {
             icon={TrendingUp} colorKey="green" loading={loading}
           />
         </div>
+
+        {/* ── Conciliação shortcut ────────────────────────────────────────── */}
+        <Link
+          href={`/dashboard/conciliacao${selectedKey ? `?period_key=${selectedKey}` : ''}`}
+          className="glass-card rounded-xl p-4 flex items-center gap-4 hover:border-purple-500/30 transition-colors group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+            <Scale className="w-5 h-5 text-purple-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Conciliação Financeira</p>
+            <p className="text-xs text-slate-500 mt-0.5">Comparar receita bruta com taxas ML cobradas por pedido</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-purple-400 transition-colors shrink-0" />
+        </Link>
 
         {/* ── Tabs ────────────────────────────────────────────────────────── */}
         <div className="glass-card rounded-xl overflow-hidden">
