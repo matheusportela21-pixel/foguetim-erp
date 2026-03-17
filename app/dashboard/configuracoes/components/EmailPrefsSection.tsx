@@ -74,10 +74,11 @@ function Toggle({ on, onToggle, disabled }: { on: boolean; onToggle: () => void;
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function EmailPrefsSection() {
   const { profile } = useAuth()
-  const [prefs, setPrefs]     = useState<EmailPrefs>({ ...DEFAULT_PREFS })
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState<PrefKey | null>(null)
-  const [toast, setToast]     = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [prefs, setPrefs]       = useState<EmailPrefs>({ ...DEFAULT_PREFS })
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState<PrefKey | null>(null)
+  const [testing, setTesting]   = useState(false)
+  const [toast, setToast]       = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
   const showToast = useCallback((type: 'success' | 'error', msg: string) => {
     setToast({ type, msg })
@@ -177,6 +178,30 @@ export default function EmailPrefsSection() {
       <p className="text-[11px] text-slate-600">
         As notificações são enviadas apenas para eventos reais do Mercado Livre. Sem spam.
       </p>
+
+      {/* Test button */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={async () => {
+            setTesting(true)
+            try {
+              const res  = await fetch('/api/email/test', { method: 'POST' })
+              const data = await res.json() as { success?: boolean; message?: string }
+              showToast(data.success ? 'success' : 'error', data.message ?? 'Erro desconhecido')
+            } catch {
+              showToast('error', 'Erro ao chamar rota de teste')
+            } finally {
+              setTesting(false)
+            }
+          }}
+          disabled={testing}
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-white/[0.04] hover:bg-white/[0.07] text-slate-300 border border-white/[0.08] rounded-lg transition-all disabled:opacity-50"
+        >
+          {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+          {testing ? 'Enviando...' : 'Enviar email de teste'}
+        </button>
+        <p className="text-[11px] text-slate-600">Envia um exemplo para o seu email cadastrado</p>
+      </div>
 
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-xl shadow-xl text-sm font-semibold text-white ${
