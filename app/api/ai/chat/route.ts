@@ -73,8 +73,8 @@ Contexto do vendedor:
 - Empresa: ${empresa}
 - Plano Foguetim: ${PLAN_LABELS[plan] ?? plan}
 - Mercado Livre: ${mlConnected ? `conectado (conta: ${nickname})` : 'não conectado'}
-- Total de anúncios: ${totalListings ?? 0}
-- Anúncios ativos: ${activeListings ?? 0}
+- Anúncios sincronizados: ${totalListings ?? 0} total, ${activeListings ?? 0} ativos
+  (dados do último sync — acesse Produtos para ver em tempo real)
   `.trim()
 
   return { text, plan }
@@ -100,6 +100,7 @@ Regras:
 - Dê exemplos concretos quando possível
 - Se não souber algo específico do negócio, pergunte
 - Nunca invente dados — se não tiver a informação, diga
+- Quando mencionar contagem de anúncios, avise que são dados do último sync e sugira acessar a página de Produtos para ver em tempo real
 - Respostas em português brasileiro
 - Máximo 3 parágrafos por resposta (seja conciso)
 - Use emojis com moderação`
