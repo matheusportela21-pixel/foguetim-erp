@@ -1,24 +1,23 @@
 /**
  * GET /api/mercadolivre/ads/advertiser
- * Diagnóstico: testa múltiplos endpoints ML Ads para encontrar o correto.
+ * Diagnóstico avançado: testa variações com e sem api-version header.
  */
 import { NextResponse }                      from 'next/server'
 import { getAuthUser }                       from '@/lib/server-auth'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
-async function probe(token: string, url: string): Promise<{ url: string; status: number; body: string; headers: string }> {
+async function probe(token: string, url: string, extraHeaders?: Record<string, string>) {
   try {
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, 'api-version': '2' },
+      headers: { Authorization: `Bearer ${token}`, ...extraHeaders },
     })
     const body = await res.text()
     const ct = res.headers.get('content-type') ?? ''
-    console.log(`[probe] ${url} → ${res.status} | ct: ${ct} | body: ${body.slice(0, 200)}`)
-    return { url, status: res.status, body: body.slice(0, 400), headers: ct }
+    console.log(`[probe] ${url} → ${res.status} | body(200): ${body.slice(0, 200)}`)
+    return { url, status: res.status, body: body.slice(0, 400), ct }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    console.error(`[probe] ${url} → error: ${msg}`)
-    return { url, status: -1, body: msg, headers: '' }
+    return { url, status: -1, body: msg, ct: '' }
   }
 }
 
@@ -36,50 +35,30 @@ export async function GET() {
     const id = conn.ml_user_id
     if (!id) return NextResponse.json({ error: 'ml_user_id ausente' }, { status: 400 })
 
-    const today = new Date().toISOString().split('T')[0]
-    const from  = new Date(Date.now() - 30 * 86400_000).toISOString().split('T')[0]
+    // Verificar escopo do token atual
+    const tokenScope = await probe(token, `https://api.mercadolibre.com/oauth/token/info`, { 'api-version': '2' })
 
-    // Testar todos os formatos possíveis de endpoint em paralelo
     const probes = await Promise.all([
-      // 1. Endpoint sem MLB (base), sem datas
-      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}/product_ads/campaigns`),
-      // 2. Endpoint sem MLB, com datas
-      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}/product_ads/campaigns?date_from=${from}&date_to=${today}`),
-      // 3. Endpoint com MLB, sem datas
-      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns`),
-      // 4. Endpoint com MLB, com datas
-      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns?date_from=${from}&date_to=${today}`),
-      // 5. Search por user_id sem MLB
-      probe(token, `https://api.mercadolibre.com/advertising/advertisers/search?user_id=${id}`),
-      // 6. Usuário ML (scope check)
-      probe(token, `https://api.mercadolibre.com/users/${id}`),
+      // Sem api-version header (antigo formato)
+      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns?limit=1`),
+      // Com api-version: 2
+      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}/product_ads/campaigns?limit=1`, { 'api-version': '2' }),
+      // Endpoint de detalhes do advertiser
+      probe(token, `https://api.mercadolibre.com/advertising/MLB/advertisers/${id}`, { 'api-version': '2' }),
+      // Sem MLB, sem api-version
+      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}/product_ads/campaigns?limit=1`),
+      // Check token scope via users/me
+      probe(token, `https://api.mercadolibre.com/users/me`),
+      // ML Ads advertiser por site
+      probe(token, `https://api.mercadolibre.com/advertising/advertisers/${id}`, { 'api-version': '2' }),
     ])
 
-    // Encontrar o primeiro que retornou dados úteis (status 200 + body não vazio)
-    const working = probes.find(p => p.status === 200 && p.body.trim().length > 2)
-
-    if (working?.body.includes('"results"') || working?.body.includes('"id"')) {
-      // Extrair advertiser_id do resultado, se possível
-      try {
-        const parsed = JSON.parse(working.body) as { results?: { advertiser_id?: number }[]; advertiser_id?: number }
-        const advertiserId = parsed.results?.[0]?.advertiser_id ?? parsed.advertiser_id ?? id
-        return NextResponse.json({
-          advertiser_id:   advertiserId,
-          advertiser_name: '',
-          account_name:    '',
-          site_id:         'MLB',
-          debug:           { id, probes },
-        })
-      } catch { /* continue */ }
-    }
-
-    // Retornar diagnóstico completo mesmo sem dados
     return NextResponse.json({
       advertiser_id:   id,
       advertiser_name: '',
       account_name:    '',
       site_id:         'MLB',
-      debug:           { id, probes },
+      debug:           { id, tokenScope, probes },
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
