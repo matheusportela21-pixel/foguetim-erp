@@ -1,4 +1,5 @@
 /**
+ * GET  /api/armazem/movimentacoes  — list stock movements
  * POST /api/armazem/movimentacoes  — create a stock movement and update inventory
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -47,6 +48,87 @@ const DECREASE_TYPES: MovementType[] = [
   'transferencia_saida',
 ]
 
+export async function GET(req: NextRequest) {
+  const user = await getAuthUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const db = supabaseAdmin()
+
+  try {
+    const { searchParams } = new URL(req.url)
+    const product_id = searchParams.get('product_id') || ''
+    const warehouse_id = searchParams.get('warehouse_id') || ''
+    const typeParam = searchParams.get('type') || ''
+    const date_from = searchParams.get('date_from') || ''
+    const date_to = searchParams.get('date_to') || ''
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)))
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    // Get user's warehouse IDs for isolation
+    const { data: userWarehouses, error: whError } = await db
+      .from('warehouses')
+      .select('id')
+      .eq('user_id', user.id)
+
+    if (whError) {
+      console.error('[armazem/movimentacoes GET warehouses]', whError)
+      return NextResponse.json({ error: 'Erro ao verificar armazéns' }, { status: 500 })
+    }
+
+    const warehouseIds = (userWarehouses ?? []).map((w: { id: number }) => w.id)
+    if (warehouseIds.length === 0) {
+      return NextResponse.json({ data: [], total: 0, page, limit })
+    }
+
+    let query = db
+      .from('warehouse_stock_movements')
+      .select(
+        `id, warehouse_id, product_id, movement_type, quantity_before, quantity_change, quantity_after,
+         reason, reference_type, reference_id, created_by, created_at,
+         product:warehouse_products!product_id(id, sku, name),
+         warehouse:warehouses!warehouse_id(id, name)`,
+        { count: 'exact' },
+      )
+      .in('warehouse_id', warehouseIds)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+
+    if (warehouse_id) {
+      query = query.eq('warehouse_id', warehouse_id)
+    }
+    if (product_id) {
+      query = query.eq('product_id', product_id)
+    }
+    if (typeParam) {
+      const typeArr = typeParam.split(',').map((t) => t.trim()).filter(Boolean)
+      if (typeArr.length > 0) {
+        query = query.in('movement_type', typeArr)
+      }
+    }
+    if (date_from) {
+      query = query.gte('created_at', date_from)
+    }
+    if (date_to) {
+      const dateTo = date_to.endsWith('Z') ? date_to : `${date_to}T23:59:59-03:00`
+      query = query.lte('created_at', dateTo)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('[armazem/movimentacoes GET]', error)
+      return NextResponse.json({ error: 'Erro ao buscar movimentações' }, { status: 500 })
+    }
+
+    return NextResponse.json({ data: data ?? [], total: count ?? 0, page, limit })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[armazem/movimentacoes GET]', msg)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -66,7 +148,6 @@ export async function POST(req: NextRequest) {
       metadata,
     } = body
 
-    // Validate required fields
     if (!warehouse_id || !product_id || !movement_type || quantity === undefined || quantity === null) {
       return NextResponse.json(
         { error: 'Campos obrigatórios: warehouse_id, product_id, movement_type, quantity' },
@@ -86,7 +167,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'quantity deve ser um número positivo' }, { status: 400 })
     }
 
-    // Validate user owns the warehouse
     const { data: warehouse, error: whError } = await db
       .from('warehouses')
       .select('id')
@@ -102,7 +182,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Armazém não encontrado' }, { status: 404 })
     }
 
-    // Validate user owns the product
     const { data: product, error: prodError } = await db
       .from('warehouse_products')
       .select('id')
@@ -118,7 +197,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
 
-    // Get current inventory record
     const { data: inventoryRecord, error: invError } = await db
       .from('warehouse_inventory')
       .select('id, available_qty, reserved_qty, in_transit_qty')
@@ -133,7 +211,6 @@ export async function POST(req: NextRequest) {
 
     let inventory = inventoryRecord
 
-    // Create inventory record if it doesn't exist
     if (!inventory) {
       const initData: Record<string, unknown> = {
         warehouse_id,
@@ -167,18 +244,15 @@ export async function POST(req: NextRequest) {
       quantityChange = qty
     } else if (DECREASE_TYPES.includes(movement_type as MovementType)) {
       newAvailable   = Math.max(0, currentAvailable - qty)
-      quantityChange = -(currentAvailable - newAvailable) // actual change (may differ if floor at 0)
+      quantityChange = -(currentAvailable - newAvailable)
     } else if (movement_type === 'ajuste') {
-      // Absolute set
       newAvailable   = qty
       quantityChange = qty - currentAvailable
     } else {
-      // Fallback (shouldn't happen due to validation above)
       newAvailable   = currentAvailable
       quantityChange = 0
     }
 
-    // Update inventory
     const { error: updateInvError } = await db
       .from('warehouse_inventory')
       .update({ available_qty: newAvailable })
@@ -189,7 +263,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao atualizar inventário' }, { status: 500 })
     }
 
-    // Insert movement record
     const movementData: Record<string, unknown> = {
       warehouse_id,
       product_id,
@@ -214,11 +287,9 @@ export async function POST(req: NextRequest) {
 
     if (movError) {
       console.error('[armazem/movimentacoes POST movement insert]', movError)
-      // Inventory was already updated — log this inconsistency but return an error
       return NextResponse.json({ error: 'Erro ao registrar movimentação' }, { status: 500 })
     }
 
-    // Fetch updated inventory to return
     const { data: updatedInventory } = await db
       .from('warehouse_inventory')
       .select('*')
