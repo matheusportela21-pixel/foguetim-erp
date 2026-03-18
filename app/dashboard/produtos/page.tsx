@@ -2169,7 +2169,9 @@ export default function ProdutosPage() {
             { icon: Copy,      label: 'Copiar Anúncio', soon: false },
           ] as const).map(btn => (
             <button key={btn.label}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-dark-700 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] border border-white/[0.06] transition-all"
+              disabled={btn.soon}
+              title={btn.soon ? 'Em breve' : btn.label}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-dark-700 border border-white/[0.06] transition-all ${btn.soon ? 'opacity-50 cursor-not-allowed text-slate-500' : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'}`}
               onClick={btn.soon ? undefined : () => setCopyProd(pageItems[0] ?? null)}>
               <btn.icon className="w-3.5 h-3.5" />
               {btn.label}

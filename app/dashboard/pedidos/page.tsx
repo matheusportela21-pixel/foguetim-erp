@@ -14,6 +14,7 @@ import {
   type Pedido, type PedidoStatus, type MKTPedido,
 } from './_data'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import Header from '@/components/Header'
 
 // ─── ML ORDER TYPES ──────────────────────────────────────────────────────────
 
@@ -518,16 +519,14 @@ export default function PedidosPage() {
     <div className="flex-1 overflow-y-auto">
 
       {/* ── HEADER ── */}
-      <div className="dash-header sticky top-0 z-20 flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-        <div>
-          <h1 className="text-xl font-bold text-white">Pedidos</h1>
-          <p className="text-slate-500 text-sm">Gerencie todos os pedidos da sua loja</p>
-        </div>
-        {/* View tabs */}
+      <Header title="Pedidos" subtitle="Gerencie todos os pedidos da sua loja" />
+
+      {/* ── View Tabs ── */}
+      <div className="px-6 py-3 border-b border-white/[0.06] flex items-center gap-2">
         <div className="flex items-center gap-1 bg-dark-800/60 rounded-xl p-1 border border-white/[0.06]">
           {[
-            { id: 'ml',    label: '📦 Mercado Livre' },
-            { id: 'local', label: 'Local'             },
+            { id: 'ml',    label: 'Mercado Livre' },
+            { id: 'local', label: 'Local'          },
           ].map(t => (
             <button key={t.id} onClick={() => setView(t.id as 'ml' | 'local')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -536,19 +535,6 @@ export default function PedidosPage() {
               {t.label}
             </button>
           ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="relative p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all">
-            <Bell className="w-5 h-5" />
-            {urgentCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
-                {urgentCount}
-              </span>
-            )}
-          </button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white">
-            MP
-          </div>
         </div>
       </div>
 

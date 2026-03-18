@@ -552,16 +552,25 @@ export default function DashboardPage() {
           {/* Left: Revenue placeholder + Recent orders */}
           <div className="lg:col-span-2 space-y-4">
             <div className="dash-card p-5 rounded-2xl">
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Receita vs Lucro</p>
-                  <p className="text-xs text-slate-600 mt-0.5">Últimos 6 meses</p>
+                  <p className="text-xs text-slate-600 mt-0.5">Histórico por período</p>
                 </div>
+                <Link href="/dashboard/financeiro" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                  Ver financeiro <ArrowUpRight className="w-3 h-3" />
+                </Link>
               </div>
-              <EmptyCard
-                message="Gráfico em desenvolvimento"
-                hint="Em breve: evolução de receita e lucro por período"
-              />
+              <div className="flex flex-col items-center justify-center py-10 gap-3 border border-dashed border-white/[0.06] rounded-xl">
+                <BarChart3 className="w-8 h-8 text-slate-700" />
+                <div className="text-center">
+                  <p className="text-xs font-semibold text-slate-500">Conecte o Mercado Livre para ver dados reais</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Gráfico de receita x lucro disponível em breve</p>
+                </div>
+                <Link href="/dashboard/integracoes" className="text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors">
+                  Configurar integração →
+                </Link>
+              </div>
             </div>
 
             {/* Recent orders */}

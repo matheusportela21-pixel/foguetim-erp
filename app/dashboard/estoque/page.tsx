@@ -56,11 +56,10 @@ function KpiCard({
   level, count, loading,
 }: { level: StockLevel; count: number; loading: boolean }) {
   const cfg = LEVEL_CFG[level]
-  const emoji = { ruptura: '🔴', alerta: '🟡', baixo: '🔵', normal: '🟢' }[level]
   return (
     <div className={`glass-card rounded-xl p-4 bg-gradient-to-br ${cfg.kpiBg} border`}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">{emoji}</span>
+        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cfg.dot}`} />
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{cfg.label}</p>
       </div>
       {loading
@@ -162,12 +161,12 @@ export default function EstoquePage() {
           {/* Filter tabs */}
           <div className="flex items-center gap-1 bg-dark-800 border border-white/[0.06] rounded-xl p-1">
             {([
-              { key: 'todos',   label: 'Todos',   count: summary?.total   ?? 0 },
-              { key: 'ruptura', label: '🔴 Ruptura', count: summary?.ruptura ?? 0 },
-              { key: 'alerta',  label: '🟡 Alerta',  count: summary?.alerta  ?? 0 },
-              { key: 'baixo',   label: '🔵 Baixo',   count: summary?.baixo   ?? 0 },
-              { key: 'normal',  label: '🟢 Normal',  count: summary?.normal  ?? 0 },
-            ] as { key: FilterTab; label: string; count: number }[]).map(tab => (
+              { key: 'todos',   label: 'Todos',   dot: null,             count: summary?.total   ?? 0 },
+              { key: 'ruptura', label: 'Ruptura', dot: 'bg-red-500',     count: summary?.ruptura ?? 0 },
+              { key: 'alerta',  label: 'Alerta',  dot: 'bg-amber-400',   count: summary?.alerta  ?? 0 },
+              { key: 'baixo',   label: 'Baixo',   dot: 'bg-blue-400',    count: summary?.baixo   ?? 0 },
+              { key: 'normal',  label: 'Normal',  dot: 'bg-green-400',   count: summary?.normal  ?? 0 },
+            ] as { key: FilterTab; label: string; dot: string | null; count: number }[]).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key)}
@@ -177,6 +176,7 @@ export default function EstoquePage() {
                     : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
                 }`}
               >
+                {tab.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tab.dot}`} />}
                 {tab.label}
                 {!loading && (
                   <span className={`text-[10px] font-bold px-1 py-0.5 rounded-full ${

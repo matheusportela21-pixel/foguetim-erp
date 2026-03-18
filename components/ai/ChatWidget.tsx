@@ -106,20 +106,20 @@ export function ChatWidget() {
     return (
       <button
         onClick={handleOpen}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2
-                   px-4 py-3 bg-indigo-600 hover:bg-indigo-700
+        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2
+                   px-3 py-2.5 md:px-4 md:py-3 bg-indigo-600 hover:bg-indigo-700
                    text-white rounded-full shadow-lg transition-all
                    hover:scale-105 active:scale-95"
       >
-        <Sparkles className="w-5 h-5" />
-        <span className="text-sm font-medium">Foguetim AI</span>
+        <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
+        <span className="text-xs md:text-sm font-medium">Foguetim AI</span>
       </button>
     )
   }
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 w-[380px]
+      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px]
                  bg-gray-950 border border-gray-800 rounded-2xl
                  shadow-2xl flex flex-col overflow-hidden
                  transition-all duration-200"
