@@ -2068,7 +2068,7 @@ export default function ProdutosPage() {
         msg: `${rascunhoCount} produto${rascunhoCount !== 1 ? 's' : ''} em rascunho`,
         detail: 'Finalize e publique nos marketplaces.',
       },
-    ].filter((a): a is NonNullable<typeof a> => a !== false && !dismissed.includes((a as any).key))
+    ].filter((a): a is Exclude<typeof a, false> => a !== false && !dismissed.includes((a as any).key))
   }, [allProdutos, dismissed])
 
   // ── Sort toggle ───────────────────────────────────────────────────────────
