@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Link2, Plus, Search, AlertCircle, CheckCircle2, Clock, X,
-  ChevronLeft, ChevronRight, Zap, Trash2, Loader2,
+  ChevronLeft, ChevronRight, Zap, Trash2, Loader2, RefreshCw, DollarSign,
 } from 'lucide-react'
 import Header from '@/components/Header'
 
@@ -18,6 +18,10 @@ interface Mapping {
   listing_sku: string | null
   listing_status: string | null
   mapping_status: 'unmapped' | 'partial' | 'mapped' | 'conflict'
+  auto_sync_stock: boolean
+  auto_sync_price: boolean
+  last_sync_at: string | null
+  last_sync_error: string | null
   created_at: string
   product: { id: number; sku: string; name: string; barcode: string | null }
 }
@@ -457,6 +461,74 @@ const STATUS_INFO = [
   { key: 'conflict',  label: 'Conflito',    color: 'text-red-400',     bg: 'bg-red-900/40',     icon: AlertCircle  },
 ]
 
+// ─── Sync Toggle ──────────────────────────────────────────────────────────────
+
+interface SyncToggleProps {
+  mappingId: number
+  field: 'auto_sync_stock' | 'auto_sync_price'
+  value: boolean
+  channel: string
+  onToggled: (id: number, field: 'auto_sync_stock' | 'auto_sync_price', newVal: boolean) => void
+  setToast: (t: ToastState) => void
+}
+
+function SyncToggle({ mappingId, field, value, channel, onToggled, setToast }: SyncToggleProps) {
+  const [loading, setLoading] = useState(false)
+  const isStock = field === 'auto_sync_stock'
+  const label = isStock ? 'Estoque' : 'Preço'
+  const icon = isStock
+    ? <RefreshCw className={`w-2.5 h-2.5 ${value ? 'text-emerald-400' : 'text-slate-600'}`} />
+    : <DollarSign className={`w-2.5 h-2.5 ${value ? 'text-blue-400' : 'text-slate-600'}`} />
+
+  // Só ML suporta sync por enquanto
+  const disabled = channel !== 'mercado_livre'
+
+  async function handleToggle() {
+    if (loading || disabled) return
+    const newVal = !value
+    setLoading(true)
+    try {
+      const r = await fetch(`/api/armazem/mapeamentos/${mappingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: newVal }),
+      })
+      if (!r.ok) throw new Error()
+      onToggled(mappingId, field, newVal)
+      setToast({
+        message: `Sync de ${label.toLowerCase()} ${newVal ? 'ativado' : 'desativado'}.`,
+        type: 'success',
+      })
+    } catch {
+      setToast({ message: `Erro ao alterar sync de ${label.toLowerCase()}.`, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={loading || disabled}
+      title={disabled
+        ? `Sync de ${label} só disponível para Mercado Livre`
+        : `${value ? 'Desativar' : 'Ativar'} sync de ${label} automático`}
+      className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all disabled:opacity-40
+        ${value
+          ? isStock
+            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+            : 'bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20'
+          : 'bg-white/[0.03] border border-white/[0.06] text-slate-600 hover:bg-white/[0.06] hover:text-slate-400'
+        }`}
+    >
+      {loading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : icon}
+      {isStock ? 'EST' : 'PRC'}
+    </button>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function MapeamentosPage() {
   const [mappings, setMappings]           = useState<Mapping[]>([])
   const [stats, setStats]                 = useState<Record<string, number>>({})
@@ -525,6 +597,14 @@ export default function MapeamentosPage() {
   function setToast(t: ToastState) {
     setToastState(t)
     setTimeout(() => setToastState(null), 3000)
+  }
+
+  function handleSyncToggled(
+    id: number,
+    field: 'auto_sync_stock' | 'auto_sync_price',
+    newVal: boolean,
+  ) {
+    setMappings(prev => prev.map(m => m.id === id ? { ...m, [field]: newVal } : m))
   }
 
   async function handleDelete(id: number) {
@@ -710,9 +790,11 @@ export default function MapeamentosPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/[0.06]">
-                      {['Produto', 'Canal', 'Anúncio', 'Status', 'Ações'].map(col => (
+                      {['Produto', 'Canal', 'Anúncio', 'Status', 'Sync Auto', 'Ações'].map(col => (
                         <th key={col} className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          {col}
+                          {col === 'Sync Auto'
+                            ? <span title="Sincronização automática de estoque e preço com o marketplace">{col}</span>
+                            : col}
                         </th>
                       ))}
                     </tr>
@@ -739,6 +821,35 @@ export default function MapeamentosPage() {
                             <span className="text-xs text-slate-400">{statusLabel(m.mapping_status)}</span>
                           </div>
                         </td>
+                        {/* Sync Auto toggles */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <SyncToggle
+                              mappingId={m.id}
+                              field="auto_sync_stock"
+                              value={m.auto_sync_stock}
+                              channel={m.channel}
+                              onToggled={handleSyncToggled}
+                              setToast={setToast}
+                            />
+                            <SyncToggle
+                              mappingId={m.id}
+                              field="auto_sync_price"
+                              value={m.auto_sync_price}
+                              channel={m.channel}
+                              onToggled={handleSyncToggled}
+                              setToast={setToast}
+                            />
+                            {m.last_sync_error && (
+                              <span title={m.last_sync_error} className="text-red-400 text-[9px] cursor-help">⚠</span>
+                            )}
+                            {m.last_sync_at && !m.last_sync_error && (
+                              <span title={`Último sync: ${new Date(m.last_sync_at).toLocaleString('pt-BR')}`}
+                                className="text-emerald-500 text-[9px] cursor-help">✓</span>
+                            )}
+                          </div>
+                        </td>
+
                         <td className="px-4 py-3">
                           {deleteId === m.id ? (
                             <div className="flex items-center gap-2">

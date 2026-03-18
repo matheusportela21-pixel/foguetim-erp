@@ -296,6 +296,24 @@ export async function POST(req: NextRequest) {
       .eq('id', inventory.id)
       .single()
 
+    // ── Fire-and-forget: sincronizar estoque com marketplace se produto tem opt-in ──
+    // REGRA: só executa se o produto tiver mapeamentos com auto_sync_stock = true.
+    // A sincronização é assíncrona — não bloqueia a resposta da movimentação.
+    // O armazém é a fonte de verdade; a sync com ML é consequência.
+    if (INCREASE_TYPES.includes(movement_type as MovementType) ||
+        DECREASE_TYPES.includes(movement_type as MovementType) ||
+        movement_type === 'ajuste') {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      // Não aguardar — fire-and-forget
+      void fetch(`${baseUrl}/api/armazem/sync-to-marketplace`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ product_id, fields: ['stock'] }),
+      }).catch(err => {
+        console.error('[movimentacoes] Sync fire-and-forget falhou (não crítico):', err)
+      })
+    }
+
     return NextResponse.json({ movement, inventory: updatedInventory }, { status: 201 })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

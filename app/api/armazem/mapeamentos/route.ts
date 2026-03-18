@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     let query = db
       .from('warehouse_product_mappings')
       .select(
-        `id, warehouse_product_id, channel, marketplace_item_id, listing_title, listing_sku, listing_status, mapping_status, created_at, updated_at,
+        `id, warehouse_product_id, channel, marketplace_item_id, listing_title, listing_sku, listing_status, mapping_status, auto_sync_stock, auto_sync_price, last_sync_at, last_sync_error, created_at, updated_at,
          product:warehouse_products!warehouse_product_id(id, sku, name, barcode)`,
         { count: 'exact' },
       )
