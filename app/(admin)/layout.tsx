@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, XCircle,
   FileText, Bell, LogOut, Shield, ChevronRight,
-  Ticket, UserCog, Wrench, Webhook,
+  Ticket, UserCog, Wrench, Webhook, Megaphone,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
@@ -25,6 +25,7 @@ const NAV = [
   { href: '/admin/tickets',       icon: Ticket,          label: 'Tickets'          },
   { href: '/admin/cancelamentos', icon: XCircle,         label: 'Cancelamentos'    },
   { href: '/admin/notificacoes',  icon: Bell,            label: 'Notificações'     },
+  { href: '/admin/avisos',        icon: Megaphone,       label: 'Avisos & Changelog'},
   { href: '/admin/logs',          icon: FileText,        label: 'Logs do Sistema'  },
   { href: '/admin/ferramentas',   icon: Wrench,          label: 'Ferramentas'      },
   { href: '/admin/webhooks',      icon: Webhook,         label: 'Webhooks ML'      },

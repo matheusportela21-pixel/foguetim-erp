@@ -1,13 +1,14 @@
 'use client'
 
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
 import {
   TrendingUp, Package, DollarSign, ShoppingCart,
   AlertTriangle, ArrowUpRight, ShoppingBag, MessageCircle,
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
   Shield, ChevronRight, MessageSquare, Archive, Activity, Calendar,
+  Wrench, X, ExternalLink, ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
@@ -44,18 +45,40 @@ const LEVEL_CFG: Record<string, { label: string; color: string; bg: string; emoj
   red:         { label: 'Crítico',  color: 'text-red-500',    bg: 'bg-red-600/15',    emoji: '🚨' },
 }
 
-/* ── Notices & Changelog (informational content, not mock data) ─────────── */
-const notices = [
-  { badge: 'IMPORTANTE',  badgeCls: 'bg-red-500/15 text-red-400 ring-1 ring-red-500/30',        title: 'Black Friday 2026 — Prepare seu estoque com antecedência!',                date: '10/03/2026' },
-  { badge: 'OPORTUNIDADE', badgeCls: 'bg-green-500/15 text-green-400 ring-1 ring-green-500/30', title: 'Mercado Livre: Promoção relâmpago disponível para sellers Gold',            date: '07/03/2026' },
-  { badge: 'NOVO',         badgeCls: 'bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30', title: 'Foguetim ERP v1.1 lançado — Integração ML com pedidos e SAC em tempo real!', date: '14/03/2026' },
-]
+/* ── Announcement & Changelog types ─────────────────────────────────────── */
+interface Announcement {
+  id:             string
+  title:          string
+  content:        string
+  type:           'info' | 'warning' | 'success' | 'urgent'
+  link:           string | null
+  is_dismissible: boolean
+  starts_at:      string
+}
 
-const changelog = [
-  { version: 'v1.1.0', title: 'Integração Mercado Livre lançada!', desc: 'Sincronize anúncios, pedidos e perguntas do ML em tempo real.', date: '14/03/2026' },
-  { version: 'v1.0.5', title: 'Relatórios avançados',             desc: 'Novos gráficos de desempenho por marca e marketplace.',         date: '10/03/2026' },
-  { version: 'v1.0.0', title: 'Lançamento do Foguetim ERP',       desc: 'Dashboard, Produtos, Precificação, Listagens e Financeiro.',    date: '01/03/2026' },
-]
+interface ChangelogEntry {
+  id:           string
+  version:      string
+  title:        string
+  description:  string
+  details:      string | null
+  category:     'feature' | 'fix' | 'improvement' | 'security'
+  published_at: string
+}
+
+const ANNOUNCEMENT_COLORS: Record<string, { border: string; bg: string; dot: string }> = {
+  info:    { border: 'border-blue-500/30',   bg: 'bg-blue-500/5',   dot: 'bg-blue-400'   },
+  success: { border: 'border-green-500/30',  bg: 'bg-green-500/5',  dot: 'bg-green-400'  },
+  warning: { border: 'border-amber-500/30',  bg: 'bg-amber-500/5',  dot: 'bg-amber-400'  },
+  urgent:  { border: 'border-red-500/30',    bg: 'bg-red-500/5',    dot: 'bg-red-400 animate-pulse' },
+}
+
+const CHANGELOG_CATEGORY: Record<string, { icon: React.ElementType; color: string; label: string }> = {
+  feature:     { icon: Sparkles,   color: 'text-purple-400 bg-purple-500/10', label: 'Feature'     },
+  fix:         { icon: Wrench,     color: 'text-blue-400 bg-blue-500/10',     label: 'Correção'    },
+  improvement: { icon: TrendingUp, color: 'text-green-400 bg-green-500/10',   label: 'Melhoria'    },
+  security:    { icon: Shield,     color: 'text-red-400 bg-red-500/10',       label: 'Segurança'   },
+}
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
 
@@ -115,6 +138,10 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState('Olá')       // neutral until hydrated
   const [todayStr,  setTodayStr] = useState('')
   const [nextHoliday, setNextHoliday] = useState<{ nome: string; icone: string; days: number } | null>(null)
+  const [announcements,    setAnnouncements]    = useState<Announcement[]>([])
+  const [changelogEntries, setChangelogEntries] = useState<ChangelogEntry[]>([])
+  const [changelogLoading, setChangelogLoading] = useState(true)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
@@ -185,6 +212,30 @@ export default function DashboardPage() {
         if (d.connected && typeof d.score === 'number') setHealthScore(d.score)
       })
       .catch(() => { /* silent */ })
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/announcements')
+      .then(r => r.json())
+      .then((d: { announcements?: Announcement[] }) => setAnnouncements(d.announcements ?? []))
+      .catch(() => { /* silent */ })
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/changelog?limit=5')
+      .then(r => r.json())
+      .then((d: { entries?: ChangelogEntry[] }) => setChangelogEntries(d.entries ?? []))
+      .catch(() => { /* silent */ })
+      .finally(() => setChangelogLoading(false))
+  }, [])
+
+  const dismissAnnouncement = useCallback(async (id: string) => {
+    setAnnouncements(prev => prev.filter(a => a.id !== id))
+    await fetch('/api/announcements/dismiss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ announcement_id: id }),
+    }).catch(() => { /* silently ignore — already removed from UI */ })
   }, [])
 
   /* Derived KPI values */
@@ -628,37 +679,111 @@ export default function DashboardPage() {
                       ? 'text-white border-b-2 border-purple-500 -mb-px'
                       : 'text-slate-600 hover:text-slate-300'
                   }`}>
-                  {t === 'avisos' ? <><Bell className="w-3.5 h-3.5" /> Avisos</> : <><Sparkles className="w-3.5 h-3.5" /> Notas de Atualização</>}
+                  {t === 'avisos'
+                    ? <><Bell className="w-3.5 h-3.5" /> Avisos{announcements.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-purple-600 text-white text-[9px] font-bold leading-none">{announcements.length}</span>}</>
+                    : <><Sparkles className="w-3.5 h-3.5" /> Notas de Atualização</>}
                 </button>
               ))}
             </div>
 
             {infoTab === 'avisos' && (
-              <div className="divide-y divide-white/[0.04]">
-                {notices.map((n, i) => (
-                  <div key={i} className="flex items-start gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${n.badgeCls}`}>{n.badge}</span>
-                    <p className="text-xs text-slate-300 flex-1 leading-relaxed">{n.title}</p>
-                    <span className="text-[10px] text-slate-600 shrink-0">{n.date}</span>
-                  </div>
-                ))}
-              </div>
+              announcements.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Bell className="w-6 h-6 text-slate-700 mb-2" />
+                  <p className="text-xs text-slate-600">Nenhum aviso no momento</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {announcements.map(a => {
+                    const colors = ANNOUNCEMENT_COLORS[a.type] ?? ANNOUNCEMENT_COLORS.info
+                    const inner = (
+                      <div className={`flex items-start gap-3 px-5 py-3.5 border-l-2 ${colors.border} ${colors.bg} hover:bg-white/[0.02] transition-colors`}>
+                        <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${colors.dot}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white leading-snug">{a.title}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{a.content}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {a.link && <ExternalLink className="w-3 h-3 text-slate-600" />}
+                          {a.is_dismissible && (
+                            <button
+                              onClick={e => { e.preventDefault(); e.stopPropagation(); void dismissAnnouncement(a.id) }}
+                              className="p-1 rounded text-slate-700 hover:text-slate-400 transition-colors"
+                              aria-label="Dispensar aviso"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                    return a.link ? (
+                      <Link key={a.id} href={a.link}>{inner}</Link>
+                    ) : (
+                      <div key={a.id}>{inner}</div>
+                    )
+                  })}
+                </div>
+              )
             )}
 
             {infoTab === 'updates' && (
               <div className="divide-y divide-white/[0.04]">
-                {changelog.map((c, i) => (
-                  <div key={i} className="flex items-start gap-3 px-5 py-3">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30 shrink-0 mt-0.5 font-mono">
-                      {c.version}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white">{c.title}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{c.desc}</p>
-                    </div>
-                    <span className="text-[10px] text-slate-600 shrink-0">{c.date}</span>
+                {changelogLoading ? (
+                  <div className="flex items-center gap-2 px-5 py-4 text-xs text-slate-600">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
                   </div>
-                ))}
+                ) : changelogEntries.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Sparkles className="w-6 h-6 text-slate-700 mb-2" />
+                    <p className="text-xs text-slate-600">Nenhuma atualização encontrada</p>
+                  </div>
+                ) : (
+                  <>
+                    {changelogEntries.map(c => {
+                      const cat  = CHANGELOG_CATEGORY[c.category] ?? CHANGELOG_CATEGORY.feature
+                      const Icon = cat.icon
+                      const isExpanded = expandedId === c.id
+                      const dateStr = new Date(c.published_at).toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: '2-digit',
+                        timeZone: 'America/Sao_Paulo',
+                      })
+                      return (
+                        <div key={c.id}>
+                          <button
+                            onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                            className="w-full flex items-start gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors text-left"
+                          >
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${cat.color}`}>
+                              <Icon className="w-3 h-3" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-mono font-bold text-slate-500">{c.version}</span>
+                                <p className="text-xs font-semibold text-white">{c.title}</p>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{c.description}</p>
+                              {isExpanded && c.details && (
+                                <p className="text-[11px] text-slate-400 mt-2 p-2.5 bg-white/[0.03] rounded-lg leading-relaxed border border-white/[0.05]">
+                                  {c.details}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-slate-600">{dateStr}</span>
+                              <ChevronDown className={`w-3.5 h-3.5 text-slate-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </div>
+                          </button>
+                        </div>
+                      )
+                    })}
+                    <div className="px-5 py-2.5 border-t border-white/[0.04]">
+                      <Link href="/dashboard/changelog" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                        Ver todas as atualizações <ArrowUpRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
