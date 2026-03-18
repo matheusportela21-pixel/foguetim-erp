@@ -8,7 +8,7 @@ import {
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
   AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink, MessageSquare, Tag, Scale, Archive, Activity, Calendar,
-  DollarSign, ChevronDown, ChevronRight, Zap,
+  DollarSign, ChevronDown, ChevronRight, Zap, Warehouse, Layers, ArrowLeftRight, Building2, MapPin,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -33,6 +33,23 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: 'Armazém',
+    marketplaceDot: 'bg-emerald-400',
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      { href: '/dashboard/armazem',                icon: Warehouse,       label: 'Visão Geral'     },
+      { href: '/dashboard/armazem/produtos',       icon: Package,         label: 'Produtos'        },
+      { href: '/dashboard/armazem/estoque',        icon: Layers,          label: 'Estoque'         },
+      { href: '/dashboard/armazem/movimentacoes',  icon: ArrowLeftRight,  label: 'Movimentações'   },
+      { href: '/dashboard/armazem/mapeamentos',    icon: Link2,           label: 'Mapeamentos'     },
+      { href: '/dashboard/armazem/categorias',     icon: Tag,             label: 'Categorias'      },
+      { href: '/dashboard/armazem/armazens',       icon: Building2,       label: 'Armazéns'        },
+      { href: '/dashboard/armazem/localizacoes',   icon: MapPin,          label: 'Localizações'    },
+      { href: '/dashboard/armazem/notas-entrada',  icon: FileText,        label: 'Notas de Entrada', badge: 'Beta', roles: ['admin', 'super_admin', 'foguetim_support'] },
+    ],
+  },
+  {
     label: 'Mercado Livre',
     marketplaceDot: 'bg-yellow-400',
     collapsible: true,
@@ -40,7 +57,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: '/dashboard/pedidos',      icon: ShoppingCart,  label: 'Pedidos'        },
       { href: '/dashboard/produtos-ml',  icon: Package,       label: 'Produtos'       },
-      { href: '/dashboard/estoque',      icon: Archive,       label: 'Estoque'        },
+      { href: '/dashboard/estoque',      icon: Archive,       label: 'Estoque ML'     },
       { href: '/dashboard/precificacao', icon: Calculator,    label: 'Precificação'   },
       { href: '/dashboard/promocoes',    icon: Tag,           label: 'Promoções'      },
       { href: '/dashboard/pos-venda',    icon: MessageSquare, label: 'Pós-Venda'      },
@@ -48,6 +65,7 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/reputacao',    icon: ShieldCheck,   label: 'Reputação'      },
       { href: '/dashboard/performance',  icon: BarChart2,     label: 'Performance'    },
       { href: '/dashboard/saude',        icon: Activity,      label: 'Saúde da Conta' },
+      { href: '/dashboard/conciliacao',  icon: Scale,         label: 'Conciliação',   roles: ['admin', 'super_admin', 'owner', 'foguetim_support', 'diretor', 'director'] },
     ],
   },
   {
@@ -68,7 +86,6 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/equipe',        icon: Users,      label: 'Equipe'           },
       { href: '/dashboard/notificacoes',  icon: Bell,       label: 'Notificações'     },
       { href: '/dashboard/configuracoes', icon: Settings,   label: 'Configurações'    },
-      { href: '/dashboard/conciliacao',   icon: Scale,      label: 'Conciliação',     roles: ['admin', 'super_admin', 'owner', 'foguetim_support', 'diretor', 'director'] },
       { href: '/dashboard/nfe',           icon: FileCheck,  label: 'NF-e',            roles: ['admin', 'super_admin', 'owner', 'foguetim_support'] },
       { href: '/dashboard/ajuda',         icon: HelpCircle, label: 'Central de Ajuda' },
     ],
