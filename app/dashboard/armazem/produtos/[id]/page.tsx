@@ -84,6 +84,14 @@ interface ToastState {
   type: 'success' | 'error'
 }
 
+interface ProductMapping {
+  id: number
+  channel: string
+  marketplace_item_id: string | null
+  listing_title: string | null
+  mapping_status: 'unmapped' | 'partial' | 'mapped' | 'conflict'
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
@@ -354,6 +362,18 @@ export default function ProductDetailPage() {
   // Variation modal
   const [showVarModal, setShowVarModal] = useState(false)
 
+  // Mappings section
+  const [productMappings, setProductMappings] = useState<ProductMapping[]>([])
+  const [showMappingModal, setShowMappingModal] = useState(false)
+  const [mappingForm, setMappingForm] = useState({
+    channel: 'mercado_livre',
+    marketplace_item_id: '',
+    listing_title: '',
+    mapping_status: 'mapped',
+  })
+  const [savingMapping, setSavingMapping] = useState(false)
+  const [mappingErr, setMappingErr] = useState<string | null>(null)
+
   // ── Load ───────────────────────────────────────────────────────────────────
 
   const loadProduct = useCallback(async () => {
@@ -408,6 +428,62 @@ export default function ProductDetailPage() {
   }, [id])
 
   useEffect(() => { loadProduct() }, [loadProduct])
+
+  // ── Mappings ───────────────────────────────────────────────────────────────
+
+  const loadProductMappings = useCallback(async () => {
+    if (!id) return
+    try {
+      const r = await fetch(`/api/armazem/mapeamentos?product_id=${id}&limit=50`)
+      if (!r.ok) return
+      const d = await r.json()
+      setProductMappings(d.data ?? [])
+    } catch { /* noop */ }
+  }, [id])
+
+  useEffect(() => { loadProductMappings() }, [loadProductMappings])
+
+  async function handleUnlinkMapping(mappingId: number) {
+    try {
+      const r = await fetch(`/api/armazem/mapeamentos/${mappingId}`, { method: 'DELETE' })
+      if (!r.ok && r.status !== 204) throw new Error()
+      setToastMsg('Mapeamento removido.', 'success')
+      loadProductMappings()
+    } catch {
+      setToastMsg('Erro ao remover mapeamento.', 'error')
+    }
+  }
+
+  async function handleSaveMapping() {
+    if (!mappingForm.marketplace_item_id.trim() || !product) return
+    setSavingMapping(true)
+    setMappingErr(null)
+    try {
+      const r = await fetch('/api/armazem/mapeamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          warehouse_product_id: Number(product.id),
+          channel: mappingForm.channel,
+          marketplace_item_id: mappingForm.marketplace_item_id.trim(),
+          listing_title: mappingForm.listing_title.trim() || null,
+          mapping_status: mappingForm.mapping_status,
+        }),
+      })
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao criar mapeamento')
+      }
+      setToastMsg('Mapeamento criado!', 'success')
+      setShowMappingModal(false)
+      setMappingForm({ channel: 'mercado_livre', marketplace_item_id: '', listing_title: '', mapping_status: 'mapped' })
+      loadProductMappings()
+    } catch (e: unknown) {
+      setMappingErr(e instanceof Error ? e.message : 'Erro desconhecido')
+    } finally {
+      setSavingMapping(false)
+    }
+  }
 
   // ── Toast ──────────────────────────────────────────────────────────────────
 
@@ -920,16 +996,141 @@ export default function ProductDetailPage() {
           open={openSections.includes('mappings')}
           onToggle={() => toggleSection('mappings')}
         >
-          <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-              <Link2 className="w-5 h-5 text-slate-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-300 mb-1">Mapeamentos com Marketplaces</p>
-              <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                Vincule este produto a anúncios no Mercado Livre, Shopee e Amazon. Disponível no Bloco 3.
+          <div className="space-y-3">
+            {/* Header row */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                {productMappings.length === 0 ? 'Nenhum anúncio vinculado' : `${productMappings.length} vínculo${productMappings.length !== 1 ? 's' : ''}`}
               </p>
+              <button
+                onClick={() => setShowMappingModal(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                Mapear Anúncio
+              </button>
             </div>
+
+            {/* Inline mapping form */}
+            {showMappingModal && (
+              <div className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02] space-y-3">
+                {mappingErr && (
+                  <p className="text-xs text-red-400 bg-red-500/[0.08] border border-red-500/20 rounded-lg px-3 py-2">{mappingErr}</p>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Canal</label>
+                    <select
+                      className="input-cyber w-full px-2 py-1.5 text-xs rounded-lg"
+                      value={mappingForm.channel}
+                      onChange={e => setMappingForm(p => ({ ...p, channel: e.target.value }))}
+                    >
+                      <option value="mercado_livre">Mercado Livre</option>
+                      <option value="shopee">Shopee</option>
+                      <option value="amazon">Amazon</option>
+                      <option value="magalu">Magalu</option>
+                      <option value="other">Outro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Status</label>
+                    <select
+                      className="input-cyber w-full px-2 py-1.5 text-xs rounded-lg"
+                      value={mappingForm.mapping_status}
+                      onChange={e => setMappingForm(p => ({ ...p, mapping_status: e.target.value }))}
+                    >
+                      <option value="mapped">Mapeado</option>
+                      <option value="partial">Parcial</option>
+                      <option value="unmapped">Sugerido</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                    ID do Anúncio <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input-cyber w-full px-3 py-1.5 text-xs rounded-lg font-mono"
+                    placeholder="Ex: MLB123456789"
+                    value={mappingForm.marketplace_item_id}
+                    onChange={e => setMappingForm(p => ({ ...p, marketplace_item_id: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Título do Anúncio</label>
+                  <input
+                    type="text"
+                    className="input-cyber w-full px-3 py-1.5 text-xs rounded-lg"
+                    placeholder="Opcional"
+                    value={mappingForm.listing_title}
+                    onChange={e => setMappingForm(p => ({ ...p, listing_title: e.target.value }))}
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => { setShowMappingModal(false); setMappingErr(null) }}
+                    className="flex-1 py-1.5 rounded-lg border border-white/[0.08] text-xs text-slate-400 hover:bg-white/[0.04] transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveMapping}
+                    disabled={savingMapping || !mappingForm.marketplace_item_id.trim()}
+                    className="flex-1 py-1.5 rounded-lg btn-primary text-xs font-semibold disabled:opacity-50"
+                  >
+                    {savingMapping ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {productMappings.length === 0 && !showMappingModal && (
+              <div className="py-6 text-center">
+                <p className="text-xs text-slate-600">
+                  Nenhum anúncio vinculado. Mapeie para sincronizar estoque automaticamente no futuro.
+                </p>
+              </div>
+            )}
+
+            {/* Mappings list */}
+            {productMappings.length > 0 && (
+              <div className="space-y-2">
+                {productMappings.map((m: ProductMapping) => (
+                  <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                        m.channel === 'mercado_livre' ? 'bg-yellow-900/40 text-yellow-400' :
+                        m.channel === 'shopee' ? 'bg-orange-900/40 text-orange-400' :
+                        m.channel === 'amazon' ? 'bg-blue-900/40 text-blue-400' :
+                        'bg-slate-900/40 text-slate-400'
+                      }`}>
+                        {m.channel === 'mercado_livre' ? 'ML' : m.channel === 'shopee' ? 'SP' : m.channel === 'amazon' ? 'AMZ' : m.channel}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs text-slate-200 truncate">{m.listing_title || m.marketplace_item_id || '—'}</p>
+                        {m.marketplace_item_id && <p className="text-[10px] text-slate-600 font-mono">{m.marketplace_item_id}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`w-2 h-2 rounded-full ${
+                        m.mapping_status === 'mapped' ? 'bg-emerald-400' :
+                        m.mapping_status === 'partial' ? 'bg-amber-400' :
+                        m.mapping_status === 'conflict' ? 'bg-red-400' :
+                        'bg-slate-500'
+                      }`} />
+                      <button
+                        onClick={() => handleUnlinkMapping(m.id)}
+                        className="text-[10px] text-slate-600 hover:text-red-400 transition-colors"
+                      >
+                        Desvincular
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Accordion>
 
