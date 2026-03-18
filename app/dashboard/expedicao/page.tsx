@@ -5,6 +5,7 @@ import Header from '@/components/Header'
 import {
   Package, Printer, Truck, CheckCircle, AlertTriangle,
   RefreshCw, Search, X, ExternalLink, Clock, MapPin, User,
+  FileText, Square, CheckSquare,
 } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -229,20 +230,42 @@ function TrackingModal({
 }
 
 /* ── Shipment Card ───────────────────────────────────────────────────────── */
-function ShipmentCard({ item }: { item: ShipmentItem }) {
+function ShipmentCard({
+  item,
+  selected,
+  onToggleSelect,
+}: {
+  item: ShipmentItem
+  selected: boolean
+  onToggleSelect: (id: number | string) => void
+}) {
   const [trackingOpen, setTrackingOpen] = useState(false)
   const urgent  = getUrgency(item)
   const s       = item.shipment
   const cfg     = statusCfg(s?.status ?? 'pending')
   const mainItem = item.order_items[0]
   const extraQty = item.order_items.length > 1 ? item.order_items.length - 1 : 0
+  const canLabel = s?.status === 'ready_to_ship' || s?.status === 'handling'
 
   return (
     <>
-      <div className={`bg-[#111318] border rounded-xl p-4 transition-all hover:border-white/[0.1] ${urgent ? 'border-amber-500/30' : 'border-white/[0.06]'}`}>
+      <div className={`bg-[#111318] border rounded-xl p-4 transition-all hover:border-white/[0.1] ${urgent ? 'border-amber-500/30' : selected ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-white/[0.06]'}`}>
         {/* Top row */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
+            {/* Select checkbox */}
+            {canLabel && s?.id && (
+              <button
+                onClick={() => onToggleSelect(s.id!)}
+                className="shrink-0 text-slate-600 hover:text-indigo-400 transition-colors"
+                title={selected ? 'Desmarcar' : 'Selecionar para impressão em lote'}
+              >
+                {selected
+                  ? <CheckSquare className="w-4 h-4 text-indigo-400" />
+                  : <Square className="w-4 h-4" />
+                }
+              </button>
+            )}
             <span className="text-[11px] font-mono text-slate-500 shrink-0">#{item.order_id}</span>
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
               {cfg.icon} {cfg.label}
@@ -290,7 +313,7 @@ function ShipmentCard({ item }: { item: ShipmentItem }) {
 
         {/* Actions */}
         <div className="flex items-center gap-2 flex-wrap">
-          {(s?.status === 'ready_to_ship' || s?.status === 'handling') && s?.id && (
+          {canLabel && s?.id && (
             <a
               href={`/api/mercadolivre/shipments/${s.id}/label`}
               target="_blank"
@@ -298,6 +321,17 @@ function ShipmentCard({ item }: { item: ShipmentItem }) {
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg transition-all"
             >
               <Printer className="w-3.5 h-3.5" /> Etiqueta PDF
+            </a>
+          )}
+          {s?.id && (
+            <a
+              href={`/api/mercadolivre/shipments/${s.id}/danfe`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Baixar DANFE (nota fiscal)"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-all"
+            >
+              <FileText className="w-3.5 h-3.5" /> DANFE
             </a>
           )}
           {s?.id && (
@@ -329,11 +363,26 @@ const TABS = [
 ]
 
 export default function ExpedicaoPage() {
-  const [items, setItems]       = useState<ShipmentItem[]>([])
-  const [loading, setLoading]   = useState(true)
+  const [items, setItems]         = useState<ShipmentItem[]>([])
+  const [loading, setLoading]     = useState(true)
   const [connected, setConnected] = useState<boolean | null>(null)
-  const [tab, setTab]           = useState('todos')
-  const [search, setSearch]     = useState('')
+  const [tab, setTab]             = useState('todos')
+  const [search, setSearch]       = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set())
+
+  function toggleSelect(id: string | number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function batchPrint(format: 'pdf' | 'zpl2') {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds).join(',')
+    window.open(`/api/mercadolivre/shipments/labels/batch?ids=${ids}&format=${format}`, '_blank')
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -443,7 +492,35 @@ export default function ExpedicaoPage() {
             })}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
+                  {selectedIds.size} selecionado{selectedIds.size > 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={() => batchPrint('pdf')}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg transition-all"
+                  title="Imprimir todas como PDF"
+                >
+                  <Printer className="w-3.5 h-3.5" /> PDF
+                </button>
+                <button
+                  onClick={() => batchPrint('zpl2')}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg border border-purple-500/20 transition-all"
+                  title="Baixar todas como ZPL2 (Zebra)"
+                >
+                  ZPL2
+                </button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="p-1.5 text-slate-600 hover:text-slate-300 transition-colors"
+                  title="Limpar seleção"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
               <input
@@ -497,7 +574,12 @@ export default function ExpedicaoPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filtered.map(item => (
-              <ShipmentCard key={`${item.order_id}-${item.shipment?.id}`} item={item} />
+              <ShipmentCard
+                key={`${item.order_id}-${item.shipment?.id}`}
+                item={item}
+                selected={item.shipment?.id != null && selectedIds.has(item.shipment.id)}
+                onToggleSelect={toggleSelect}
+              />
             ))}
           </div>
         )}

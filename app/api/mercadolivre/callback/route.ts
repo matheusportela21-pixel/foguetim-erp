@@ -15,8 +15,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { exchangeCode, saveConnection } from '@/lib/mercadolivre'
+import { exchangeCode, saveConnection, getMLConnections } from '@/lib/mercadolivre'
 import { createNotification } from '@/lib/notify'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+
+// Limite de contas ML por plano (será aplicado quando BILLING_ACTIVE = true)
+const ML_ACCOUNT_LIMITS: Record<string, number> = {
+  explorador:      1,
+  comandante:      2,
+  almirante:       3,
+  missao_espacial: 5,
+  enterprise:      99,
+}
+const BILLING_ACTIVE = false  // Espelho de PlanContext.tsx
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
@@ -65,11 +76,29 @@ export async function GET(req: NextRequest) {
     const nickname = me.nickname ?? String(tokens.user_id)
     console.log('[ML callback] ML user nickname:', nickname)
 
-    // 3. Save to DB using admin client (bypasses RLS)
+    // 3. Verificar limite do plano (quando billing ativo)
+    if (BILLING_ACTIVE) {
+      const { data: userRow } = await supabaseAdmin()
+        .from('users')
+        .select('plan')
+        .eq('id', user.id)
+        .single()
+
+      const plan  = (userRow?.plan ?? 'explorador') as string
+      const limit = ML_ACCOUNT_LIMITS[plan] ?? 1
+      const existing = await getMLConnections(user.id)
+
+      if (existing.length >= limit) {
+        console.warn('[ML callback] plan limit reached — plan:', plan, 'limit:', limit)
+        return redirect(`/dashboard/integracoes?ml_error=plan_limit&plan=${encodeURIComponent(plan)}&limit=${limit}`)
+      }
+    }
+
+    // 4. Save to DB using admin client (bypasses RLS)
     await saveConnection(user.id, tokens, nickname)
     console.log('[ML callback] saveConnection OK')
 
-    // 4. Notificação de conexão bem-sucedida
+    // 5. Notificação de conexão bem-sucedida
     await createNotification({
       userId:    user.id,
       title:     'Mercado Livre conectado!',

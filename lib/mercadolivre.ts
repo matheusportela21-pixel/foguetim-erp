@@ -49,6 +49,8 @@ export interface MLConnection {
   marketplace:   string
   ml_user_id:    number
   ml_nickname:   string
+  account_label: string | null
+  is_primary:    boolean
   access_token:  string
   refresh_token: string
   expires_at:    string
@@ -134,13 +136,16 @@ export async function refreshToken(refreshTk: string): Promise<MLTokenResponse> 
 
 export async function getValidToken(userId: string): Promise<string | null> {
   const db = supabaseAdmin()
+  // Prefer primary; fall back to first active connection if none set as primary
   const { data: conn, error } = await db
     .from('marketplace_connections')
     .select('*')
     .eq('user_id', userId)
     .eq('marketplace', 'mercadolivre')
     .eq('connected', true)
-    .single()
+    .order('is_primary', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (error || !conn) return null
 
@@ -201,39 +206,73 @@ export async function mlFetch<T = unknown>(
 
 // ─── Helpers de conexão ───────────────────────────────────────────────────────
 
-/** Salva ou atualiza a conexão ML no banco após o callback OAuth */
+/** Salva ou atualiza a conexão ML no banco após o callback OAuth.
+ *  - Se a conta ML (ml_user_id) já existe para este usuário → atualiza tokens.
+ *  - Se é uma nova conta ML → insere nova linha; define is_primary se for a primeira.
+ */
 export async function saveConnection(
   userId: string,
   tokens: MLTokenResponse,
   mlNickname: string,
 ): Promise<void> {
+  const db        = supabaseAdmin()
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+  const now       = new Date().toISOString()
 
-  const { error } = await supabaseAdmin()
+  // Verificar se esta conta ML já está registrada para este usuário
+  const { data: existing } = await db
     .from('marketplace_connections')
-    .upsert(
-      {
-        user_id:       userId,
-        marketplace:   'mercadolivre',
-        ml_user_id:    tokens.user_id,
+    .select('id')
+    .eq('user_id', userId)
+    .eq('marketplace', 'mercadolivre')
+    .eq('ml_user_id', tokens.user_id)
+    .maybeSingle()
+
+  if (existing) {
+    // Re-conectando conta existente — apenas atualiza os tokens
+    const { error } = await db
+      .from('marketplace_connections')
+      .update({
         ml_nickname:   mlNickname,
         access_token:  tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at:    expiresAt,
         connected:     true,
-        updated_at:    new Date().toISOString(),
-      },
-      { onConflict: 'user_id,marketplace' },
-    )
+        updated_at:    now,
+      })
+      .eq('id', existing.id)
+    if (error) throw new Error(`saveConnection (update) falhou: ${error.message}`)
+  } else {
+    // Nova conta ML — verifica se é a primeira para definir is_primary
+    const { count } = await db
+      .from('marketplace_connections')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('marketplace', 'mercadolivre')
+      .eq('connected', true)
 
-  if (error) {
-    console.error('[ML] saveConnection error:', error)
-    throw new Error(`saveConnection falhou: ${error.message}`)
+    const { error } = await db
+      .from('marketplace_connections')
+      .insert({
+        user_id:       userId,
+        marketplace:   'mercadolivre',
+        ml_user_id:    tokens.user_id,
+        ml_nickname:   mlNickname,
+        account_label: null,
+        access_token:  tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at:    expiresAt,
+        connected:     true,
+        is_primary:    (count ?? 0) === 0,
+        updated_at:    now,
+      })
+    if (error) throw new Error(`saveConnection (insert) falhou: ${error.message}`)
   }
+
   console.log('[ML] saveConnection OK — user_id:', userId, 'ml_nickname:', mlNickname)
 }
 
-/** Desconecta ML — mantém o registro mas marca connected = false */
+/** Desconecta todas as contas ML — mantém registros mas marca connected = false */
 export async function disconnectML(userId: string): Promise<void> {
   await supabaseAdmin()
     .from('marketplace_connections')
@@ -242,13 +281,86 @@ export async function disconnectML(userId: string): Promise<void> {
     .eq('marketplace', 'mercadolivre')
 }
 
-/** Retorna a conexão ML atual do usuário */
+/** Desconecta uma conta ML específica. Se era a primária, promove a próxima ativa. */
+export async function disconnectMLById(userId: string, connectionId: string): Promise<void> {
+  const db = supabaseAdmin()
+
+  const { data: conn } = await db
+    .from('marketplace_connections')
+    .select('id, is_primary')
+    .eq('id', connectionId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (!conn) return
+
+  await db
+    .from('marketplace_connections')
+    .update({ connected: false, is_primary: false, updated_at: new Date().toISOString() })
+    .eq('id', connectionId)
+
+  // Se era a primária, promove a próxima conta ativa
+  if (conn.is_primary) {
+    const { data: next } = await db
+      .from('marketplace_connections')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('marketplace', 'mercadolivre')
+      .eq('connected', true)
+      .neq('id', connectionId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (next) {
+      await db
+        .from('marketplace_connections')
+        .update({ is_primary: true, updated_at: new Date().toISOString() })
+        .eq('id', next.id)
+    }
+  }
+}
+
+/** Retorna a conexão ML primária do usuário (compatibilidade retroativa) */
 export async function getMLConnection(userId: string): Promise<MLConnection | null> {
   const { data } = await supabaseAdmin()
     .from('marketplace_connections')
     .select('*')
     .eq('user_id', userId)
     .eq('marketplace', 'mercadolivre')
-    .single()
+    .eq('connected', true)
+    .order('is_primary', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   return data as MLConnection | null
+}
+
+/** Retorna todas as conexões ML ativas do usuário */
+export async function getMLConnections(userId: string): Promise<MLConnection[]> {
+  const { data } = await supabaseAdmin()
+    .from('marketplace_connections')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('marketplace', 'mercadolivre')
+    .eq('connected', true)
+    .order('is_primary', { ascending: false })
+    .order('created_at', { ascending: true })
+  return (data ?? []) as MLConnection[]
+}
+
+/** Define uma conta ML como primária (e remove a flag das demais) */
+export async function setMLPrimary(userId: string, connectionId: string): Promise<void> {
+  const db = supabaseAdmin()
+  // Remove primary de todas
+  await db
+    .from('marketplace_connections')
+    .update({ is_primary: false, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('marketplace', 'mercadolivre')
+  // Define a escolhida
+  await db
+    .from('marketplace_connections')
+    .update({ is_primary: true, updated_at: new Date().toISOString() })
+    .eq('id', connectionId)
+    .eq('user_id', userId)
 }

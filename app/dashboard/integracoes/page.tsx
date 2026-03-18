@@ -7,7 +7,7 @@ import Header from '@/components/Header'
 import {
   CheckCircle, RefreshCw, Zap, Truck, ChevronDown, ChevronUp,
   Eye, EyeOff, ExternalLink, Copy, AlertCircle, X, Globe, HelpCircle,
-  Loader2, CheckCircle2,
+  Loader2, CheckCircle2, Star, Plus, Trash2,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -375,14 +375,25 @@ interface MLStatus {
   ml_user_id?: number
 }
 
+interface MLConnectionInfo {
+  id:            string
+  ml_user_id:    number
+  ml_nickname:   string
+  account_label: string | null
+  is_primary:    boolean
+  expires_at:    string
+  connected:     boolean
+}
+
 function IntegracoesContent() {
   const searchParams = useSearchParams()
   const [mks, setMks]         = useState<MktEntry[]>(INIT_MKT)
   const [fts, setFts]         = useState(fretes)
   const [syncing, setSyncing] = useState<string | null>(null)
-  const [mlStatus, setMlStatus] = useState<MLStatus | null>(null)
-  const [mlLoading, setMlLoading] = useState(true)
-  const [mlDisconnecting, setMlDisconnecting] = useState(false)
+  const [mlStatus, setMlStatus]         = useState<MLStatus | null>(null)
+  const [mlConnections, setMlConnections] = useState<MLConnectionInfo[]>([])
+  const [mlLoading, setMlLoading]       = useState(true)
+  const [mlDisconnecting, setMlDisconnecting] = useState<string | null>(null)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
   // Handle ?connected=true or ?ml_error=... from OAuth redirect
@@ -409,11 +420,14 @@ function IntegracoesContent() {
 
   // Load real ML connection status on mount
   useEffect(() => {
-    fetch('/api/mercadolivre/status')
-      .then(r => r.json())
-      .then((data: MLStatus) => {
-        setMlStatus(data)
-        if (data.connected) {
+    Promise.all([
+      fetch('/api/mercadolivre/status').then(r => r.json()),
+      fetch('/api/mercadolivre/connections').then(r => r.json()),
+    ])
+      .then(([status, connsData]: [MLStatus, { connections?: MLConnectionInfo[] }]) => {
+        setMlStatus(status)
+        setMlConnections(connsData.connections ?? [])
+        if (status.connected) {
           setMks(prev => prev.map(m =>
             m.id === 'ml'
               ? { ...m, connected: true, apiStatus: 'conectado' }
@@ -425,17 +439,33 @@ function IntegracoesContent() {
       .finally(() => setMlLoading(false))
   }, [])
 
-  async function disconnectML() {
-    setMlDisconnecting(true)
+  async function disconnectMLAccount(connectionId: string) {
+    setMlDisconnecting(connectionId)
     try {
-      await fetch('/api/mercadolivre/disconnect', { method: 'DELETE' })
-      setMlStatus({ connected: false })
-      setMks(prev => prev.map(m =>
-        m.id === 'ml' ? { ...m, connected: false, apiStatus: 'nao_configurado' } : m
-      ))
+      await fetch(`/api/mercadolivre/connections?id=${connectionId}`, { method: 'DELETE' })
+      const remaining = mlConnections.filter(c => c.id !== connectionId)
+      setMlConnections(remaining)
+      if (remaining.length === 0) {
+        setMlStatus({ connected: false })
+        setMks(prev => prev.map(m =>
+          m.id === 'ml' ? { ...m, connected: false, apiStatus: 'nao_configurado' } : m
+        ))
+      }
+      setToast({ type: 'success', msg: 'Conta desconectada com sucesso.' })
+    } catch {
+      setToast({ type: 'error', msg: 'Erro ao desconectar conta.' })
     } finally {
-      setMlDisconnecting(false)
+      setMlDisconnecting(null)
     }
+  }
+
+  async function setPrimary(connectionId: string) {
+    await fetch(`/api/mercadolivre/connections?id=${connectionId}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ set_primary: true }),
+    })
+    setMlConnections(prev => prev.map(c => ({ ...c, is_primary: c.id === connectionId })))
   }
 
   function sync(id: string) {
@@ -498,37 +528,35 @@ function IntegracoesContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {mks.map(mk => {
               if (mk.id === 'ml') {
-                // ML card with real OAuth connect/disconnect
+                // ML card with multi-account support
                 return (
-                  <div key="ml" className={`dash-card rounded-2xl border ${mk.color} overflow-hidden`}>
+                  <div key="ml" className={`dash-card rounded-2xl border ${mk.color} overflow-hidden col-span-full md:col-span-2 xl:col-span-3`}>
                     <div className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0">
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center text-xl shrink-0">
                             🟡
                           </div>
-                          <div className="min-w-0">
+                          <div>
                             <p className="font-bold text-white text-sm">Mercado Livre</p>
                             {mlLoading ? (
                               <div className="flex items-center gap-1 mt-0.5">
                                 <Loader2 className="w-3 h-3 text-slate-600 animate-spin" />
                                 <span className="text-[10px] text-slate-600">Verificando...</span>
                               </div>
-                            ) : mlStatus?.connected ? (
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <CheckCircle className="w-3 h-3 text-green-400" />
-                                <span className="text-[10px] text-green-400">Conectado como {mlStatus.nickname}</span>
-                              </div>
                             ) : (
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-                                <span className="text-[10px] text-slate-500">Não conectado</span>
-                              </div>
+                              <span className="text-[10px] text-slate-500">
+                                {mlConnections.length === 0
+                                  ? 'Não conectado'
+                                  : `${mlConnections.length} conta${mlConnections.length > 1 ? 's' : ''} conectada${mlConnections.length > 1 ? 's' : ''}`
+                                }
+                              </span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex gap-1.5 shrink-0 items-center">
+                        <div className="flex items-center gap-2">
                           {mlStatus?.connected && (
                             <button onClick={() => sync('ml')}
                               title="Sincronizar agora"
@@ -536,22 +564,70 @@ function IntegracoesContent() {
                               <RefreshCw className="w-3.5 h-3.5" />
                             </button>
                           )}
-                          {mlStatus?.connected ? (
-                            <button
-                              onClick={disconnectML}
-                              disabled={mlDisconnecting}
-                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-dark-700 border border-white/[0.06] text-slate-400 hover:text-red-400 disabled:opacity-50 transition-all">
-                              {mlDisconnecting ? 'Desconectando...' : 'Desconectar'}
-                            </button>
-                          ) : (
-                            <a href="/api/mercadolivre/auth"
-                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition-all flex items-center gap-1.5">
-                              <ExternalLink className="w-3 h-3" /> Conectar
-                            </a>
-                          )}
+                          <a href="/api/mercadolivre/auth"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition-all">
+                            <Plus className="w-3 h-3" />
+                            {mlConnections.length === 0 ? 'Conectar' : 'Adicionar conta'}
+                          </a>
                         </div>
                       </div>
 
+                      {/* Connected accounts list */}
+                      {!mlLoading && mlConnections.length > 0 && (
+                        <div className="space-y-2">
+                          {mlConnections.map(conn => (
+                            <div key={conn.id}
+                              className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
+                                conn.is_primary
+                                  ? 'border-amber-500/30 bg-amber-500/5'
+                                  : 'border-white/[0.04] bg-white/[0.02]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                                  <span className="text-sm">🟡</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-xs font-bold text-white truncate">
+                                      {conn.account_label ?? conn.ml_nickname}
+                                    </p>
+                                    {conn.is_primary && (
+                                      <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-900/40 text-amber-400">
+                                        <Star className="w-2.5 h-2.5" /> Principal
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-600 font-mono">{conn.ml_nickname}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {!conn.is_primary && (
+                                  <button
+                                    onClick={() => setPrimary(conn.id)}
+                                    title="Definir como conta principal"
+                                    className="p-1.5 text-slate-600 hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-500/10"
+                                  >
+                                    <Star className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => disconnectMLAccount(conn.id)}
+                                  disabled={mlDisconnecting === conn.id}
+                                  title="Desconectar esta conta"
+                                  className="p-1.5 text-slate-600 hover:text-red-400 disabled:opacity-50 transition-colors rounded-lg hover:bg-red-500/10"
+                                >
+                                  {mlDisconnecting === conn.id
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    : <Trash2 className="w-3.5 h-3.5" />
+                                  }
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
