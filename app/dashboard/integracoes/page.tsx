@@ -525,8 +525,9 @@ function IntegracoesContent() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {mks.map(mk => {
+          {/* ML — active integration */}
+          <div className="mb-4">
+            {mks.filter(mk => mk.id === 'ml').map(mk => {
               if (mk.id === 'ml') {
                 // ML card with multi-account support
                 return (
@@ -633,16 +634,41 @@ function IntegracoesContent() {
                 )
               }
 
-              return (
-                <MktCard
-                  key={mk.id}
-                  mk={mk}
-                  onUpdate={updateMk}
-                  onSync={sync}
-                  syncing={syncing}
-                />
-              )
+              return null
             })}
+          </div>
+
+          {/* Coming soon marketplaces */}
+          <div>
+            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span>Em breve</span>
+              <span className="flex-1 h-px bg-white/[0.04]" />
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {[
+                { id: 'shopee', name: 'Shopee', color: 'border-orange-500/20 bg-orange-500/5', dot: 'bg-orange-400', desc: 'Integração de pedidos e anúncios' },
+                { id: 'amazon', name: 'Amazon', color: 'border-cyan-500/20 bg-cyan-500/5', dot: 'bg-cyan-400', desc: 'Fulfillment e anúncios Amazon' },
+                { id: 'magalu', name: 'Magalu', color: 'border-blue-500/20 bg-blue-500/5', dot: 'bg-blue-400', desc: 'Pedidos e catálogo Magazine Luiza' },
+                { id: 'tiktok', name: 'TikTok Shop', color: 'border-slate-500/20 bg-slate-500/5', dot: 'bg-slate-400', desc: 'Social commerce TikTok' },
+                { id: 'ame', name: 'Americanas', color: 'border-red-500/20 bg-red-500/5', dot: 'bg-red-400', desc: 'Marketplace Americanas/B2W' },
+                { id: 'cb', name: 'Casas Bahia', color: 'border-green-500/20 bg-green-500/5', dot: 'bg-green-400', desc: 'Via Varejo e Casas Bahia' },
+                { id: 'ns', name: 'Nuvemshop', color: 'border-indigo-500/20 bg-indigo-500/5', dot: 'bg-indigo-400', desc: 'Loja virtual e multicanal' },
+                { id: 'ali', name: 'AliExpress', color: 'border-rose-500/20 bg-rose-500/5', dot: 'bg-rose-400', desc: 'Cross-border AliExpress' },
+              ].map(m => (
+                <div key={m.id} className={`rounded-xl border ${m.color} p-3.5 opacity-70 flex items-center justify-between group`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${m.dot} shrink-0`} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-300">{m.name}</p>
+                      <p className="text-[10px] text-slate-600 mt-0.5">{m.desc}</p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-500 ring-1 ring-white/[0.06] shrink-0">
+                    Em breve
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

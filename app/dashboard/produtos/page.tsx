@@ -2021,48 +2021,55 @@ export default function ProdutosPage() {
 
   // ── Alerts ────────────────────────────────────────────────────────────────
 
-  const alerts = useMemo(() => [
-    {
-      key: 'margem',
-      icon: TrendingDown,
-      color: 'border-red-500/20 bg-red-500/5',
-      iconCls: 'text-red-400 bg-red-500/10',
-      msg: `${allProdutos.filter(p => margem(p,'ML') < 15).length} produtos com margem abaixo de 15% no ML`,
-      detail: 'Revise o preço ou os custos.',
-    },
-    {
-      key: 'semestoque',
-      icon: Package,
-      color: 'border-amber-500/20 bg-amber-500/5',
-      iconCls: 'text-amber-400 bg-amber-500/10',
-      msg: `${allProdutos.filter(p => p.estoqueReal === 0).length} produtos sem estoque`,
-      detail: 'Ficam inativos nos marketplaces.',
-    },
-    {
-      key: 'baixoestoque',
-      icon: AlertCircle,
-      color: 'border-amber-500/20 bg-amber-500/5',
-      iconCls: 'text-amber-400 bg-amber-500/10',
-      msg: `${allProdutos.filter(p => p.estoqueReal > 0 && p.estoqueReal <= p.estoqueMinimo).length} produtos com estoque abaixo do mínimo`,
-      detail: 'Faça a reposição antes de esgotar.',
-    },
-    {
-      key: 'semimagem',
-      icon: ImageOff,
-      color: 'border-slate-500/20 bg-slate-500/5',
-      iconCls: 'text-slate-400 bg-slate-500/10',
-      msg: `${allProdutos.filter(p => p.imagens.length === 0).length} produtos sem imagem`,
-      detail: 'Menor taxa de conversão.',
-    },
-    {
-      key: 'rascunho',
-      icon: Info,
-      color: 'border-purple-500/20 bg-purple-500/5',
-      iconCls: 'text-purple-400 bg-purple-500/10',
-      msg: `${allProdutos.filter(p => p.status === 'rascunho').length} produtos em rascunho`,
-      detail: 'Finalize e publique nos marketplaces.',
-    },
-  ].filter(a => !dismissed.includes(a.key)), [dismissed])
+  const alerts = useMemo(() => {
+    const margemCount     = allProdutos.filter(p => margem(p,'ML') < 15).length
+    const semEstoqueCount = allProdutos.filter(p => p.estoqueReal === 0).length
+    const baixoCount      = allProdutos.filter(p => p.estoqueReal > 0 && p.estoqueReal <= p.estoqueMinimo).length
+    const semImagemCount  = allProdutos.filter(p => p.imagens.length === 0).length
+    const rascunhoCount   = allProdutos.filter(p => p.status === 'rascunho').length
+    return [
+      margemCount > 0 && {
+        key: 'margem',
+        icon: TrendingDown,
+        color: 'border-red-500/20 bg-red-500/5',
+        iconCls: 'text-red-400 bg-red-500/10',
+        msg: `${margemCount} produto${margemCount !== 1 ? 's' : ''} com margem abaixo de 15% no ML`,
+        detail: 'Revise o preço ou os custos.',
+      },
+      semEstoqueCount > 0 && {
+        key: 'semestoque',
+        icon: Package,
+        color: 'border-amber-500/20 bg-amber-500/5',
+        iconCls: 'text-amber-400 bg-amber-500/10',
+        msg: `${semEstoqueCount} produto${semEstoqueCount !== 1 ? 's' : ''} sem estoque`,
+        detail: 'Ficam inativos nos marketplaces.',
+      },
+      baixoCount > 0 && {
+        key: 'baixoestoque',
+        icon: AlertCircle,
+        color: 'border-amber-500/20 bg-amber-500/5',
+        iconCls: 'text-amber-400 bg-amber-500/10',
+        msg: `${baixoCount} produto${baixoCount !== 1 ? 's' : ''} com estoque abaixo do mínimo`,
+        detail: 'Faça a reposição antes de esgotar.',
+      },
+      semImagemCount > 0 && {
+        key: 'semimagem',
+        icon: ImageOff,
+        color: 'border-slate-500/20 bg-slate-500/5',
+        iconCls: 'text-slate-400 bg-slate-500/10',
+        msg: `${semImagemCount} produto${semImagemCount !== 1 ? 's' : ''} sem imagem`,
+        detail: 'Menor taxa de conversão.',
+      },
+      rascunhoCount > 0 && {
+        key: 'rascunho',
+        icon: Info,
+        color: 'border-purple-500/20 bg-purple-500/5',
+        iconCls: 'text-purple-400 bg-purple-500/10',
+        msg: `${rascunhoCount} produto${rascunhoCount !== 1 ? 's' : ''} em rascunho`,
+        detail: 'Finalize e publique nos marketplaces.',
+      },
+    ].filter((a): a is NonNullable<typeof a> => a !== false && !dismissed.includes((a as any).key))
+  }, [allProdutos, dismissed])
 
   // ── Sort toggle ───────────────────────────────────────────────────────────
 
