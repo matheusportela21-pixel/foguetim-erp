@@ -933,7 +933,7 @@ function MLProductsTab() {
   }, [statusFilter, catalogTab, sortBy])
 
   function openEditPage(itemId: string) {
-    window.open(`/dashboard/produtos-ml/editar/${itemId}`, '_blank')
+    window.open(`/dashboard/produtos/editar/${itemId}`, '_blank')
   }
 
   async function handleSync() {

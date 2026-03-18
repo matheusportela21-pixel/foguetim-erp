@@ -5,7 +5,7 @@ import MobileWarning from './MobileWarning'
 
 // Pages where we show the mobile warning
 const COMPLEX_PATHS = [
-  '/dashboard/produtos',
+  '/dashboard/produtos-ml',
   '/dashboard/pedidos',
   '/dashboard/financeiro',
   '/dashboard/relatorios',

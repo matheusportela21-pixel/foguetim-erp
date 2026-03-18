@@ -381,7 +381,7 @@ export default function DashboardPage() {
             {[
               { label: 'Faturamento 30d',   value: revenue,   sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro', tooltip: 'Receita bruta dos últimos 30 dias no Mercado Livre' },
               { label: 'Pedidos 30d',       value: orders,    sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos',    tooltip: 'Total de pedidos recebidos nos últimos 30 dias' },
-              { label: 'Anúncios Ativos',   value: active,    sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos',   tooltip: 'Total de anúncios ativos sincronizados' },
+              { label: 'Anúncios Ativos',   value: active,    sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos-ml',   tooltip: 'Total de anúncios ativos sincronizados' },
               { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Ver Central Pós-Venda' : 'Nenhuma pendente', icon: MessageSquare, color: questions > 0 ? 'text-orange-400 bg-orange-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/pos-venda', tooltip: 'Perguntas não respondidas dos seus compradores no ML' },
             ].map(k => (
               <Link key={k.label} href={k.href}
@@ -450,9 +450,9 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y divide-white/[0.04]">
                 {[
-                  { label: 'Anúncios Ativos',   val: ml?.connected ? ml.totalActive ?? 0 : 0, level: ml?.connected && (ml.totalActive ?? 0) > 0 ? 'ok' as const : 'muted' as const, href: '/dashboard/produtos' },
-                  { label: 'Anúncios Pausados', val: 0, level: 'muted' as const, href: '/dashboard/produtos' },
-                  { label: 'Em Revisão',        val: 0, level: 'muted' as const, href: '/dashboard/produtos' },
+                  { label: 'Anúncios Ativos',   val: ml?.connected ? ml.totalActive ?? 0 : 0, level: ml?.connected && (ml.totalActive ?? 0) > 0 ? 'ok' as const : 'muted' as const, href: '/dashboard/produtos-ml' },
+                  { label: 'Anúncios Pausados', val: 0, level: 'muted' as const, href: '/dashboard/produtos-ml' },
+                  { label: 'Em Revisão',        val: 0, level: 'muted' as const, href: '/dashboard/produtos-ml' },
                 ].map(item => (
                   <Link key={item.label} href={item.href}
                     className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
@@ -561,7 +561,7 @@ export default function DashboardPage() {
           <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3">Ações Rápidas</p>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {[
-              { icon: Plus,        label: 'Cadastrar Produto', href: '/dashboard/produtos'    },
+              { icon: Plus,        label: 'Cadastrar Produto', href: '/dashboard/produtos-ml'    },
               { icon: Tag,         label: 'Nova Listagem',     href: '/dashboard/listagens'   },
               { icon: Calculator,  label: 'Calcular Preço',    href: '/dashboard/precificacao'},
               { icon: FileCheck,   label: 'Emitir NF-e',       href: '/dashboard/nfe'         },
