@@ -310,7 +310,7 @@ export default function Listagens() {
                     onClick={() => navigator.clipboard.writeText(
                       `${listing.titulo}\n\n${listing.descricao}\n\nPalavras-chave: ${listing.palavrasChave}`
                     )}
-                    className="btn-neon px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5"
+                    className="dash-btn-ghost px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5"
                   >
                     <Copy className="w-3 h-3" />Copiar tudo
                   </button>
