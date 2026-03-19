@@ -26,6 +26,13 @@ interface Invoice {
   is_beta: boolean
   created_at: string
   updated_at: string
+  freight_cost?: number
+  insurance_cost?: number
+  other_expenses?: number
+  discount_amount_entry?: number
+  difal_type?: string // 'none' | 'value' | 'percent'
+  difal_value?: number
+  apply_costs_to_products?: boolean
 }
 
 interface InvoiceItem {
@@ -96,6 +103,18 @@ export default function InvoiceDetailPage() {
   const [confirming, setConfirming] = useState(false)
   const [toast, setToastState]      = useState<ToastState | null>(null)
 
+  // Complementary costs state
+  const [costs, setCosts] = useState({
+    freight_cost: 0,
+    insurance_cost: 0,
+    other_expenses: 0,
+    discount_amount_entry: 0,
+    difal_type: 'none',
+    difal_value: 0,
+    apply_costs_to_products: false,
+  })
+  const [savingCosts, setSavingCosts] = useState(false)
+
   // Per-item resolution state
   const [itemStates, setItemStates] = useState<Record<number, ItemResolvingState>>({})
 
@@ -113,8 +132,19 @@ export default function InvoiceDetailPage() {
       const r = await fetch(`/api/armazem/notas-entrada/${id}`)
       if (!r.ok) throw new Error()
       const d = await r.json()
-      setInvoice(d.invoice ?? d)
+      const inv: Invoice = d.invoice ?? d
+      setInvoice(inv)
       setItems(d.items ?? d.invoice?.items ?? [])
+      // Populate complementary costs from saved data
+      setCosts({
+        freight_cost: inv.freight_cost ?? 0,
+        insurance_cost: inv.insurance_cost ?? 0,
+        other_expenses: inv.other_expenses ?? 0,
+        discount_amount_entry: inv.discount_amount_entry ?? 0,
+        difal_type: inv.difal_type ?? 'none',
+        difal_value: inv.difal_value ?? 0,
+        apply_costs_to_products: inv.apply_costs_to_products ?? false,
+      })
     } catch {
       setToast({ message: 'Erro ao carregar nota fiscal.', type: 'error' })
     } finally {
@@ -203,10 +233,64 @@ export default function InvoiceDetailPage() {
     await patchItem(itemId, { resolution_type: 'pending' })
   }
 
+  async function handleSaveCosts() {
+    setSavingCosts(true)
+    try {
+      const r = await fetch(`/api/armazem/notas-entrada/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          freight_cost: costs.freight_cost,
+          insurance_cost: costs.insurance_cost,
+          other_expenses: costs.other_expenses,
+          discount_amount_entry: costs.discount_amount_entry,
+          difal_type: costs.difal_type,
+          difal_value: costs.difal_value,
+          apply_costs_to_products: costs.apply_costs_to_products,
+        }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error ?? 'Erro ao salvar custos')
+      setToast({ message: 'Custos complementares salvos.', type: 'success' })
+      await loadInvoice()
+    } catch (e: unknown) {
+      setToast({ message: e instanceof Error ? e.message : 'Erro ao salvar custos.', type: 'error' })
+    } finally {
+      setSavingCosts(false)
+    }
+  }
+
+  function calcRealCost(item: InvoiceItem): number {
+    const totalItems = items.reduce((s, i) => s + i.unit_cost * i.quantity, 0)
+    if (totalItems === 0) return item.unit_cost
+
+    const itemValue = item.unit_cost * item.quantity
+    const ratio = itemValue / totalItems
+
+    const freightRateio    = (costs.freight_cost || 0) * ratio
+    const insuranceRateio  = (costs.insurance_cost || 0) * ratio
+    const expensesRateio   = (costs.other_expenses || 0) * ratio
+    const discountRateio   = (costs.discount_amount_entry || 0) * ratio
+
+    let difalRateio = 0
+    if (costs.difal_type === 'value') {
+      difalRateio = (costs.difal_value || 0) * ratio
+    } else if (costs.difal_type === 'percent') {
+      difalRateio = itemValue * ((costs.difal_value || 0) / 100) * ratio
+    }
+
+    const totalRealForItem = itemValue + freightRateio + insuranceRateio + expensesRateio + difalRateio - discountRateio
+    return totalRealForItem / item.quantity
+  }
+
   async function handleConfirmEntry() {
     setConfirming(true)
     try {
-      const r = await fetch(`/api/armazem/notas-entrada/${id}/confirm`, { method: 'POST' })
+      const r = await fetch(`/api/armazem/notas-entrada/${id}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apply_costs: costs.apply_costs_to_products }),
+      })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error ?? 'Erro ao confirmar entrada')
       const count = d.movements_created ?? d.count ?? '?'
@@ -353,6 +437,143 @@ export default function InvoiceDetailPage() {
           )}
         </div>
 
+        {/* Complementary costs */}
+        {!isCompleted && (
+          <div className="glass-card p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-200" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Custos Complementares da Nota
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-500 font-medium">Frete (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input-cyber w-full px-3 py-2 text-sm rounded-lg"
+                  placeholder="0,00"
+                  value={costs.freight_cost || ''}
+                  onChange={e => setCosts(prev => ({ ...prev, freight_cost: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-500 font-medium">Seguro (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input-cyber w-full px-3 py-2 text-sm rounded-lg"
+                  placeholder="0,00"
+                  value={costs.insurance_cost || ''}
+                  onChange={e => setCosts(prev => ({ ...prev, insurance_cost: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-500 font-medium">Outras Despesas (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input-cyber w-full px-3 py-2 text-sm rounded-lg"
+                  placeholder="0,00"
+                  value={costs.other_expenses || ''}
+                  onChange={e => setCosts(prev => ({ ...prev, other_expenses: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-500 font-medium">Desconto (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input-cyber w-full px-3 py-2 text-sm rounded-lg"
+                  placeholder="0,00"
+                  value={costs.discount_amount_entry || ''}
+                  onChange={e => setCosts(prev => ({ ...prev, discount_amount_entry: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+
+            {/* DIFAL */}
+            <div className="space-y-2">
+              <label className="text-[11px] text-slate-500 font-medium">DIFAL</label>
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { value: 'none',    label: 'Não aplicar' },
+                  { value: 'value',   label: 'Valor (R$)' },
+                  { value: 'percent', label: 'Percentual (%)' },
+                ].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="difal_type"
+                      value={opt.value}
+                      checked={costs.difal_type === opt.value}
+                      onChange={() => setCosts(prev => ({ ...prev, difal_type: opt.value, difal_value: 0 }))}
+                      className="accent-purple-500"
+                    />
+                    <span className="text-xs text-slate-400">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+              {costs.difal_type !== 'none' && (
+                <div className="space-y-1 max-w-xs">
+                  <label className="text-[11px] text-slate-500 font-medium">
+                    {costs.difal_type === 'value' ? 'Valor DIFAL (R$)' : 'Alíquota DIFAL (%)'}
+                  </label>
+                  <input
+                    type="number"
+                    step={costs.difal_type === 'percent' ? '0.01' : '0.01'}
+                    min="0"
+                    className="input-cyber w-full px-3 py-2 text-sm rounded-lg"
+                    placeholder={costs.difal_type === 'value' ? '0,00' : '0,00'}
+                    value={costs.difal_value || ''}
+                    onChange={e => setCosts(prev => ({ ...prev, difal_value: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Apply costs toggle */}
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => setCosts(prev => ({ ...prev, apply_costs_to_products: !prev.apply_costs_to_products }))}
+                className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
+                  costs.apply_costs_to_products ? 'bg-purple-600' : 'bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                    costs.apply_costs_to_products ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <div>
+                <p className="text-xs font-semibold text-slate-300">Aplicar custos ao custo dos produtos?</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Quando ativo, o custo real de cada item será calculado proporcionalmente ao total da nota.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleSaveCosts}
+                disabled={savingCosts}
+                className="flex items-center gap-2 btn-primary px-5 py-2 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {savingCosts ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
+                ) : (
+                  'Salvar Custos'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Completed banner */}
         {isCompleted && (
           <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
@@ -382,7 +603,12 @@ export default function InvoiceDetailPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
-                    {['#', 'Descrição', 'SKU Forn.', 'EAN', 'Qtd', 'Custo Unit.', 'Resolução', !isCompleted ? 'Ação' : ''].filter(Boolean).map(col => (
+                    {[
+                      '#', 'Descrição', 'SKU Forn.', 'EAN', 'Qtd', 'Custo Unit.',
+                      costs.apply_costs_to_products ? 'Custo Real' : '',
+                      'Resolução',
+                      !isCompleted ? 'Ação' : '',
+                    ].filter(Boolean).map(col => (
                       <th key={col} className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                         {col}
                       </th>
@@ -404,6 +630,19 @@ export default function InvoiceDetailPage() {
                         <td className="px-4 py-3 text-xs text-slate-300 font-mono">
                           {item.unit_cost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </td>
+                        {costs.apply_costs_to_products && (
+                          <td className="px-4 py-3 text-xs font-mono font-semibold">
+                            {(() => {
+                              const real = calcRealCost(item)
+                              const isDiff = Math.abs(real - item.unit_cost) > 0.001
+                              return (
+                                <span className={isDiff ? 'text-emerald-400' : 'text-slate-300'}>
+                                  {real.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </span>
+                              )
+                            })()}
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           {item.resolution_type === 'pending' && (
                             <span className="text-[10px] text-slate-500 bg-slate-900/40 border border-slate-700/40 px-2 py-0.5 rounded-full">
