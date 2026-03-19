@@ -130,6 +130,7 @@ function KpiTooltip({ text }: { text: string }) {
 
 /* ── Page ──────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
+  useEffect(() => { document.title = 'Dashboard — Foguetim ERP' }, [])
   const [infoTab, setInfoTab]   = useState<'avisos' | 'updates'>('avisos')
   const [metrics, setMetrics]   = useState<MLMetrics | null>(null)
   const [mlLoading, setMlLoading] = useState(true)
@@ -285,7 +286,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-                {greeting}, {firstName}! 👋
+                {greeting}, {firstName}!
               </h1>
               <p className="text-sm text-slate-500 mt-1">
                 {ml?.connected

@@ -74,6 +74,8 @@ const BTN_SECONDARY = 'flex items-center gap-2 px-3 py-2 rounded-lg border borde
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MovimentacoesPage() {
+  useEffect(() => { document.title = 'Movimentações — Foguetim ERP' }, [])
+
   // List state
   const [movements, setMovements] = useState<Movement[]>([])
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 50, total: 0 })
@@ -370,7 +372,9 @@ export default function MovimentacoesPage() {
       <div className="p-6 space-y-4">
 
         {/* ── Toolbar ── */}
-        <div className="glass-card p-3 flex flex-wrap items-center gap-2">
+        <div className="glass-card p-3 space-y-2">
+          {/* Row 1: filters */}
+          <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative min-w-[180px] flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
@@ -436,23 +440,30 @@ export default function MovimentacoesPage() {
           </select>
 
           {/* Date range */}
-          <input
-            type="date"
-            className="input-cyber text-sm py-1.5 px-3"
-            value={dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            title="Data inicial"
-          />
-          <input
-            type="date"
-            className="input-cyber text-sm py-1.5 px-3"
-            value={dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            title="Data final"
-          />
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
+            De:
+            <input
+              type="date"
+              className="input-cyber text-sm py-1.5 px-3"
+              style={{ colorScheme: 'dark' }}
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
+            Até:
+            <input
+              type="date"
+              className="input-cyber text-sm py-1.5 px-3"
+              style={{ colorScheme: 'dark' }}
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+            />
+          </label>
+          </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 ml-auto">
+          {/* Row 2: actions */}
+          <div className="flex items-center gap-2 justify-end">
             <button className={BTN_SECONDARY} onClick={exportCSV} disabled={!movements.length}>
               <Download className="w-4 h-4" />
               Exportar CSV
@@ -495,8 +506,8 @@ export default function MovimentacoesPage() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
                       {Array.from({ length: 8 }).map((_, j) => (
-                        <td key={j}>
-                          <div className="animate-pulse bg-white/[0.04] rounded h-4 w-full" />
+                        <td key={j} className="px-4 py-3">
+                          <div className="shimmer-load rounded h-4 w-full" />
                         </td>
                       ))}
                     </tr>

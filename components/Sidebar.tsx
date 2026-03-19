@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useSidebar } from '@/context/SidebarContext'
 
-type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean }
+type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean; exact?: boolean }
 type NavGroup = {
   label: string
   marketplaceDot?: string // color for dot indicator e.g. 'bg-yellow-400'
@@ -28,7 +28,7 @@ const navGroups: NavGroup[] = [
     label: 'Visão Geral',
     items: [
       { href: '/dashboard',                        icon: LayoutDashboard, label: 'Dashboard'         },
-      { href: '/dashboard/financeiro',             icon: TrendingUp,      label: 'Financeiro'        },
+      { href: '/dashboard/financeiro',             icon: TrendingUp,      label: 'Financeiro', exact: true },
       { href: '/dashboard/financeiro/custos',      icon: Receipt,         label: 'Custos da Empresa' },
       { href: '/dashboard/calendario',             icon: Calendar,        label: 'Calendário'        },
     ],
@@ -39,7 +39,7 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     defaultCollapsed: false,
     items: [
-      { href: '/dashboard/armazem',                icon: Warehouse,       label: 'Visão Geral'     },
+      { href: '/dashboard/armazem',                icon: Warehouse,       label: 'Visão Geral', exact: true },
       { href: '/dashboard/armazem/produtos',       icon: Package,         label: 'Produtos'        },
       { href: '/dashboard/armazem/estoque',        icon: Layers,          label: 'Estoque'         },
       { href: '/dashboard/armazem/movimentacoes',  icon: ArrowLeftRight,  label: 'Movimentações'   },
@@ -285,8 +285,8 @@ export default function Sidebar() {
 
                 {!isCollapsed && (
                   <ul className="space-y-0.5">
-                    {visibleItems.map(({ href, icon: Icon, label, badge, disabled }) => {
-                      const active = !disabled && (pathname === href || (href !== '/dashboard' && pathname.startsWith(href)))
+                    {visibleItems.map(({ href, icon: Icon, label, badge, disabled, exact }) => {
+                      const active = !disabled && (pathname === href || (!exact && href !== '/dashboard' && pathname.startsWith(href + '/')))
                       const isPosVenda = href === '/dashboard/pos-venda'
                       return (
                         <li key={href}>

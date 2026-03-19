@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Layers, Plus, Search, X, AlertTriangle, TrendingUp, TrendingDown, PackageX, PackageMinus } from 'lucide-react'
+import { Layers, Plus, Search, X, AlertTriangle, TrendingUp, TrendingDown, PackageX, PackageMinus, Package } from 'lucide-react'
+import Link from 'next/link'
 import Header from '@/components/Header'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
@@ -57,6 +58,8 @@ function getStockStatus(item: InventoryItem): StockStatus {
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function EstoquePage() {
+  useEffect(() => { document.title = 'Estoque — Foguetim ERP' }, [])
+
   const [inventory, setInventory]   = useState<InventoryItem[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [loading, setLoading]       = useState(true)
@@ -370,7 +373,7 @@ export default function EstoquePage() {
         {loading ? (
           <div className="glass-card p-6 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 rounded-lg bg-white/[0.04] animate-pulse" />
+              <div key={i} className="h-12 rounded-lg shimmer-load" />
             ))}
           </div>
         ) : error ? (
@@ -383,12 +386,21 @@ export default function EstoquePage() {
             <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4">
               <Layers className="w-7 h-7 text-slate-600" />
             </div>
-            <h3 className="text-base font-semibold text-slate-300 mb-1">Nenhum item em estoque</h3>
-            <p className="text-sm text-slate-500 max-w-sm">
+            <h3 className="text-base font-semibold text-slate-300 mb-2">Nenhum item em estoque</h3>
+            <p className="text-sm text-slate-500 max-w-sm mb-6">
               {filters.q || filters.status || filters.warehouse_id
                 ? 'Nenhum item encontrado para os filtros aplicados.'
-                : 'Cadastre produtos e registre entradas para ver o estoque aqui.'}
+                : 'Cadastre produtos no armazém e registre entradas para ver o estoque aqui.'}
             </p>
+            {!filters.q && !filters.status && !filters.warehouse_id && (
+              <Link
+                href="/dashboard/armazem/produtos"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors"
+              >
+                <Package className="w-4 h-4" />
+                Ir para Produtos
+              </Link>
+            )}
           </div>
         ) : (
           <div className="glass-card overflow-hidden">

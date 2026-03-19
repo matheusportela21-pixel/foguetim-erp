@@ -475,6 +475,7 @@ function CreateModal({ warehouses, categories, onClose, onSuccess }: CreateModal
 
 export default function ArmazemProdutosPage() {
   const router = useRouter()
+  useEffect(() => { document.title = 'Produtos — Foguetim ERP' }, [])
 
   const [products,   setProducts]   = useState<Product[]>([])
   const [loading,    setLoading]    = useState(true)
@@ -683,9 +684,9 @@ export default function ArmazemProdutosPage() {
 
         {/* ── Content ── */}
         {loading ? (
-          <div className="glass-card rounded-xl p-8 space-y-3 animate-pulse">
+          <div className="glass-card rounded-xl p-8 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 bg-white/[0.04] rounded-lg" />
+              <div key={i} className="h-12 shimmer-load rounded-lg" />
             ))}
           </div>
         ) : error ? (

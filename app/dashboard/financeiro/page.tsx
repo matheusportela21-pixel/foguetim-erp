@@ -167,6 +167,8 @@ function SectionSkeleton() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function FinanceiroPage() {
+  useEffect(() => { document.title = 'Financeiro — Foguetim ERP' }, [])
+
   const [periods,     setPeriods]     = useState<BillingPeriod[]>([])
   const [selectedKey, setSelectedKey] = useState<string>('')
   const [billingData, setBillingData] = useState<BillingPeriodData | null>(null)

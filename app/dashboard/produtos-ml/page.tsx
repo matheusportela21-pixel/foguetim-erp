@@ -1750,6 +1750,7 @@ function MLProductsTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProdutosMLPage() {
+  useEffect(() => { document.title = 'Produtos ML — Foguetim ERP' }, [])
   return (
     <div>
       <Header title="Produtos" subtitle="Seus anúncios no Mercado Livre" />
