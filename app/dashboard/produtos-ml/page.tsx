@@ -1466,6 +1466,7 @@ function MLProductsTab() {
                   </th>
                   <th className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">Status</th>
                   <th className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-bold text-violet-600 uppercase tracking-wider whitespace-nowrap">Preço Ideal</th>
                   <th className="py-2.5 px-3" />
                 </tr>
               </thead>
@@ -1562,6 +1563,20 @@ function MLProductsTab() {
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${listingBadgeCls(item.listing_type_id)}`}>
                           {listingLabel(item.listing_type_id)}
                         </span>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <a
+                          href={`/dashboard/precificacao?ml_item_id=${item.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Calcular preço ideal para este anúncio"
+                          className="flex items-center gap-1 text-[10px] text-violet-400 hover:text-violet-300 transition-colors group/calc"
+                        >
+                          <Plus className="w-3 h-3 group-hover/calc:scale-110 transition-transform" />
+                          <span className="hidden group-hover/calc:inline">Calcular</span>
+                          <span className="inline group-hover/calc:hidden">—</span>
+                        </a>
                       </td>
 
                       <td className="py-3 px-3" onClick={e => e.stopPropagation()}>

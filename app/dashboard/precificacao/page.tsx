@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Calculator, Info, TrendingUp, Package, Truck, Percent,
-  AlertTriangle, Zap, ChevronDown, RefreshCw, Search,
+  AlertTriangle, Zap, Search,
   CheckCircle2, XCircle, Minus, ArrowUpRight, ArrowDownRight,
   ToggleLeft, ToggleRight, Layers, Lock, Unlock, Settings2,
   CircleDollarSign, Scale, BarChart3,
@@ -15,13 +15,13 @@ import {
 } from '@/lib/pricing/pricing-engine'
 import { ML_CATEGORY_COMMISSIONS, ML_REPUTATION_SHIPPING } from '@/lib/pricing/ml-tariffs'
 
-// ─── Regimes tributários ───────────────────────────────────────────────────────
-const REGIMES = [
-  { label: 'Simples Nacional — Anexo I (Comércio)', aliquota: 6.0  },
-  { label: 'Simples Nacional — Anexo II (Indústria)', aliquota: 7.25 },
-  { label: 'Lucro Presumido',                         aliquota: 11.33 },
-  { label: 'Lucro Real',                              aliquota: 13.25 },
-  { label: 'MEI (isento)',                            aliquota: 0   },
+// ─── Presets de imposto ───────────────────────────────────────────────────────
+const TAX_PRESETS = [
+  { label: 'MEI',        shortLabel: 'MEI',       aliquota: 0     },
+  { label: 'Simples I',  shortLabel: 'SN I',      aliquota: 6.0   },
+  { label: 'Simples II', shortLabel: 'SN II',     aliquota: 7.25  },
+  { label: 'Presumido',  shortLabel: 'Presumido', aliquota: 11.33 },
+  { label: 'Real',       shortLabel: 'L. Real',   aliquota: 13.25 },
 ]
 
 // ─── Helpers UI ───────────────────────────────────────────────────────────────
@@ -193,10 +193,9 @@ export default function PrecificacaoPage() {
   const [fullStorage,    setFullStorage]    = useState(0.8)
   const [currentMLPrice, setCurrentMLPrice] = useState<number | null>(null)
 
-  // Regime tributário
-  const [regimeIdx, setRegimeIdx]   = useState(0)
-  const [showRegimes, setShowRegimes] = useState(false)
-  const [catSearch,  setCatSearch]    = useState('')
+  // Regime tributário / imposto
+  const [taxPreset, setTaxPreset] = useState<string>('Simples I')
+  const [catSearch, setCatSearch] = useState('')
 
   // Aba resultado
   const [resultTab, setResultTab] = useState<'result' | 'breakdown' | 'simulator'>('result')
@@ -209,7 +208,14 @@ export default function PrecificacaoPage() {
       .then(r => r.json())
       .then(data => {
         setMlConnected(!!data.mlConnected)
-        if (data.categories?.length) setCategories(data.categories)
+        if (data.categories?.length) {
+          // Normaliza: API retorna {name, classicPct, premiumPct} ou {categoryName, ...}
+          setCategories(data.categories.map((c: { categoryName?: string; name?: string; classicPct: number; premiumPct: number }) => ({
+            categoryName: c.categoryName ?? c.name ?? 'Categoria',
+            classicPct:   c.classicPct,
+            premiumPct:   c.premiumPct,
+          })))
+        }
         if (data.reputation?.label)   setMlRepLabel(data.reputation.label)
         if (data.reputation?.level)   setReputation(data.reputation.level as ReputationLevel)
       })
@@ -228,7 +234,7 @@ export default function PrecificacaoPage() {
     productCost,
     packagingCost,
     otherCosts,
-    taxPct: REGIMES[regimeIdx].aliquota,
+    taxPct,
     marketingPct,
     affiliatePct,
     listingType,
@@ -247,7 +253,7 @@ export default function PrecificacaoPage() {
     targetMarginPct:  targetMargin,
     currentMLPrice,
   }), [
-    productCost, packagingCost, otherCosts, regimeIdx, marketingPct, affiliatePct,
+    productCost, packagingCost, otherCosts, taxPct, marketingPct, affiliatePct,
     listingType, commissionPct, activeCat, reputation, shippingMode,
     productWeightG, pkgWeightG, manualShipping, isFull, fullHandling, fullStorage,
     targetMargin, currentMLPrice,
@@ -345,36 +351,42 @@ export default function PrecificacaoPage() {
               </div>
             </div>
 
-            {/* Regime tributário */}
-            <div className="dash-card rounded-xl p-4">
-              <button
-                onClick={() => setShowRegimes(v => !v)}
-                className="w-full flex items-center justify-between"
-              >
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <Percent className="w-4 h-4 text-blue-400" /> Regime Tributário
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-blue-400">{REGIMES[regimeIdx].aliquota}%</span>
-                  <ChevronDown className={`w-4 h-4 text-slate-600 transition-transform ${showRegimes ? 'rotate-180' : ''}`} />
+            {/* Regime tributário / Imposto */}
+            <div className="dash-card rounded-xl p-4 space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+                <Percent className="w-4 h-4 text-blue-400" /> Imposto (% sobre venda)
+              </h3>
+              {/* Presets rápidos */}
+              <div className="grid grid-cols-5 gap-1">
+                {TAX_PRESETS.map(p => (
+                  <button key={p.label}
+                    onClick={() => { setTaxPct(p.aliquota); setTaxPreset(p.label) }}
+                    className={`flex flex-col items-center py-1.5 px-1 rounded-lg text-[10px] font-semibold transition-all ${
+                      taxPreset === p.label
+                        ? 'bg-blue-500/15 border border-blue-500/30 text-blue-300'
+                        : 'border border-white/[0.06] text-slate-500 hover:text-slate-300 hover:border-white/[0.12]'
+                    }`}>
+                    <span>{p.shortLabel}</span>
+                    <span className={`text-[9px] font-normal mt-0.5 ${taxPreset === p.label ? 'text-blue-400' : 'text-slate-700'}`}>{p.aliquota}%</span>
+                  </button>
+                ))}
+              </div>
+              {/* Input livre */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="number" min={0} max={100} step={0.01}
+                    value={taxPct}
+                    onChange={e => { setTaxPct(+e.target.value); setTaxPreset('custom') }}
+                    className="dash-input w-full py-2 pl-3 pr-8 rounded-lg text-sm font-mono"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">%</span>
                 </div>
-              </button>
-              {showRegimes && (
-                <div className="mt-3 space-y-1.5">
-                  {REGIMES.map((r, i) => (
-                    <button key={i} onClick={() => { setRegimeIdx(i); setTaxPct(r.aliquota); setShowRegimes(false) }}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-lg text-sm transition-all ${
-                        regimeIdx === i ? 'bg-blue-500/10 border border-blue-500/30 text-white' : 'text-slate-400 hover:bg-white/[0.04]'
-                      }`}>
-                      <span>{r.label}</span>
-                      <span className={`font-mono text-xs ${regimeIdx === i ? 'text-blue-400' : 'text-slate-600'}`}>{r.aliquota}%</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {!showRegimes && (
-                <p className="mt-2 text-xs text-slate-500">{REGIMES[regimeIdx].label}</p>
-              )}
+                {taxPreset === 'custom' && (
+                  <span className="text-[10px] text-violet-400 shrink-0">personalizado</span>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-600">Incide sobre o preço de venda bruto</p>
             </div>
 
             {/* Custos adicionais */}
@@ -431,14 +443,14 @@ export default function PrecificacaoPage() {
                 </div>
                 <select
                   value={categoryIdx}
-                  onChange={e => { setCategoryIdx(+e.target.value); setManualCommPct(null) }}
+                  onChange={e => { setCategoryIdx(+e.target.value); setManualCommPct(null); setCatSearch('') }}
                   className="dash-input w-full py-2 px-3 rounded-lg text-xs"
-                  size={1}
+                  size={catSearch ? Math.min(6, categories.filter(c => c.categoryName.toLowerCase().includes(catSearch.toLowerCase())).length + 1) : 1}
                 >
                   {categories
                     .filter(c => !catSearch || c.categoryName.toLowerCase().includes(catSearch.toLowerCase()))
-                    .map((c, i) => (
-                      <option key={i} value={categories.indexOf(c)}>
+                    .map((c) => (
+                      <option key={categories.indexOf(c)} value={categories.indexOf(c)}>
                         {c.categoryName} — {listingType === 'classic' ? c.classicPct : c.premiumPct}%
                       </option>
                     ))}
@@ -643,7 +655,7 @@ export default function PrecificacaoPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { label: 'Comissão ML',    value: fmtBRL(result.suggestedPrice * result.commissionPct / 100), sub: `${result.commissionPct}%`, color: 'text-orange-400' },
-                        { label: 'Imposto',         value: fmtBRL(result.suggestedPrice * REGIMES[regimeIdx].aliquota / 100), sub: `${REGIMES[regimeIdx].aliquota}%`, color: 'text-red-400' },
+                        { label: 'Imposto',         value: fmtBRL(result.suggestedPrice * taxPct / 100), sub: `${taxPct}%`, color: 'text-red-400' },
                         { label: 'Frete',           value: fmtBRL(result.shippingCost), sub: result.shippingIsAuto ? 'auto' : 'manual', color: 'text-purple-400' },
                         { label: 'Taxa fixa ML',    value: fmtBRL(result.fixedFee), sub: result.suggestedPrice < 79 ? 'aplicada' : 'não aplicada', color: 'text-rose-400' },
                       ].map(k => (

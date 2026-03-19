@@ -879,6 +879,63 @@ export default function ProductDetailPage() {
             </div>
 
             <SectionSaveButton saving={savingPricing} onClick={savePricing} label="Salvar preços" />
+
+            {/* ── Mini widget de preço ideal ── */}
+            {(() => {
+              const cost = pricingForm.manual_cost ? parseFloat(pricingForm.manual_cost) : (product.cost_price ?? product.average_cost ?? null)
+              if (!cost || cost <= 0) return null
+              return (
+                <div className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/[0.06] px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-violet-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <BarChart3 className="w-3.5 h-3.5" /> Estimativa Rápida — Mercado Livre
+                    </p>
+                    <a
+                      href={`/dashboard/precificacao`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
+                    >
+                      Simulador completo <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  {/* Tabela de cenários: 3 margens */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Margem 15%', margin: 15 },
+                      { label: 'Margem 20%', margin: 20 },
+                      { label: 'Margem 30%', margin: 30 },
+                    ].map(({ label, margin }) => {
+                      // Cálculo simplificado: preço = custo / (1 - (12 + 6 + 18/preço aprox))
+                      // Usamos formula direta para estimativa (sem iterar taxa fixa)
+                      const commission = 0.12   // Clássico padrão
+                      const tax        = 0.06   // Simples I
+                      const shipping   = 18     // Frete estimado médio
+                      const targetM    = margin / 100
+                      const denom      = 1 - commission - tax - targetM
+                      const price = denom > 0 ? (cost + shipping) / denom : 0
+                      const profit = price > 0 ? price - cost - shipping - price * commission - price * tax : 0
+                      const marginReal = price > 0 ? (profit / price * 100) : 0
+                      return (
+                        <div key={label} className="text-center p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                          <p className="text-[9px] text-slate-600 mb-1">{label}</p>
+                          <p className="text-sm font-black text-violet-300 font-mono">
+                            {price > 0 ? `R$ ${price.toFixed(2).replace('.', ',')}` : '—'}
+                          </p>
+                          <p className="text-[9px] text-emerald-400 mt-0.5">
+                            {profit > 0 ? `+R$ ${profit.toFixed(2).replace('.', ',')}` : '—'}
+                          </p>
+                          <p className="text-[9px] text-slate-600">{marginReal.toFixed(1)}% margem</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[9px] text-slate-600 leading-relaxed">
+                    Estimativa: Clássico (12%), Simples I (6%), frete R$ 18. Para cálculo preciso com peso e categoria, use o simulador.
+                  </p>
+                </div>
+              )
+            })()}
           </div>
         </Accordion>
 
