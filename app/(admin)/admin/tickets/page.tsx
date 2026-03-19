@@ -59,6 +59,7 @@ function fmtDate(iso: string) {
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function AdminTicketsPage() {
+  useEffect(() => { document.title = 'Tickets — Admin Foguetim' }, [])
   const [tickets, setTickets]     = useState<SupportTicket[]>([])
   const [total, setTotal]         = useState(0)
   const [loading, setLoading]     = useState(true)
@@ -164,13 +165,13 @@ export default function AdminTicketsPage() {
       <div className="space-y-2">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 bg-[#111318] border border-white/[0.06] rounded-xl animate-pulse" />
+            <div key={i} className="h-16 bg-[#111318] border border-white/[0.06] rounded-xl shimmer-load" />
           ))
         ) : tickets.length === 0 ? (
           <div className="bg-[#111318] border border-white/[0.06] rounded-xl p-12 text-center">
             <Ticket className="w-8 h-8 text-slate-700 mx-auto mb-3" />
             <p className="text-sm text-slate-600">Nenhum ticket encontrado</p>
-            <p className="text-xs text-slate-700 mt-1">Os tickets de suporte dos usuários aparecerão aqui</p>
+            <p className="text-xs text-slate-700 mt-1">Tickets de suporte dos usuários aparecerão aqui</p>
           </div>
         ) : tickets.map(t => {
           const statusCfg   = STATUS_CFG[t.status]

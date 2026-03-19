@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import Header from '@/components/Header'
-import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2 } from 'lucide-react'
+import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2, History } from 'lucide-react'
 
 const faqs = [
   {
@@ -206,6 +207,16 @@ export default function AjudaPage() {
                     <p className="text-[10px] text-slate-500">Resposta em até 24h</p>
                   </div>
                 </button>
+                <Link href="/dashboard/ajuda/feedbacks"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-white/[0.08] hover:bg-white/[0.04] transition-all">
+                  <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center shrink-0">
+                    <History className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-white">Meus Feedbacks</p>
+                    <p className="text-[10px] text-slate-600">Ver tickets enviados</p>
+                  </div>
+                </Link>
               </div>
             </div>
 

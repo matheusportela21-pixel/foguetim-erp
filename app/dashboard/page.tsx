@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
 import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
 import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
+import { DevBanner } from '@/components/DevBanner'
 
 /* ── ML Metrics type ────────────────────────────────────────────────── */
 interface MLMetrics {
@@ -267,6 +268,7 @@ export default function DashboardPage() {
 
   return (
     <div>
+      <DevBanner />
       <div className="p-6 space-y-6">
 
         {/* ── Mobile sticky nav strip ── */}
