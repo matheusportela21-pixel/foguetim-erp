@@ -10,6 +10,9 @@ import {
   Shield, ChevronRight, MessageSquare, Archive, Activity, Calendar,
   Wrench, X, ExternalLink, ChevronDown,
 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts'
 import { useAuth } from '@/lib/auth-context'
 import { useSidebar } from '@/context/SidebarContext'
 import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
@@ -142,6 +145,7 @@ export default function DashboardPage() {
   const [changelogEntries, setChangelogEntries] = useState<ChangelogEntry[]>([])
   const [changelogLoading, setChangelogLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [finData, setFinData] = useState<{ receita_bruta: number; taxas_ml: number; receita_liquida: number } | null>(null)
   const { user, profile } = useAuth()
 
   const { toggle } = useSidebar()
@@ -228,6 +232,18 @@ export default function DashboardPage() {
       .catch(() => { /* silent */ })
       .finally(() => setChangelogLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!metrics?.connected) return
+    fetch('/api/mercadolivre/financeiro?period=mes')
+      .then(r => r.json())
+      .then((d: { receita_bruta?: number; taxas_ml?: number; receita_liquida?: number }) => {
+        if (typeof d.receita_bruta === 'number') {
+          setFinData({ receita_bruta: d.receita_bruta, taxas_ml: d.taxas_ml ?? 0, receita_liquida: d.receita_liquida ?? 0 })
+        }
+      })
+      .catch(() => { /* silent */ })
+  }, [metrics?.connected])
 
   const dismissAnnouncement = useCallback(async (id: string) => {
     setAnnouncements(prev => prev.filter(a => a.id !== id))
@@ -605,23 +621,60 @@ export default function DashboardPage() {
             <div className="dash-card p-5 rounded-2xl">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Receita vs Lucro</p>
-                  <p className="text-xs text-slate-600 mt-0.5">Histórico por período</p>
+                  <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Financeiro do Mês</p>
+                  <p className="text-xs text-slate-600 mt-0.5">Receita bruta · taxas ML · receita líquida</p>
                 </div>
                 <Link href="/dashboard/financeiro" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
                   Ver financeiro <ArrowUpRight className="w-3 h-3" />
                 </Link>
               </div>
-              <div className="flex flex-col items-center justify-center py-10 gap-3 border border-dashed border-white/[0.06] rounded-xl">
-                <BarChart3 className="w-8 h-8 text-slate-700" />
-                <div className="text-center">
-                  <p className="text-xs font-semibold text-slate-500">Conecte o Mercado Livre para ver dados reais</p>
-                  <p className="text-[10px] text-slate-600 mt-0.5">Gráfico de receita x lucro disponível em breve</p>
+              {!ml?.connected ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-3 border border-dashed border-white/[0.06] rounded-xl">
+                  <BarChart3 className="w-7 h-7 text-slate-700" />
+                  <p className="text-xs text-slate-500 text-center">Conecte o Mercado Livre<br/>para ver dados financeiros reais</p>
+                  <Link href="/dashboard/integracoes" className="text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors">
+                    Configurar integração →
+                  </Link>
                 </div>
-                <Link href="/dashboard/integracoes" className="text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors">
-                  Configurar integração →
-                </Link>
-              </div>
+              ) : finData ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { label: 'Receita bruta',   value: finData.receita_bruta,   color: 'text-green-400'  },
+                      { label: 'Taxas ML',         value: finData.taxas_ml,        color: 'text-red-400'    },
+                      { label: 'Receita líquida',  value: finData.receita_liquida, color: 'text-purple-400' },
+                    ].map(k => (
+                      <div key={k.label} className="bg-white/[0.03] rounded-xl p-2.5 border border-white/[0.06]">
+                        <p className="text-[9px] text-slate-600 mb-0.5">{k.label}</p>
+                        <p className={`text-xs font-bold ${k.color} leading-none`}>{fmtBRL(k.value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <BarChart data={[
+                      { name: 'Receita bruta',  value: finData.receita_bruta   },
+                      { name: 'Taxas ML',        value: finData.taxas_ml        },
+                      { name: 'Rec. líquida',   value: finData.receita_liquida },
+                    ]} barSize={40}>
+                      <XAxis dataKey="name" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis hide />
+                      <Tooltip
+                        contentStyle={{ background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#e2e8f0', fontSize: 11 }}
+                        formatter={(v: number) => [fmtBRL(v), '']}
+                      />
+                      <Bar dataKey="value" radius={[6,6,0,0]}>
+                        <Cell fill="#22c55e" />
+                        <Cell fill="#ef4444" />
+                        <Cell fill="#a855f7" />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </>
+              ) : (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+                </div>
+              )}
             </div>
 
             {/* Recent orders */}
@@ -642,12 +695,34 @@ export default function DashboardPage() {
           {/* Right: Platform distribution + Stats */}
           <div className="space-y-4">
             <div className="dash-card p-5 rounded-2xl">
-              <p className="font-bold text-white text-sm mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>Vendas por Plataforma</p>
-              <p className="text-xs text-slate-600 mb-4">Distribuição no mês</p>
-              <EmptyCard
-                message="Apenas ML integrado"
-                hint="Novas integrações em breve"
-              />
+              <p className="font-bold text-white text-sm mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>Plataformas</p>
+              <p className="text-xs text-slate-600 mb-4">Canais conectados</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
+                  <div className="w-7 h-7 rounded-lg bg-yellow-500/15 flex items-center justify-center shrink-0">
+                    <ShoppingCart className="w-3.5 h-3.5 text-yellow-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-white">Mercado Livre</p>
+                    <p className="text-[10px] text-slate-500">{ml?.connected ? `@${ml.nickname}` : 'Não conectado'}</p>
+                  </div>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${ml?.connected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {ml?.connected ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                {['Shopee', 'Amazon'].map(p => (
+                  <div key={p} className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/[0.05] rounded-xl opacity-50">
+                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-slate-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-slate-500">{p}</p>
+                      <p className="text-[10px] text-slate-600">Em breve</p>
+                    </div>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">Breve</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Estoque crítico */}
