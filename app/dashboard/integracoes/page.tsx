@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import Header from '@/components/Header'
+import OtpConfirmation from '@/components/security/OtpConfirmation'
 import {
   CheckCircle, RefreshCw, Zap, Truck, ChevronDown, ChevronUp,
   Eye, EyeOff, ExternalLink, Copy, AlertCircle, X, Globe, HelpCircle,
@@ -395,6 +396,7 @@ function IntegracoesContent() {
   const [mlLoading, setMlLoading]       = useState(true)
   const [mlDisconnecting, setMlDisconnecting] = useState<string | null>(null)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [otpDisconnectId, setOtpDisconnectId] = useState<string | null>(null)
 
   // Handle ?connected=true or ?ml_error=... from OAuth redirect
   useEffect(() => {
@@ -614,7 +616,7 @@ function IntegracoesContent() {
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => disconnectMLAccount(conn.id)}
+                                  onClick={() => setOtpDisconnectId(conn.id)}
                                   disabled={mlDisconnecting === conn.id}
                                   title="Desconectar esta conta"
                                   className="p-1.5 text-slate-600 hover:text-red-400 disabled:opacity-50 transition-colors rounded-lg hover:bg-red-500/10"
@@ -749,6 +751,17 @@ function IntegracoesContent() {
         </div>
 
       </div>
+
+      {otpDisconnectId && (
+        <OtpConfirmation
+          actionType="disconnect_ml"
+          targetId={otpDisconnectId}
+          onVerified={() => { const id = otpDisconnectId; setOtpDisconnectId(null); disconnectMLAccount(id) }}
+          onCancel={() => setOtpDisconnectId(null)}
+          title="Desconectar Mercado Livre"
+          description="Esta ação removerá a integração com esta conta. Digite o código enviado ao seu e-mail para confirmar."
+        />
+      )}
     </div>
   )
 }

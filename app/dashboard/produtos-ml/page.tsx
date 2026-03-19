@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import BulkActionModal, { type BulkAction, type BulkProgress } from '@/components/ml/BulkActionModal'
+import OtpConfirmation from '@/components/security/OtpConfirmation'
 import {
   RefreshCw, Copy, Search, SlidersHorizontal,
   ChevronDown, ChevronUp, X,
@@ -918,6 +919,7 @@ function MLProductsTab() {
   const [bulkRunning,      setBulkRunning]      = useState(false)
   const [bulkProgress,     setBulkProgress]     = useState<BulkProgress | null>(null)
   const [bulkToast,        setBulkToast]        = useState<{ type: 'success' | 'partial'; message: string } | null>(null)
+  const [showBulkOtp,      setShowBulkOtp]      = useState(false)
 
   // Debounce search input → reset to page 1 and update search_query
   useEffect(() => {
@@ -1702,10 +1704,26 @@ function MLProductsTab() {
         <BulkActionModal
           action={activeBulkAction}
           selectedCount={selectedIds.length}
-          onConfirm={executeBulkAction}
+          onConfirm={() => {
+            if (activeBulkAction === 'pause' || activeBulkAction === 'reactivate') {
+              setShowBulkOtp(true)
+            } else {
+              executeBulkAction()
+            }
+          }}
           onCancel={() => { if (!bulkRunning) setActiveBulkAction(null) }}
           isLoading={bulkRunning}
           progress={bulkProgress ?? undefined}
+        />
+      )}
+
+      {showBulkOtp && activeBulkAction && (
+        <OtpConfirmation
+          actionType={activeBulkAction === 'pause' ? 'bulk_pause_ml' : 'bulk_reactivate_ml'}
+          onVerified={() => { setShowBulkOtp(false); executeBulkAction() }}
+          onCancel={() => setShowBulkOtp(false)}
+          title={activeBulkAction === 'pause' ? 'Confirmar pausa em massa' : 'Confirmar reativação em massa'}
+          description={`Digite o código enviado ao seu e-mail para confirmar a ação em ${selectedIds.length} anúncio(s).`}
         />
       )}
 

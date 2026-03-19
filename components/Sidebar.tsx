@@ -8,7 +8,7 @@ import {
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
   AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink, MessageSquare, Tag, Scale, Archive, Activity, Calendar,
-  DollarSign, ChevronDown, ChevronRight, Zap, Warehouse, Layers, ArrowLeftRight, Building2, MapPin,
+  DollarSign, ChevronDown, ChevronRight, Zap, Warehouse, Layers, ArrowLeftRight, Building2, MapPin, Receipt,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -27,9 +27,10 @@ const navGroups: NavGroup[] = [
   {
     label: 'Visão Geral',
     items: [
-      { href: '/dashboard',            icon: LayoutDashboard, label: 'Dashboard'   },
-      { href: '/dashboard/financeiro', icon: TrendingUp,      label: 'Financeiro'  },
-      { href: '/dashboard/calendario', icon: Calendar,        label: 'Calendário'  },
+      { href: '/dashboard',                        icon: LayoutDashboard, label: 'Dashboard'         },
+      { href: '/dashboard/financeiro',             icon: TrendingUp,      label: 'Financeiro'        },
+      { href: '/dashboard/financeiro/custos',      icon: Receipt,         label: 'Custos da Empresa' },
+      { href: '/dashboard/calendario',             icon: Calendar,        label: 'Calendário'        },
     ],
   },
   {

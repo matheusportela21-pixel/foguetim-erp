@@ -7,6 +7,7 @@ import {
   Pencil, Trash2, CheckCircle2, XCircle, X, Info,
 } from 'lucide-react'
 import Header from '@/components/Header'
+import OtpConfirmation from '@/components/security/OtpConfirmation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -485,6 +486,7 @@ export default function ArmazemProdutosPage() {
   const [showModal,  setShowModal]  = useState(false)
   const [toast,      setToast]      = useState<ToastState | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [otpDeleteId,   setOtpDeleteId]   = useState<string | null>(null)
 
   // Debounce search
   const searchRef  = useRef<NodeJS.Timeout | null>(null)
@@ -769,7 +771,15 @@ export default function ArmazemProdutosPage() {
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs text-slate-400 mr-1">Confirmar?</span>
                             <button
-                              onClick={() => handleDelete(product.id)}
+                              onClick={() => {
+                                const hasActiveMapping = products.find(p => p.id === deleteConfirm)?.mappings?.some(m => m.status === 'mapped')
+                                if (hasActiveMapping) {
+                                  setOtpDeleteId(deleteConfirm)
+                                  setDeleteConfirm(null)
+                                } else {
+                                  handleDelete(product.id)
+                                }
+                              }}
                               className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition-all"
                             >
                               Sim
@@ -840,6 +850,17 @@ export default function ArmazemProdutosPage() {
           categories={categories}
           onClose={() => setShowModal(false)}
           onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {otpDeleteId && (
+        <OtpConfirmation
+          actionType="delete_warehouse_product"
+          targetId={otpDeleteId}
+          onVerified={() => { const id = otpDeleteId; setOtpDeleteId(null); handleDelete(id) }}
+          onCancel={() => setOtpDeleteId(null)}
+          title="Excluir produto do armazém"
+          description="Este produto possui mapeamentos ativos. Digite o código enviado ao seu e-mail para confirmar a exclusão."
         />
       )}
     </div>
