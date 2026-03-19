@@ -2,13 +2,28 @@
  * lib/pricing/ml-tariffs.ts
  *
  * Tarifas reais do Mercado Livre Brasil — extraídas das páginas de ajuda oficiais.
- * Fonte: mercadolivre.com.br/ajuda + koncili.com/blog/categorias-do-mercado-livre
- * Referência: médias praticadas em 2025 — validar periodicamente em:
+ * Fonte: mercadolivre.com.br/ajuda + koncili.com/blog (atualizado fev/2026)
+ *        ecommercenapratica.com (atualizado 16/mar/2026)
+ *        tracaodecrescimento.com.br · blog.tecnospeed.com.br (mar/2026)
+ *
+ * ⚠️  MUDANÇA IMPORTANTE — vigente desde 2 de março de 2026:
+ *   - Modelo de taxa fixa por faixa de preço (R$ 6,25–R$ 6,75) foi EXTINTO
+ *   - Substituído por custo operacional variável com 232 combinações:
+ *     29 faixas de peso × 8 faixas de preço (tabela NÃO publicada oficialmente)
+ *   - Exemplo divulgado: produto 2 kg → R$ 6,35 a R$ 26,25 conforme preço de venda
+ *   - O custo variável cresce com o preço e estabiliza acima de R$ 200
+ *   - Os percentuais de COMISSÃO por categoria permanecem INALTERADOS
+ *
+ * Para uso no simulador até disponibilização da tabela oficial completa,
+ * mantemos a função getFixedFee() com os valores históricos como APROXIMAÇÃO.
+ * Consulte o Simulador de Tarifas oficial do ML para valores exatos pós-mar/2026:
  *   https://www.mercadolivre.com.br/ajuda/16449
- *   https://www.mercadolivre.com.br/ajuda/tarifas-e-faturamento_1472
  *
  * REGRA: NUNCA aplicar preço automaticamente no ML — apenas simular e sugerir.
  */
+
+/** Data da última grande mudança tarifária do ML */
+export const ML_TARIFF_LAST_UPDATED = '2026-03-02'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -97,18 +112,20 @@ export const ML_DEFAULT_COMMISSION: MLCategoryCommission = {
   premiumPct:   17.0,
 }
 
-// ─── Taxa fixa por venda ──────────────────────────────────────────────────────
-// Fonte: vendedores.mercadolivre.com.br
-// Aplica-se apenas para produtos abaixo de R$ 79,00
+// ─── Taxa fixa por venda (modelo histórico — vigente até 01/mar/2026) ────────
+// Fonte: vendedores.mercadolivre.com.br (pre-mar/2026)
+// ⚠️  A partir de 2/mar/2026, substituído por custo operacional variável.
+// Mantido para cálculo aproximado até publicação da tabela oficial de 232 combinações.
 
 export const ML_FIXED_FEES: MLFixedFee[] = [
-  { priceMin: 0,     priceMax: 12.50, fee: 0,    label: 'Abaixo de R$ 12,50 — 50% do valor (sem taxa fixa)' },
-  { priceMin: 12.50, priceMax: 20.01, fee: 5.50, label: 'R$ 12,50 a R$ 20,00'  },
-  { priceMin: 20.01, priceMax: 79.00, fee: 6.00, label: 'R$ 20,01 a R$ 78,99'  },
-  { priceMin: 79.00, priceMax: null,  fee: 0,    label: 'Acima de R$ 79,00 — sem taxa fixa' },
+  { priceMin:  0.00, priceMax: 12.50, fee: 0,    label: 'Abaixo de R$ 12,50 — 50% do valor (taxa especial)' },
+  { priceMin: 12.50, priceMax: 29.00, fee: 6.25, label: 'R$ 12,50 a R$ 28,99 — R$ 6,25 taxa fixa'           },
+  { priceMin: 29.00, priceMax: 50.00, fee: 6.50, label: 'R$ 29,00 a R$ 49,99 — R$ 6,50 taxa fixa'           },
+  { priceMin: 50.00, priceMax: 79.00, fee: 6.75, label: 'R$ 50,00 a R$ 78,99 — R$ 6,75 taxa fixa'           },
+  { priceMin: 79.00, priceMax: null,  fee: 0,    label: 'Acima de R$ 79,00 — sem taxa fixa'                  },
 ]
 
-// Nota especial: produtos < R$ 12,50 → taxa = 50% do valor (tratado no engine)
+// Produtos < R$ 12,50: taxa = 50% do valor (tratado na engine)
 export const ML_MIN_PRICE_HALF_FEE = 12.50
 
 // ─── Frete estimado por peso (Mercado Envios) ─────────────────────────────────
@@ -148,19 +165,19 @@ export const ML_REPUTATION_SHIPPING: MLReputationShipping[] = [
   {
     level:             'platinum',
     label:             'MercadoLíder Platinum',
-    subsidyPct:        100,   // ML cobre 100% do frete (até limite por envio)
+    subsidyPct:        70,    // ML subsidia até 70% do custo de frete grátis (mar/2026)
     freeShippingAbove: 0,     // Frete grátis em todos os produtos
   },
   {
     level:             'gold',
     label:             'MercadoLíder Gold',
-    subsidyPct:        40,    // ML cobre 40% do custo do frete grátis
+    subsidyPct:        40,    // ML subsidia ~40% do custo do frete grátis (estimativa)
     freeShippingAbove: 79,    // Frete grátis em produtos acima de R$ 79
   },
   {
     level:             'silver',
     label:             'MercadoLíder Silver',
-    subsidyPct:        20,    // ML cobre 20% do frete
+    subsidyPct:        20,    // ML subsidia ~20% do frete (estimativa)
     freeShippingAbove: 120,   // Frete grátis em produtos acima de R$ 120
   },
   {
@@ -185,7 +202,8 @@ export const ML_REPUTATION_SHIPPING: MLReputationShipping[] = [
 
 // ─── Custos Full / Fulfillment ────────────────────────────────────────────────
 // Fonte: mercadolivre.com.br/ajuda/40538
-// Valores aproximados — variam por tamanho do produto e duração de armazenagem
+// Valores atualizados: reajuste de +7,6% na armazenagem (vigente desde 2/mar/2026)
+// Retirada de estoque Full: +5% | Coleta: +5% a +10% | Armaz. >6 meses: +6,4%
 
 export interface MLFullCost {
   sizeLabel:     string
@@ -194,10 +212,10 @@ export interface MLFullCost {
 }
 
 export const ML_FULL_COSTS: MLFullCost[] = [
-  { sizeLabel: 'Pequeno (até 0,5kg, até 20×13×2cm)',      handlingFee: 4.50,  storagePer30d: 0.50 },
-  { sizeLabel: 'Médio (até 1kg, até 35×25×4cm)',          handlingFee: 5.50,  storagePer30d: 0.80 },
-  { sizeLabel: 'Grande (até 5kg, até 60×45×45cm)',        handlingFee: 7.50,  storagePer30d: 1.20 },
-  { sizeLabel: 'Extra-grande (até 25kg, até 90×60×60cm)', handlingFee: 12.00, storagePer30d: 2.50 },
+  { sizeLabel: 'Pequeno (até 0,5kg, até 20×13×2cm)',      handlingFee: 4.50,  storagePer30d: 0.54 }, // 0.50 × 1.076
+  { sizeLabel: 'Médio (até 1kg, até 35×25×4cm)',          handlingFee: 5.92,  storagePer30d: 0.86 }, // 5.50 × 1.076; 0.80 × 1.076
+  { sizeLabel: 'Grande (até 5kg, até 60×45×45cm)',        handlingFee: 7.50,  storagePer30d: 1.29 }, // 1.20 × 1.076
+  { sizeLabel: 'Extra-grande (até 25kg, até 90×60×60cm)', handlingFee: 12.00, storagePer30d: 2.69 }, // 2.50 × 1.076
 ]
 
 // ─── Funções auxiliares ───────────────────────────────────────────────────────
@@ -226,7 +244,13 @@ export function getCommissionForCategory(
 }
 
 /**
- * Calcula a taxa fixa por venda com base no preço do produto.
+ * Calcula o custo fixo por venda com base no preço do produto.
+ * Usa os valores históricos (vigentes até 01/mar/2026) como APROXIMAÇÃO.
+ *
+ * ⚠️  A partir de 2/mar/2026 o ML adotou custo operacional VARIÁVEL (232 combinações).
+ * Os valores retornados são conservadores e podem subestimar o custo real.
+ * Consulte: https://www.mercadolivre.com.br/ajuda/16449
+ *
  * Produtos < R$ 12,50: taxa = 50% do valor (tratado separadamente na engine).
  */
 export function getFixedFee(price: number): number {

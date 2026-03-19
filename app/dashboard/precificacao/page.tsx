@@ -684,9 +684,14 @@ export default function PrecificacaoPage() {
                     ))}
 
                     {/* Disclaimer */}
-                    <p className="text-[10px] text-slate-700 leading-relaxed pt-1">
-                      Comissões e tarifas baseadas em médias de jan/2025. Consulte a Central de Vendedores do ML para valores atualizados da sua categoria.
-                    </p>
+                    <div className="pt-1 space-y-1">
+                      <p className="text-[10px] text-slate-700 leading-relaxed">
+                        Comissões por categoria: Koncili/ML (fev/2026) — percentuais inalterados em 2026.
+                      </p>
+                      <p className="text-[10px] text-amber-700 leading-relaxed">
+                        ⚠️ Desde 2/mar/2026, a taxa fixa (R$ 6,25–6,75) foi substituída por custo operacional variável de 232 combinações peso×preço. Os valores exibidos são aproximações — use o <a href="https://www.mercadolivre.com.br/ajuda/16449" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-500">simulador oficial</a> para precisão.
+                      </p>
+                    </div>
                   </div>
                 )}
 
