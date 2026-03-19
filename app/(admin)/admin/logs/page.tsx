@@ -45,6 +45,7 @@ function fmtDate(iso: string) {
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function AdminLogsPage() {
+  useEffect(() => { document.title = 'Logs — Admin Foguetim' }, [])
   const [logs, setLogs]       = useState<ActivityLog[]>([])
   const [total, setTotal]     = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -96,7 +97,7 @@ export default function AdminLogsPage() {
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {total === null ? (
-              <span className="inline-block h-3.5 w-24 bg-white/[0.06] rounded animate-pulse align-middle" />
+              <span className="inline-block h-3.5 w-24 shimmer-load rounded align-middle" />
             ) : (
               <>{total.toLocaleString('pt-BR')} eventos registrados</>
             )}
@@ -146,7 +147,7 @@ export default function AdminLogsPage() {
                 <tr key={i}>
                   {Array.from({ length: 5 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-white/[0.04] rounded animate-pulse" />
+                      <div className="h-4 shimmer-load rounded" />
                     </td>
                   ))}
                 </tr>

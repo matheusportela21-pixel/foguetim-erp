@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Webhook, ChevronLeft, ChevronRight } from 'lucide-react'
+import { RefreshCw, Webhook, ChevronLeft, ChevronRight, Clock, Cog, CheckCircle2, XCircle } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface WebhookEntry {
@@ -57,11 +57,11 @@ const STATUS_COLORS: Record<string, string> = {
   error:      'bg-red-900/30 text-red-400',
 }
 
-const STATUS_ICONS: Record<string, string> = {
-  pending:    '⏳',
-  processing: '⚙️',
-  done:       '✅',
-  error:      '❌',
+const STATUS_ICON_MAP: Record<string, React.ElementType> = {
+  pending:    Clock,
+  processing: Cog,
+  done:       CheckCircle2,
+  error:      XCircle,
 }
 
 function fmtDatetime(iso: string) {
@@ -74,6 +74,7 @@ function fmtDatetime(iso: string) {
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function AdminWebhooksPage() {
+  useEffect(() => { document.title = 'Webhooks — Admin Foguetim' }, [])
   const [data, setData]           = useState<ApiResponse | null>(null)
   const [loading, setLoading]     = useState(true)
   const [filterTopic, setFilterTopic]   = useState('')
@@ -130,7 +131,7 @@ export default function AdminWebhooksPage() {
           <div key={label} className="bg-[#111318] border border-white/[0.06] rounded-xl p-5">
             <p className="text-xs text-slate-500 mb-2">{label}</p>
             {loading ? (
-              <div className="h-7 w-12 bg-white/[0.04] rounded animate-pulse" />
+              <div className="h-7 w-12 shimmer-load rounded" />
             ) : (
               <p className={`text-3xl font-bold tabular-nums ${color}`}>{value}</p>
             )}
@@ -191,7 +192,7 @@ export default function AdminWebhooksPage() {
                 <tr key={i}>
                   {Array.from({ length: 6 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-white/[0.04] rounded animate-pulse" />
+                      <div className="h-4 shimmer-load rounded" />
                     </td>
                   ))}
                 </tr>
@@ -225,9 +226,11 @@ export default function AdminWebhooksPage() {
                   {w.user_id}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[w.status] ?? 'bg-slate-800 text-slate-400'}`}>
-                    {STATUS_ICONS[w.status] ?? ''} {w.status}
-                  </span>
+                  {(() => { const Icon = STATUS_ICON_MAP[w.status]; return (
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[w.status] ?? 'bg-slate-800 text-slate-400'}`}>
+                      {Icon && <Icon className="w-3 h-3" />} {w.status}
+                    </span>
+                  )})()}
                   {w.error_message && (
                     <p className="text-[10px] text-red-400 mt-0.5 max-w-[200px] truncate" title={w.error_message}>
                       {w.error_message}

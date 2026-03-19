@@ -282,6 +282,7 @@ function UserDrawer({ userId, onClose }: { userId: string; onClose: () => void }
 
 /* ── Main page ───────────────────────────────────────────────────────────── */
 export default function AdminUsuariosPage() {
+  useEffect(() => { document.title = 'Usuários — Admin Foguetim' }, [])
   const [users, setUsers]         = useState<AdminUser[]>([])
   const [total, setTotal]         = useState(0)
   const [loading, setLoading]     = useState(true)
@@ -327,7 +328,7 @@ export default function AdminUsuariosPage() {
         <h1 className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Usuários</h1>
         <p className="text-sm text-slate-500 mt-0.5">
           {loading
-            ? <span className="inline-block h-3.5 w-28 bg-slate-700 animate-pulse rounded align-middle" />
+            ? <span className="inline-block h-3.5 w-28 shimmer-load rounded align-middle" />
             : `${total} usuários cadastrados`}
         </p>
       </div>
@@ -376,7 +377,7 @@ export default function AdminUsuariosPage() {
                 <tr key={i}>
                   {Array.from({ length: 7 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-white/[0.04] rounded animate-pulse" />
+                      <div className="h-4 shimmer-load rounded" />
                     </td>
                   ))}
                 </tr>

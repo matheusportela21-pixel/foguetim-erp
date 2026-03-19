@@ -89,6 +89,7 @@ function KpiCard({ icon: Icon, label, value, sub, color = 'text-white' }: {
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function AdminPage() {
+  useEffect(() => { document.title = 'Admin — Foguetim' }, [])
   const [data, setData]       = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -135,7 +136,7 @@ export default function AdminPage() {
       {loading || !data ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-[#111318] border border-white/[0.06] rounded-xl p-5 h-28 animate-pulse" />
+            <div key={i} className="bg-[#111318] border border-white/[0.06] rounded-xl p-5 h-28 shimmer-load" />
           ))}
         </div>
       ) : (
