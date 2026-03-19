@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
       reference_type,
       reference_id,
       metadata,
+      unit_cost,
     } = body
 
     if (!warehouse_id || !product_id || !movement_type || quantity === undefined || quantity === null) {
@@ -261,6 +262,36 @@ export async function POST(req: NextRequest) {
     if (updateInvError) {
       console.error('[armazem/movimentacoes POST inventory update]', updateInvError)
       return NextResponse.json({ error: 'Erro ao atualizar inventário' }, { status: 500 })
+    }
+
+    // Atualizar last_entry_cost e average_cost se custo informado
+    const unitCostNum = unit_cost !== undefined && unit_cost !== null ? Number(unit_cost) : 0
+    if (unitCostNum > 0 && INCREASE_TYPES.includes(movement_type as MovementType)) {
+      try {
+        const { data: prodCost } = await db
+          .from('warehouse_products')
+          .select('average_cost')
+          .eq('id', product_id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        const currentAvg = Number((prodCost as { average_cost?: number | null } | null)?.average_cost ?? 0) || unitCostNum
+        const newAvg = currentAvailable > 0
+          ? (currentAvg * currentAvailable + unitCostNum * qty) / (currentAvailable + qty)
+          : unitCostNum
+
+        await db
+          .from('warehouse_products')
+          .update({
+            last_entry_cost: Math.round(unitCostNum * 100) / 100,
+            average_cost:    Math.round(newAvg * 100) / 100,
+          })
+          .eq('id', product_id)
+          .eq('user_id', user.id)
+      } catch (costErr) {
+        console.error('[movimentacoes POST cost update]', costErr)
+        // non-critical — don't fail the whole request
+      }
     }
 
     const movementData: Record<string, unknown> = {

@@ -74,6 +74,7 @@ export default function EstoquePage() {
   const [adjustForm, setAdjustForm] = useState({
     movement_type: 'entrada_manual',
     quantity: '',
+    unit_cost: '',
     reason: REASONS[0],
     custom_reason: '',
   })
@@ -163,7 +164,7 @@ export default function EstoquePage() {
   /* ── open adjust modal ── */
   function openAdjust(item: InventoryItem | null) {
     setAdjustTarget(item)
-    setAdjustForm({ movement_type: 'entrada_manual', quantity: '', reason: REASONS[0], custom_reason: '' })
+    setAdjustForm({ movement_type: 'entrada_manual', quantity: '', unit_cost: '', reason: REASONS[0], custom_reason: '' })
     setAdjustWarning('')
     setShowAdjustModal(true)
   }
@@ -194,7 +195,7 @@ export default function EstoquePage() {
 
     setAdjusting(true)
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         inventory_id: adjustTarget.id,
         product_id: adjustTarget.product.id,
         warehouse_id: adjustTarget.warehouse.id,
@@ -203,6 +204,9 @@ export default function EstoquePage() {
         reason: adjustForm.reason === 'Outro (descrever)'
           ? adjustForm.custom_reason.trim()
           : adjustForm.reason,
+      }
+      if (adjustForm.movement_type === 'entrada_manual' && adjustForm.unit_cost !== '') {
+        body.unit_cost = parseFloat(adjustForm.unit_cost)
       }
       const res = await fetch('/api/armazem/movimentacoes', {
         method: 'POST',
@@ -539,6 +543,30 @@ export default function EstoquePage() {
                   className="input-cyber w-full px-3 py-2 text-sm"
                 />
               </div>
+
+              {/* Custo unitário (entrada manual only) */}
+              {adjustForm.movement_type === 'entrada_manual' && (
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1.5">
+                    Custo unitário desta entrada (R$) <span className="text-slate-600">— opcional</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input-cyber w-full pl-8 pr-3 py-2 text-sm rounded-lg"
+                      placeholder="0,00"
+                      value={adjustForm.unit_cost}
+                      onChange={e => setAdjustForm(prev => ({ ...prev, unit_cost: e.target.value }))}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-1">
+                    Se preenchido, atualiza o custo médio e o último custo de entrada do produto.
+                  </p>
+                </div>
+              )}
 
               {/* Warning */}
               {adjustWarning && (
