@@ -8,6 +8,7 @@ import {
   Layers, Package2, Info, Search, X, Plus, ExternalLink,
 } from 'lucide-react'
 import Header from '@/components/Header'
+import OtpConfirmation from '@/components/security/OtpConfirmation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -360,6 +361,7 @@ export default function ProductDetailPage() {
   })
   const [pricingForm, setPricingForm] = useState({ manual_cost: '', reference_price: '' })
   const [showCostConfirmModal, setShowCostConfirmModal] = useState(false)
+  const [showCostOtp, setShowCostOtp] = useState(false)
   const [pendingManualCost, setPendingManualCost] = useState<string>('')
   const [fiscalForm,  setFiscalForm]  = useState({ ncm: '', cest: '', origin: '', unit: '' })
   const [logisticsForm, setLogisticsForm] = useState({ weight_g: '', length_cm: '', width_cm: '', height_cm: '' })
@@ -914,6 +916,16 @@ export default function ProductDetailPage() {
                 <button
                   onClick={async () => {
                     setShowCostConfirmModal(false)
+                    // Check if OTP required (>50% change)
+                    const newCost = pendingManualCost ? parseFloat(pendingManualCost) : null
+                    const curCost = product?.manual_cost ?? product?.cost_price ?? null
+                    if (newCost !== null && curCost !== null && curCost > 0) {
+                      const diff = Math.abs(newCost - curCost) / curCost
+                      if (diff > 0.50) {
+                        setShowCostOtp(true)
+                        return
+                      }
+                    }
                     await executeSavePricing(pendingManualCost ? parseFloat(pendingManualCost) : null)
                     setPendingManualCost('')
                   }}
@@ -925,6 +937,19 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {showCostOtp && (
+          <OtpConfirmation
+            actionType="manual_cost_change"
+            onVerified={async () => {
+              setShowCostOtp(false)
+              await executeSavePricing(pendingManualCost ? parseFloat(pendingManualCost) : null)
+            }}
+            onCancel={() => setShowCostOtp(false)}
+            title="Alterar custo do produto"
+            description={`Alteração de mais de 50% no custo. Digite o código enviado ao seu e-mail para confirmar.`}
+          />
         )}
 
         {/* ── 3. Fiscal ── */}

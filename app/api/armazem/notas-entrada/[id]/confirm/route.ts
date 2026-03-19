@@ -218,9 +218,9 @@ export async function POST(
           let difalRateio = 0
           const difalType  = invoice.difal_type  as string | undefined
           const difalValue = Number(invoice.difal_value ?? 0)
-          if (difalType === 'valor') {
+          if (difalType === 'value' || difalType === 'valor') {
             difalRateio = ratio * difalValue
-          } else if (difalType === 'percentual' && difalValue > 0) {
+          } else if ((difalType === 'percent' || difalType === 'percentual') && difalValue > 0) {
             difalRateio = ratio * (itemValue * difalValue / 100)
           }
 
@@ -248,6 +248,17 @@ export async function POST(
             average_cost:    Math.round(newAvg * 100) / 100,
           })
           .eq('id', productId)
+      }
+
+      // Salvar real_unit_cost no item da nota (sempre, para todos os itens mapeados)
+      if (item.id) {
+        const costToSave = effectiveCost > 0 ? effectiveCost : itemCost
+        try {
+          await db
+            .from('purchase_invoice_items_beta')
+            .update({ real_unit_cost: Math.round(costToSave * 100) / 100 })
+            .eq('id', item.id as number)
+        } catch { /* non-critical */ }
       }
     }
 
