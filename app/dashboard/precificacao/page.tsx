@@ -6,9 +6,10 @@ import {
   AlertTriangle, Zap, Search,
   CheckCircle2, XCircle, Minus, ArrowUpRight, ArrowDownRight,
   ToggleLeft, ToggleRight, Layers, Lock, Unlock, Settings2,
-  CircleDollarSign, Scale, BarChart3,
+  CircleDollarSign, Scale, BarChart3, Loader2, FlaskConical,
 } from 'lucide-react'
 import Header from '@/components/Header'
+import OtpConfirmation from '@/components/security/OtpConfirmation'
 import {
   calcSuggestedPrice, calcMarginFromPrice,
   type PricingInput, type PricingResult, type ListingType, type ShippingMode, type ReputationLevel,
@@ -157,9 +158,133 @@ function MarginTable({ base, onSelectMargin, targetMargin }: {
   )
 }
 
+// ─── Aba de Simulação Real (PASSO 8) ─────────────────────────────────────────
+interface SimItem {
+  id:        string | number
+  name:      string
+  costPrice: number
+  weightG:   number | null
+  mlItemId:  string
+  mlListing: { item_id: string; title: string; price: number | null; listing_type: string | null; status: string | null } | null
+}
+
+function SimulationTab({ base }: { base: PricingInput }) {
+  const [items,   setItems]   = useState<SimItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [err,     setErr]     = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch('/api/precificacao/simulacao')
+      .then(r => r.json())
+      .then(d => { setItems(d.items ?? []); setErr(null) })
+      .catch(() => setErr('Não foi possível carregar os produtos.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-10 gap-2">
+      <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
+      <p className="text-xs text-slate-500">Buscando produtos reais...</p>
+    </div>
+  )
+
+  if (err) return (
+    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/[0.06] border border-red-500/20">
+      <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+      <p className="text-xs text-red-400">{err}</p>
+    </div>
+  )
+
+  if (!items.length) return (
+    <div className="text-center py-8 space-y-2">
+      <FlaskConical className="w-8 h-8 text-slate-700 mx-auto" />
+      <p className="text-sm text-slate-500">Nenhum produto com custo e anúncio ML encontrado.</p>
+      <p className="text-[10px] text-slate-600">
+        Cadastre o custo nos produtos do armazém e vincule-os a um anúncio ML para simular aqui.
+      </p>
+    </div>
+  )
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] text-slate-600 leading-relaxed">
+        Usando parâmetros atuais: imposto {base.taxPct}%, margem {base.targetMarginPct}%,
+        reputação {base.sellerReputation}.
+        {base.categoryCommissionPct !== null ? ` Comissão: ${base.categoryCommissionPct}%.` : ''}
+      </p>
+
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-white/[0.05]">
+              {['Produto', 'Custo', 'Atual ML', 'Preço ideal', 'Margem', 'Δ'].map(h => (
+                <th key={h} className="text-left py-2 pr-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => {
+              const input: PricingInput = {
+                ...base,
+                productCost:    item.costPrice,
+                productWeightG: item.weightG ?? base.productWeightG,
+                currentMLPrice: item.mlListing?.price ?? null,
+              }
+              const r           = calcSuggestedPrice(input)
+              const curPrice    = item.mlListing?.price ?? null
+              const delta       = curPrice != null && r.suggestedPrice > 0 ? r.suggestedPrice - curPrice : null
+              const deltaColor  = delta === null ? '' : delta > 1 ? 'text-amber-400' : delta < -1 ? 'text-emerald-400' : 'text-slate-500'
+              const marginColor = r.marginStatus === 'healthy' ? 'text-emerald-400' : r.marginStatus === 'tight' ? 'text-amber-400' : 'text-red-400'
+
+              return (
+                <tr key={item.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                  <td className="py-2.5 pr-3">
+                    <p className="text-slate-300 font-medium truncate max-w-[130px]">{item.name}</p>
+                    <p className="text-[9px] text-slate-700 font-mono">{item.mlItemId}</p>
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-slate-400">{fmtBRL(item.costPrice)}</td>
+                  <td className="py-2.5 pr-3 font-mono text-slate-300">{curPrice != null ? fmtBRL(curPrice) : '—'}</td>
+                  <td className="py-2.5 pr-3">
+                    <span className="font-mono font-bold text-violet-300">
+                      {r.suggestedPrice > 0 ? fmtBRL(r.suggestedPrice) : '—'}
+                    </span>
+                  </td>
+                  <td className="py-2.5 pr-3">
+                    <span className={`font-mono font-semibold ${marginColor}`}>{r.realMarginPct.toFixed(1)}%</span>
+                  </td>
+                  <td className="py-2.5">
+                    {delta !== null ? (
+                      <span className={`font-mono text-[10px] font-semibold ${deltaColor}`}>
+                        {delta > 0 ? '+' : ''}{fmtBRL(delta)}
+                      </span>
+                    ) : <span className="text-slate-700">—</span>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-[9px] text-slate-700 leading-relaxed">
+        Simulação com frete estimado por peso (quando disponível) ou R$ 18 como fallback.
+        Comissão padrão do simulador aplicada a todos os produtos. Resultados indicativos.
+      </p>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function PrecificacaoPage() {
   useEffect(() => { document.title = 'Precificação — Foguetim ERP' }, [])
+
+  // ── URL param: ml_item_id (PASSO 7) ─────────────────────────────────────────
+  const [urlMlItemId, setUrlMlItemId] = useState<string | null>(null)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    setUrlMlItemId(p.get('ml_item_id'))
+  }, [])
 
   // ── Modo ────────────────────────────────────────────────────────────────────
   const [mode, setMode] = useState<'manual' | 'auto'>('manual')
@@ -197,8 +322,14 @@ export default function PrecificacaoPage() {
   const [taxPreset, setTaxPreset] = useState<string>('Simples I')
   const [catSearch, setCatSearch] = useState('')
 
-  // Aba resultado
-  const [resultTab, setResultTab] = useState<'result' | 'breakdown' | 'simulator'>('result')
+  // Aba resultado (agora inclui simulação real — PASSO 8)
+  const [resultTab, setResultTab] = useState<'result' | 'breakdown' | 'simulator' | 'simulation'>('result')
+
+  // ── Aplicar preço ao ML — PASSO 7 ───────────────────────────────────────────
+  const [showApplyConfirm, setShowApplyConfirm] = useState(false)
+  const [showApplyOtp,     setShowApplyOtp]     = useState(false)
+  const [applying,         setApplying]         = useState(false)
+  const [applyResult,      setApplyResult]      = useState<{ ok: boolean; msg: string } | null>(null)
 
   // ── Buscar contexto ML ao entrar no modo auto ────────────────────────────────
   useEffect(() => {
@@ -265,6 +396,33 @@ export default function PrecificacaoPage() {
   const marginColor = result.marginStatus === 'healthy' ? 'text-emerald-400'
                     : result.marginStatus === 'tight'   ? 'text-amber-400'
                     : 'text-red-400'
+
+  // ── Aplicar preço ao anúncio ML (PASSO 7) ───────────────────────────────────
+  async function executarAplicacaoPreco() {
+    if (!urlMlItemId || result.suggestedPrice <= 0) return
+    setApplying(true)
+    setApplyResult(null)
+    try {
+      const newPrice = Math.round(result.suggestedPrice * 100) / 100
+      const res = await fetch(`/api/mercadolivre/items/${urlMlItemId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ field: 'price', value: newPrice }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setApplyResult({ ok: true, msg: `✅ Preço ${fmtBRL(newPrice)} aplicado com sucesso ao anúncio ${urlMlItemId}.` })
+        setCurrentMLPrice(newPrice)
+      } else {
+        setApplyResult({ ok: false, msg: `❌ ${data.error ?? 'Erro ao aplicar preço no ML.'}` })
+      }
+    } catch {
+      setApplyResult({ ok: false, msg: '❌ Erro de conexão. Tente novamente.' })
+    } finally {
+      setApplying(false)
+      setShowApplyOtp(false)
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -631,12 +789,43 @@ export default function PrecificacaoPage() {
                 )}
               </div>
 
+              {/* ── PASSO 7: Aplicar preço ao anúncio ML ─────────────────── */}
+              {urlMlItemId && result.suggestedPrice > 0 && (
+                <div className="border-t border-amber-500/20 bg-amber-500/[0.03] px-5 py-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-500 truncate">
+                        Anúncio: <span className="font-mono text-slate-400">{urlMlItemId}</span>
+                      </p>
+                      <p className="text-[10px] text-amber-500 mt-0.5 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Esta ação altera o preço diretamente no Mercado Livre
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setApplyResult(null); setShowApplyConfirm(true) }}
+                      disabled={applying}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition-all disabled:opacity-50"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Aplicar {fmtBRL(result.suggestedPrice)}
+                    </button>
+                  </div>
+                  {applyResult && (
+                    <div className={`px-3 py-2 rounded-lg text-xs font-medium ${applyResult.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                      {applyResult.msg}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Tabs */}
               <div className="flex border-b border-white/[0.05]">
                 {([
-                  ['result',    Scale,    'Resumo'],
-                  ['breakdown', BarChart3, 'Breakdown'],
-                  ['simulator', TrendingUp,'Simulador'],
+                  ['result',     Scale,        'Resumo'],
+                  ['breakdown',  BarChart3,    'Breakdown'],
+                  ['simulator',  TrendingUp,   'Simulador'],
+                  ['simulation', FlaskConical, 'Simulação Real'],
                 ] as [typeof resultTab, React.ElementType, string][]).map(([tab, Icon, lbl]) => (
                   <button key={tab} onClick={() => setResultTab(tab)}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-all ${
@@ -711,6 +900,11 @@ export default function PrecificacaoPage() {
                     targetMargin={targetMargin}
                   />
                 )}
+
+                {/* PASSO 8 — Simulação com produtos reais */}
+                {resultTab === 'simulation' && (
+                  <SimulationTab base={engineInput} />
+                )}
               </div>
             </div>
 
@@ -733,6 +927,67 @@ export default function PrecificacaoPage() {
           </div>
         </div>
       </div>
+
+      {/* ── PASSO 7: Modal de confirmação — aplicar preço ao ML ─────────────── */}
+      {showApplyConfirm && urlMlItemId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[#111318] border border-amber-500/30 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 text-amber-400" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Aplicar preço no Mercado Livre</h3>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-400">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-slate-500">Anúncio</span>
+                <span className="font-mono text-slate-300">{urlMlItemId}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-slate-500">Preço atual ML</span>
+                <span className="font-mono text-slate-300">{currentMLPrice ? fmtBRL(currentMLPrice) : '—'}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-violet-500/[0.07] border border-violet-500/20">
+                <span className="text-slate-400 font-semibold">Novo preço (calculado)</span>
+                <span className="font-mono font-black text-violet-300 text-base">{fmtBRL(result.suggestedPrice)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-[11px] text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              Esta alteração será aplicada imediatamente na sua conta do Mercado Livre e ficará visível para compradores.
+              Você precisará confirmar com um código de segurança.
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowApplyConfirm(false)}
+                className="flex-1 py-2.5 text-sm text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.07] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => { setShowApplyConfirm(false); setShowApplyOtp(true) }}
+                className="flex-1 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl transition-all"
+              >
+                Continuar com OTP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PASSO 7: OTP para confirmar aplicação de preço ─────────────────── */}
+      {showApplyOtp && (
+        <OtpConfirmation
+          actionType="price_change"
+          title="Confirmar alteração de preço"
+          description={`Digite o código de segurança para aplicar ${fmtBRL(result.suggestedPrice)} ao anúncio ${urlMlItemId} no Mercado Livre.`}
+          onVerified={() => executarAplicacaoPreco()}
+          onCancel={() => setShowApplyOtp(false)}
+        />
+      )}
     </div>
   )
 }
