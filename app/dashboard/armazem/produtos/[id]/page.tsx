@@ -63,6 +63,9 @@ interface Product {
   category_id?: string | null
   active: boolean
   cost_price?: number | null
+  manual_cost?: number | null
+  last_entry_cost?: number | null
+  average_cost?: number | null
   reference_price?: number | null
   ncm?: string | null
   cest?: string | null
@@ -355,7 +358,9 @@ export default function ProductDetailPage() {
     name: '', nickname: '', barcode: '', has_no_ean: false,
     brand: '', description: '', category_id: '', active: true,
   })
-  const [pricingForm, setPricingForm] = useState({ cost_price: '', reference_price: '' })
+  const [pricingForm, setPricingForm] = useState({ manual_cost: '', reference_price: '' })
+  const [showCostConfirmModal, setShowCostConfirmModal] = useState(false)
+  const [pendingManualCost, setPendingManualCost] = useState<string>('')
   const [fiscalForm,  setFiscalForm]  = useState({ ncm: '', cest: '', origin: '', unit: '' })
   const [logisticsForm, setLogisticsForm] = useState({ weight_g: '', length_cm: '', width_cm: '', height_cm: '' })
 
@@ -400,7 +405,7 @@ export default function ProductDetailPage() {
         active:      data.active ?? true,
       })
       setPricingForm({
-        cost_price:      fmtCost(data.cost_price),
+        manual_cost:     fmtCost(data.manual_cost ?? data.cost_price),
         reference_price: fmtCost(data.reference_price),
       })
       setFiscalForm({
@@ -542,10 +547,31 @@ export default function ProductDetailPage() {
   }
 
   async function savePricing() {
+    const newManualCost = pricingForm.manual_cost ? parseFloat(pricingForm.manual_cost) : null
+    const currentManualCost = product?.manual_cost ?? product?.cost_price ?? null
+
+    // Verificar se o custo mudou mais de 10% — se sim, mostrar modal de confirmação
+    if (newManualCost !== null && currentManualCost !== null && currentManualCost > 0) {
+      const diff = Math.abs(newManualCost - currentManualCost) / currentManualCost
+      if (diff > 0.10) {
+        setPendingManualCost(pricingForm.manual_cost)
+        setShowCostConfirmModal(true)
+        return
+      }
+    }
+
+    await executeSavePricing(newManualCost)
+  }
+
+  async function executeSavePricing(manualCostOverride?: number | null) {
     setSavingPricing(true)
     try {
+      const manualCost = manualCostOverride !== undefined
+        ? manualCostOverride
+        : (pricingForm.manual_cost ? parseFloat(pricingForm.manual_cost) : null)
       await patch({
-        cost_price:      pricingForm.cost_price      ? parseFloat(pricingForm.cost_price)      : null,
+        manual_cost:     manualCost,
+        cost_price:      manualCost,
         reference_price: pricingForm.reference_price ? parseFloat(pricingForm.reference_price) : null,
       })
       setToastMsg('Preços salvos!', 'success')
@@ -783,14 +809,47 @@ export default function ProductDetailPage() {
           onToggle={() => toggleSection('pricing')}
         >
           <div className="space-y-4">
+
+            {/* Histórico de Custos (informativo) */}
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Histórico de Custos (informativo)</p>
+              <FieldRow cols={2}>
+                <Field label="Último custo de entrada">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">R$</span>
+                    <input
+                      type="text"
+                      readOnly
+                      className="input-cyber w-full pl-9 pr-3 py-2 rounded-lg text-sm text-slate-400 cursor-default bg-white/[0.02]"
+                      value={product.last_entry_cost != null ? product.last_entry_cost.toFixed(2) : '—'}
+                    />
+                  </div>
+                </Field>
+                <Field label="Custo médio ponderado">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">R$</span>
+                    <input
+                      type="text"
+                      readOnly
+                      className="input-cyber w-full pl-9 pr-3 py-2 rounded-lg text-sm text-slate-400 cursor-default bg-white/[0.02]"
+                      value={product.average_cost != null ? product.average_cost.toFixed(2) : '—'}
+                    />
+                  </div>
+                </Field>
+              </FieldRow>
+            </div>
+
             <FieldRow cols={2}>
-              <Field label="Custo de compra">
+              <Field
+                label="Custo Manual (para precificação)"
+                hint="Este custo alimenta os cálculos de margem e precificação. Se não preenchido, o sistema usa o custo médio ou o último de entrada."
+              >
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">R$</span>
                   <input type="number" min="0" step="0.01" className="input-cyber w-full pl-9 pr-3 py-2 rounded-lg text-sm"
                     placeholder="0,00"
-                    value={pricingForm.cost_price}
-                    onChange={e => setPricingForm(p => ({ ...p, cost_price: e.target.value }))} />
+                    value={pricingForm.manual_cost}
+                    onChange={e => setPricingForm(p => ({ ...p, manual_cost: e.target.value }))} />
                 </div>
               </Field>
               <Field label="Preço de referência">
@@ -809,7 +868,7 @@ export default function ProductDetailPage() {
               <div className="flex items-start gap-2">
                 <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-300 leading-relaxed">
-                  O preço de custo será fundamental para automatização de preços, cálculo de margem e sugestões de precificação nos marketplaces.
+                  O custo manual é usado nos cálculos de margem e precificação. Se não preenchido, o sistema usa o custo médio ou o último de entrada.
                 </p>
               </div>
               <p className="text-[11px] text-slate-500 pl-5 leading-relaxed">
@@ -820,6 +879,53 @@ export default function ProductDetailPage() {
             <SectionSaveButton saving={savingPricing} onClick={savePricing} label="Salvar preços" />
           </div>
         </Accordion>
+
+        {/* ── Modal: Confirmar alteração de custo ── */}
+        {showCostConfirmModal && product && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCostConfirmModal(false)} />
+            <div className="relative w-full max-w-md glass-card rounded-2xl p-6 space-y-4 shadow-2xl border border-white/[0.08]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-amber-400" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-100" style={{ fontFamily: 'Sora, sans-serif' }}>Confirmar alteração de custo</h3>
+              </div>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Você está alterando o custo de{' '}
+                <span className="font-semibold text-slate-100">
+                  R$ {(product.manual_cost ?? product.cost_price ?? 0).toFixed(2)}
+                </span>{' '}
+                para{' '}
+                <span className="font-semibold text-amber-300">
+                  R$ {pendingManualCost ? parseFloat(pendingManualCost).toFixed(2) : '0,00'}
+                </span>.
+              </p>
+              <p className="text-xs text-slate-500">
+                Isso afeta precificação e relatórios. Confirmar?
+              </p>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => { setShowCostConfirmModal(false); setPendingManualCost('') }}
+                  className="flex-1 py-2 rounded-xl border border-white/[0.08] text-sm text-slate-400 hover:bg-white/[0.04] transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowCostConfirmModal(false)
+                    await executeSavePricing(pendingManualCost ? parseFloat(pendingManualCost) : null)
+                    setPendingManualCost('')
+                  }}
+                  disabled={savingPricing}
+                  className="flex-1 py-2 rounded-xl btn-primary text-sm font-semibold disabled:opacity-50"
+                >
+                  {savingPricing ? 'Salvando...' : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── 3. Fiscal ── */}
         <Accordion

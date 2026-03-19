@@ -191,6 +191,64 @@ export async function POST(
 
       movements.push(movement)
       movementsCreated++
+
+      // Atualizar last_entry_cost e recalcular average_cost no produto
+      const itemCost = Number(item.unit_cost ?? 0)
+      const applyCosts = invoice.apply_costs_to_products === true
+
+      let effectiveCost = itemCost
+
+      if (applyCosts && itemCost > 0) {
+        // Calcular o total de valor de todos os itens para rateio
+        const totalItemsValue = allItems.reduce((sum: number, i: Record<string, unknown>) => {
+          return sum + Number(i.unit_cost ?? 0) * Number(i.quantity ?? 0)
+        }, 0)
+
+        const itemValue = itemCost * qty
+
+        if (totalItemsValue > 0) {
+          const ratio = itemValue / totalItemsValue
+
+          const freightRateio    = ratio * Number(invoice.freight_cost       ?? 0)
+          const insuranceRateio  = ratio * Number(invoice.insurance_cost     ?? 0)
+          const expensesRateio   = ratio * Number(invoice.other_expenses     ?? 0)
+          const discountRateio   = ratio * Number(invoice.discount_amount_entry ?? 0)
+
+          // DIFAL: só ratear se difal_type for 'valor' ou 'percentual'
+          let difalRateio = 0
+          const difalType  = invoice.difal_type  as string | undefined
+          const difalValue = Number(invoice.difal_value ?? 0)
+          if (difalType === 'valor') {
+            difalRateio = ratio * difalValue
+          } else if (difalType === 'percentual' && difalValue > 0) {
+            difalRateio = ratio * (itemValue * difalValue / 100)
+          }
+
+          const totalItemCost = itemValue + freightRateio + insuranceRateio + expensesRateio + difalRateio - discountRateio
+          effectiveCost = qty > 0 ? totalItemCost / qty : itemCost
+        }
+      }
+
+      if (effectiveCost > 0) {
+        const { data: prodCost } = await db
+          .from('warehouse_products')
+          .select('average_cost, last_entry_cost')
+          .eq('id', productId)
+          .maybeSingle()
+
+        const currentAvg = Number((prodCost as Record<string, unknown> | null)?.average_cost ?? 0) || effectiveCost
+        const newAvg = currentAvailable > 0
+          ? (currentAvg * currentAvailable + effectiveCost * qty) / (currentAvailable + qty)
+          : effectiveCost
+
+        await db
+          .from('warehouse_products')
+          .update({
+            last_entry_cost: Math.round(effectiveCost * 100) / 100,
+            average_cost:    Math.round(newAvg * 100) / 100,
+          })
+          .eq('id', productId)
+      }
     }
 
     // Step 6: Update invoice status to 'completed'
