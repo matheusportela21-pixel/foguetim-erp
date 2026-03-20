@@ -322,6 +322,22 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── Perguntas pendentes ML alert ── */}
+        {questions > 0 && ml?.connected && (
+          <Link href="/dashboard/sac">
+            <div className="flex items-center gap-3 p-4 bg-amber-950/30 border border-amber-800/40 rounded-xl hover:bg-amber-900/30 transition-colors">
+              <MessageSquare className="w-5 h-5 text-amber-400 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">
+                  {questions} pergunta{questions !== 1 ? 's' : ''} sem resposta no Mercado Livre
+                </p>
+                <p className="text-xs text-amber-400/80 mt-0.5">Responda rapidamente para melhorar sua reputação</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-amber-600 shrink-0" />
+            </div>
+          </Link>
+        )}
+
         {/* ── Ruptura de estoque alert ── */}
         {rupturasCount > 0 && (
           <Link href="/dashboard/estoque?filter=ruptura">
