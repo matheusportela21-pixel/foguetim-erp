@@ -8,3 +8,12 @@
 [    7910ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/login:0
 [    8789ms] Invalid or unexpected token
 [  681564ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/login?email-login=matheus.portela21%40gmail.com&password-login=Qaz123654%40&_rsc=1vo4m:0
+[ 2109585ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/css/app/layout.css?v=1773969951116:0
+[ 2109601ms] Event
+[ 2123159ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3002/login?email-login=matheus.portela21%40gmail.com&password-login=Qaz123654%40&_rsc=1vo4m:0
+[ 2123281ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/css/app/layout.css?v=1773969965064:0
+[ 2123328ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/main-app.js?v=1773969965064:0
+[ 2123343ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/app-pages-internals.js:0
+[ 2123343ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/app/login/page.js:0
+[ 2123344ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/app/error.js:0
+[ 2123346ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/_next/static/chunks/app/not-found.js:0

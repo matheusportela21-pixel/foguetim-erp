@@ -24,6 +24,8 @@ export interface CallOptions {
   systemPrompt?: string
   messages:      AnthropicMessage[]
   temperature?:  number
+  /** Habilita web_search_20250305 — APENAS para agentes autorizados (ml_novidades, ml_feature_coverage) */
+  webSearch?:    boolean
 }
 
 /** Preços por milion tokens (USD) — claude-sonnet-4-20250514 */
@@ -51,21 +53,21 @@ export async function callAnthropic(options: CallOptions): Promise<AnthropicResp
     max_tokens: maxTokens,
     messages:   options.messages,
   }
-  if (options.systemPrompt) {
-    body.system = options.systemPrompt
+  if (options.systemPrompt)            body.system      = options.systemPrompt
+  if (options.temperature !== undefined) body.temperature = options.temperature
+  if (options.webSearch)               body.tools       = [{ type: 'web_search_20250305', name: 'web_search' }]
+
+  const headers: Record<string, string> = {
+    'Content-Type':      'application/json',
+    'x-api-key':         apiKey,
+    'anthropic-version': '2023-06-01',
   }
-  if (options.temperature !== undefined) {
-    body.temperature = options.temperature
-  }
+  if (options.webSearch) headers['anthropic-beta'] = 'web-search-2025-03-05'
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method:  'POST',
-    headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify(body),
+    headers,
+    body:    JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -98,8 +100,10 @@ export async function callAnthropic(options: CallOptions): Promise<AnthropicResp
 }
 
 /**
- * Extrai o texto da primeira mensagem de uma resposta Anthropic.
+ * Extrai o texto da resposta Anthropic.
+ * Para respostas com web_search, retorna o último bloco de texto (resposta final após buscas).
  */
 export function extractText(res: AnthropicResponse): string {
-  return res.content.find(c => c.type === 'text')?.text ?? ''
+  const textBlocks = res.content.filter(c => c.type === 'text')
+  return textBlocks[textBlocks.length - 1]?.text ?? ''
 }
