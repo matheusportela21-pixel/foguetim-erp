@@ -8,6 +8,7 @@
  */
 import { supabaseAdmin }              from '@/lib/supabase-admin'
 import { callAnthropic, extractText } from '@/lib/services/anthropic'
+import { checkThreadTriggers }        from './agent-communication'
 import { execSync }                   from 'child_process'
 import path                           from 'path'
 
@@ -1329,6 +1330,13 @@ export async function executeAgent(agentSlug: string): Promise<AgentExecutionRes
       tempo_execucao_ms: tempoMs,
       metadata,
     })
+
+    // Verificar gatilhos automáticos de thread (sem bloquear execução)
+    if (!['coordenador', 'auditor', 'sugestor'].includes(agentSlug)) {
+      checkThreadTriggers({ agentSlug, severidadeMax, achados, resumo }).catch(
+        (err: unknown) => console.error('[agent-engine] checkThreadTriggers falhou:', err)
+      )
+    }
 
     if (agentSlug === 'coordenador' && parsedData) {
       const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
