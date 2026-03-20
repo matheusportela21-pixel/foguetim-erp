@@ -1,12 +1,9 @@
 {
   "crons": [
-    {
-      "path": "/api/cron/weekly-summary",
-      "schedule": "0 11 * * 0"
-    },
-    {
-      "path": "/api/cron/relatorio-mensal",
-      "schedule": "0 9 1 * *"
-    }
+    { "path": "/api/cron/weekly-summary",   "schedule": "0 11 * * 0"      },
+    { "path": "/api/cron/relatorio-mensal", "schedule": "0 9 1 * *"       },
+    { "path": "/api/cron/sentinela-check",  "schedule": "*/5 * * * *"     },
+    { "path": "/api/cron/sentinela-ia",     "schedule": "0 11,17,1 * * *" },
+    { "path": "/api/cron/radar-mercado",    "schedule": "0 12 * * *"      }
   ]
 }
