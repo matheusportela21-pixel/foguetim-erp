@@ -201,7 +201,7 @@ export default function AjudaPage() {
               <div className="space-y-2">
                 {[
                   { icon: MessageCircle, label: 'Chat ao vivo', sub: 'Seg–Sex · 9h–18h', available: true,  cls: 'text-green-400' },
-                  { icon: Mail,          label: 'E-mail',       sub: 'suporte@foguetim.com.br', available: true,  cls: 'text-purple-400' },
+                  { icon: Mail,          label: 'E-mail',       sub: 'contato@foguetim.com.br', available: true,  cls: 'text-purple-400' },
                 ].map(c => (
                   <button key={c.label} className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${c.available ? 'border-white/[0.08] hover:bg-white/[0.04]' : 'border-white/[0.04] opacity-50 cursor-default'}`}>
                     <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center shrink-0">

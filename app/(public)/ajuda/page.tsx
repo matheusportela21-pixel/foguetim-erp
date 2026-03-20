@@ -243,10 +243,10 @@ export default async function HelpHomePage() {
                 <p className="text-sm text-gray-500 mt-1">Resposta em até 24 horas úteis.</p>
               </div>
               <a
-                href="mailto:suporte@foguetim.com.br"
+                href="mailto:contato@foguetim.com.br"
                 className="mt-auto text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
               >
-                suporte@foguetim.com.br →
+                contato@foguetim.com.br →
               </a>
             </div>
 

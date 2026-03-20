@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Rocket, Building2, MapPin, Mail, Package, Shield, BarChart2, CheckCircle2 } from 'lucide-react'
+import { Rocket, Building2, MapPin, Mail, Package, Shield, BarChart2, CheckCircle2, Star, Zap, Globe } from 'lucide-react'
 
 export const metadata = {
   title: 'Sobre o Foguetim — Foguetim ERP',
@@ -150,14 +150,64 @@ export default function SobrePage() {
         </div>
       </section>
 
-      {/* Mission */}
-      <section className="relative z-10 py-10 px-6 bg-slate-50">
+      {/* Nossa História */}
+      <section className="relative z-10 py-14 px-6 bg-slate-50">
         <div className="max-w-3xl mx-auto">
-          <p className="text-sm font-semibold text-purple-600 mb-3 uppercase tracking-wider">Nossa Missão</p>
-          <p className="text-lg text-slate-700 leading-relaxed">
-            O Foguetim nasceu da necessidade real de vendedores de marketplace que precisavam de uma ferramenta
-            integrada, inteligente e acessível para gerenciar suas operações nos maiores marketplaces do Brasil.
+          <p className="text-sm font-semibold text-purple-600 mb-3 uppercase tracking-wider">Nossa História</p>
+          <h2 className="text-2xl font-bold text-navy-900 mb-5" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Feito por vendedores, para vendedores
+          </h2>
+          <p className="text-base text-slate-600 leading-relaxed mb-4">
+            O Foguetim nasceu da necessidade real de um vendedor de marketplace em Fortaleza, CE. Cansado de ferramentas
+            genéricas que não entendiam o dia a dia do e-commerce brasileiro, decidimos construir um ERP feito por
+            vendedores, para vendedores.
           </p>
+          <p className="text-base text-slate-600 leading-relaxed">
+            Controle de estoque, integração com Mercado Livre, precificação inteligente, expedição, pós-venda — tudo
+            num só lugar, sem complicação e sem planilha.
+          </p>
+        </div>
+      </section>
+
+      {/* Nosso Diferencial */}
+      <section className="relative z-10 py-14 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-sm font-semibold text-indigo-600 mb-3 uppercase tracking-wider">Nosso Diferencial</p>
+            <h2 className="text-2xl font-bold text-navy-900" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Focado no vendedor brasileiro
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              {
+                icon: Star,
+                color: 'bg-amber-50 text-amber-600',
+                title: 'Multi-armazém e Multi-conta',
+                desc: 'Gerencie várias contas do Mercado Livre e múltiplos armazéns num único painel, sem precisar trocar de aba.',
+              },
+              {
+                icon: Globe,
+                color: 'bg-indigo-50 text-indigo-600',
+                title: 'Precificação com tarifas reais',
+                desc: 'Calcule seus preços considerando as tarifas reais do ML — frete, comissão, impostos — e nunca mais venda no prejuízo.',
+              },
+              {
+                icon: Zap,
+                color: 'bg-green-50 text-green-600',
+                title: 'Em breve: mais marketplaces',
+                desc: 'Shopee, Amazon e mais plataformas estão a caminho. Um ERP que cresce junto com o seu negócio.',
+              },
+            ].map(({ icon: Icon, color, title, desc }) => (
+              <div key={title} className="landing-card p-7">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-5 ${color}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-navy-900 mb-2 text-base">{title}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -227,6 +277,33 @@ export default function SobrePage() {
                 Contact: contato@foguetim.com.br
               </a>
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="relative z-10 py-16 px-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Comece a usar o Foguetim hoje
+          </h2>
+          <p className="text-indigo-200 mb-8 text-base">
+            Plano gratuito disponível. Sem cartão de crédito. Cancele quando quiser.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/registro"
+              className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg text-sm"
+            >
+              <Rocket className="w-4 h-4" />
+              Começar grátis
+            </Link>
+            <Link
+              href="/planos"
+              className="text-sm font-medium text-indigo-200 hover:text-white transition-colors"
+            >
+              Ver planos e preços →
+            </Link>
           </div>
         </div>
       </section>

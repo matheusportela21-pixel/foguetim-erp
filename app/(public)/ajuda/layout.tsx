@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PublicChatWidget } from '@/components/ai/PublicChatWidget'
 
 export default function HelpLayout({ children }: { children: React.ReactNode }) {
   const [query, setQuery] = useState('')
@@ -42,6 +43,9 @@ export default function HelpLayout({ children }: { children: React.ReactNode }) 
             />
           </form>
           <div className="flex items-center gap-3 ml-auto shrink-0">
+            <Link href="/changelog" className="text-sm text-gray-500 hover:text-gray-900 hidden md:block">
+              Novidades
+            </Link>
             <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-900 hidden sm:block">
               Meu painel
             </Link>
@@ -56,13 +60,15 @@ export default function HelpLayout({ children }: { children: React.ReactNode }) 
       </header>
 
       <main className="flex-1">{children}</main>
+      <PublicChatWidget />
 
       <footer className="bg-white border-t border-gray-200 py-8 mt-12">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-          <span>© 2025 Foguetim ERP. Todos os direitos reservados.</span>
+          <span>© {new Date().getFullYear()} Foguetim ERP. Todos os direitos reservados.</span>
           <div className="flex items-center gap-6">
             <Link href="/" className="hover:text-gray-900">Início</Link>
             <Link href="/planos" className="hover:text-gray-900">Planos</Link>
+            <Link href="/changelog" className="hover:text-gray-900">Changelog</Link>
             <Link href="/sobre" className="hover:text-gray-900">Sobre</Link>
             <Link href="/contato" className="hover:text-gray-900">Contato</Link>
             <Link href="/privacidade" className="hover:text-gray-900">Privacidade</Link>

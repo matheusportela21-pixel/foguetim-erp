@@ -136,7 +136,11 @@
       "Skill(gsd:plan-phase)",
       "Skill(gsd:plan-phase:*)",
       "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(public\\\\\\)/ajuda/)",
-      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/)"
+      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/)",
+      "Bash(grep -rn 2025 --include=*.ts --include=*.tsx /c/Users/mathe/foguetim/app /c/Users/mathe/foguetim/components)",
+      "Bash(ls -la /c/Users/mathe/foguetim/app/\\\\\\(public\\\\\\)/changelog/)",
+      "Bash(grep -rn \"Foguetim AI\\\\|AiChat\\\\|floating.*chat\\\\|chat.*button\" --include=*.tsx --include=*.ts /c/Users/mathe/foguetim/app /c/Users/mathe/foguetim/components)",
+      "Bash(ls -la /c/Users/mathe/foguetim/app/\\\\\\(public\\\\\\)/)"
     ]
   }
 }

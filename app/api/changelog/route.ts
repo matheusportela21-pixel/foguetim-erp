@@ -7,7 +7,6 @@
  *   category — filtro opcional (feature | fix | improvement | security)
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 export interface ChangelogEntry {
@@ -21,9 +20,6 @@ export interface ChangelogEntry {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { searchParams } = req.nextUrl
   const limit    = Math.min(parseInt(searchParams.get('limit')  ?? '10', 10), 50)
   const offset   = Math.max(parseInt(searchParams.get('offset') ?? '0',  10), 0)

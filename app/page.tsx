@@ -9,6 +9,7 @@ import {
   Shield, Menu, X, CheckCircle2, Zap, MessageCircle,
   Info, Star, Warehouse, RefreshCw, CalendarDays,
   Printer, Globe, Truck, MapPin, Tags,
+  Instagram, Linkedin,
 } from 'lucide-react'
 
 /* ── Cancelled banner ─────────────────────────────────────────────────────── */
@@ -897,63 +898,113 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="relative z-10 border-t border-gray-100 py-14 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                  <Rocket className="w-3.5 h-3.5 text-white" />
+      <footer className="relative z-10 bg-slate-900 text-slate-300">
+        <div className="max-w-6xl mx-auto px-6 pt-16 pb-10">
+
+          {/* Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 mb-12">
+
+            {/* Brand */}
+            <div className="col-span-2 sm:col-span-3 md:col-span-1">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                  <Rocket className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-bold text-gray-900" style={{ fontFamily: 'Sora, sans-serif' }}>Foguetim ERP</span>
+                <span className="font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Foguetim ERP</span>
               </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                O ERP completo para sellers de marketplace brasileiro.
+              <p className="text-sm text-slate-400 leading-relaxed mb-5">
+                O ERP do marketplace brasileiro. Do armazém ao cliente, tudo num só lugar.
               </p>
-              <div className="space-y-1 text-xs text-gray-400">
-                <p>Operado por Fio Cabana</p>
+              <div className="text-xs text-slate-500 space-y-1">
+                <p>FIO CABANA IND. E COM. DE CONF. LTDA</p>
                 <p>CNPJ: 33.685.241/0001-70</p>
-                <a href="mailto:contato@foguetim.com.br" className="hover:text-gray-900 transition-colors block">
+                <p>Fortaleza — CE — Brasil</p>
+                <a href="mailto:contato@foguetim.com.br" className="text-slate-400 hover:text-white transition-colors inline-block mt-1">
                   contato@foguetim.com.br
                 </a>
               </div>
             </div>
 
+            {/* Foguetim */}
             <div>
-              <p className="font-bold text-gray-900 mb-3 text-xs uppercase tracking-wider">Produto</p>
-              <ul className="space-y-2">
-                <li><a href="#funcionalidades" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Funcionalidades</a></li>
-                <li><Link href="/planos"        className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Planos</Link></li>
-                <li><Link href="/integracoes"   className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Integrações</Link></li>
-                <li><a href="#planos"           className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Preços</a></li>
-                <li><Link href="/ajuda"         className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Central de Ajuda</Link></li>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Foguetim</p>
+              <ul className="space-y-2.5">
+                {[
+                  { href: '/sobre',       label: 'Sobre' },
+                  { href: '/planos',      label: 'Planos' },
+                  { href: '/privacidade', label: 'Privacidade' },
+                  { href: '/termos',      label: 'Termos de Uso' },
+                ].map(l => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="text-sm text-slate-400 hover:text-white transition-colors">{l.label}</Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
+            {/* Produto */}
             <div>
-              <p className="font-bold text-gray-900 mb-3 text-xs uppercase tracking-wider">Acesso</p>
-              <ul className="space-y-2">
-                <li><Link href="/login"    className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Login</Link></li>
-                <li><Link href="/registro" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Cadastro grátis</Link></li>
-                <li><Link href="/termos"   className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Termos de Uso</Link></li>
-                <li><Link href="/privacidade" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacidade</Link></li>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Produto</p>
+              <ul className="space-y-2.5">
+                <li><a href="#funcionalidades" className="text-sm text-slate-400 hover:text-white transition-colors">Funcionalidades</a></li>
+                <li><Link href="/integracoes"  className="text-sm text-slate-400 hover:text-white transition-colors">Integrações</Link></li>
+                <li><Link href="/planos"        className="text-sm text-slate-400 hover:text-white transition-colors">Preços</Link></li>
+                <li><Link href="/ajuda"         className="text-sm text-slate-400 hover:text-white transition-colors">Central de Ajuda</Link></li>
               </ul>
             </div>
 
+            {/* Recursos */}
             <div>
-              <p className="font-bold text-gray-900 mb-3 text-xs uppercase tracking-wider">Empresa</p>
-              <ul className="space-y-2">
-                <li><Link href="/sobre"   className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Sobre</Link></li>
-                <li><Link href="/contato" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Contato</Link></li>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Recursos</p>
+              <ul className="space-y-2.5">
+                <li><Link href="/ajuda"     className="text-sm text-slate-400 hover:text-white transition-colors">Central de Ajuda</Link></li>
+                <li><Link href="/changelog" className="text-sm text-slate-400 hover:text-white transition-colors">Changelog</Link></li>
+                <li><span className="text-sm text-slate-600 cursor-default select-none">Blog (em breve)</span></li>
+                <li><span className="text-sm text-slate-600 cursor-default select-none">Status (em breve)</span></li>
+              </ul>
+            </div>
+
+            {/* Suporte */}
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Suporte</p>
+              <ul className="space-y-2.5">
+                <li><Link href="/contato" className="text-sm text-slate-400 hover:text-white transition-colors">Contato</Link></li>
+                <li>
+                  <a href="mailto:contato@foguetim.com.br" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    contato@foguetim.com.br
+                  </a>
+                </li>
+                <li><Link href="/ajuda" className="text-sm text-slate-400 hover:text-white transition-colors">FAQ</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
-            <p>© 2026 Foguetim ERP — Todos os direitos reservados.</p>
-            <p className="italic text-center">
-              Feito com 🚀 em Fortaleza, CE · Integrações via APIs oficiais
-            </p>
+          {/* Bottom bar */}
+          <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-slate-500 text-center sm:text-left">
+              <p>© {new Date().getFullYear()} Foguetim ERP. Todos os direitos reservados.</p>
+              <p className="mt-0.5">Feito com 🚀 em Fortaleza, CE · Integrações via APIs oficiais</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href="https://instagram.com/foguetim.erp"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Instagram"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              >
+                <Instagram className="w-4 h-4" />
+              </a>
+              <a
+                href="https://linkedin.com/company/foguetim"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="LinkedIn"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              >
+                <Linkedin className="w-4 h-4" />
+              </a>
+            </div>
           </div>
         </div>
       </footer>
