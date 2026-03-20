@@ -53,7 +53,7 @@ export async function GET() {
       return NextResponse.json({ posts: [] })
     }
 
-    return NextResponse.json({ posts: (data ?? []) as BlogPost[] })
+    return NextResponse.json({ posts: (data ?? []) as unknown as BlogPost[] })
   } catch (err) {
     console.error('[blog/posts/popular] Unexpected error:', err)
     return NextResponse.json({ posts: [] })

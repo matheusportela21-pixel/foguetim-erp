@@ -62,7 +62,7 @@ export async function GET(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const post = data as BlogPost
+    const post = data as unknown as BlogPost
 
     // Fire-and-forget view count increment
     db.from('blog_posts')

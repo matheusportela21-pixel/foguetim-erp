@@ -8,6 +8,8 @@
  *
  * Response: { results: BlogPost[], query: string }
  */
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -65,7 +67,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ results: [], query: q })
     }
 
-    return NextResponse.json({ results: (data ?? []) as BlogPost[], query: q })
+    return NextResponse.json({ results: (data ?? []) as unknown as BlogPost[], query: q })
   } catch (err) {
     console.error('[blog/search] Unexpected error:', err)
     return NextResponse.json({ results: [], query: q })

@@ -7,6 +7,8 @@
  *   exclude   — slug of the post to exclude from results
  *   limit     — number of posts to return (default 3)
  */
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -74,7 +76,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ posts: [] })
     }
 
-    return NextResponse.json({ posts: (data ?? []) as BlogPost[] })
+    return NextResponse.json({ posts: (data ?? []) as unknown as BlogPost[] })
   } catch (err) {
     console.error('[blog/posts/related] Unexpected error:', err)
     return NextResponse.json({ posts: [] })

@@ -118,7 +118,7 @@ function CoverImage({ post, className }: { post: BlogPost; className?: string })
 }
 
 /* ── PostCard ───────────────────────────────────────────────────────────── */
-export function PostCard({ post }: { post: BlogPost }) {
+function PostCard({ post }: { post: BlogPost }) {
   const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
   return (
     <Link

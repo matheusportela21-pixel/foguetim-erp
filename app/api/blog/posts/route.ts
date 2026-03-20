@@ -9,6 +9,8 @@
  *   limit     — number of posts to return (default 12, max 50)
  *   offset    — pagination offset (default 0)
  */
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -87,7 +89,7 @@ export async function GET(req: NextRequest) {
     }
 
     const total   = count ?? 0
-    const posts   = (data ?? []) as BlogPost[]
+    const posts   = (data ?? []) as unknown as BlogPost[]
     const hasMore = offset + posts.length < total
 
     return NextResponse.json({ posts, total, hasMore })

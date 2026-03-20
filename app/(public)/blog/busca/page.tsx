@@ -4,7 +4,7 @@
  */
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Clock, User, Loader2, BookOpen, ChevronRight } from 'lucide-react'
@@ -152,7 +152,7 @@ function ResultCard({ post, query }: { post: BlogPost; query: string }) {
 }
 
 /* ── Page ───────────────────────────────────────────────────────────────── */
-export default function BlogSearchPage() {
+function BlogSearchContent() {
   const searchParamsHook = useSearchParams()
   const router = useRouter()
   const initialQ = searchParamsHook.get('q') ?? ''
@@ -303,5 +303,13 @@ export default function BlogSearchPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function BlogSearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-gray-400">Carregando...</div>}>
+      <BlogSearchContent />
+    </Suspense>
   )
 }
