@@ -36,6 +36,15 @@ interface Customer {
 
 type SortField = 'last_order_date' | 'total_spent' | 'total_orders'
 
+interface MLOrder {
+  id:           number
+  pack_id:      number | null
+  status:       string
+  date_created: string
+  total_amount: number
+  order_items:  Array<{ title: string; quantity: number; unit_price: number; thumbnail?: string }>
+}
+
 /* ── Helpers ─────────────────────────────────────────────────────────────────── */
 function fmtBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -133,6 +142,25 @@ function CustomerDrawer({
   const [saving,  setSaving]  = useState(false)
   const [saved,   setSaved]   = useState(false)
   const [error,   setError]   = useState<string | null>(null)
+
+  // ML Order history
+  const [mlOrders, setMlOrders]         = useState<MLOrder[]>([])
+  const [mlOrdersLoading, setMlOrdersLoading] = useState(false)
+  const [mlOrdersError, setMlOrdersError]     = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!customer.ml_buyer_id) return
+    setMlOrdersLoading(true)
+    fetch(`/api/mercadolivre/orders?buyer_id=${customer.ml_buyer_id}&days=365&limit=10`)
+      .then(r => r.json())
+      .then((d: { orders?: MLOrder[]; error?: string; notConnected?: boolean }) => {
+        if (d.notConnected) { setMlOrdersError('not_connected'); return }
+        if (d.error) { setMlOrdersError(d.error); return }
+        setMlOrders(d.orders ?? [])
+      })
+      .catch(() => setMlOrdersError('Erro de rede'))
+      .finally(() => setMlOrdersLoading(false))
+  }, [customer.ml_buyer_id])
 
   const save = useCallback(async (patch: {
     notes?: string; tags?: string[]; rating?: number | null; is_vip?: boolean
@@ -316,6 +344,72 @@ function CustomerDrawer({
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
+
+          {/* Histórico de Pedidos ML */}
+          <div>
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-3">Histórico ML</p>
+            {mlOrdersLoading && (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-14 bg-dark-700 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            )}
+            {!mlOrdersLoading && mlOrdersError === 'not_connected' && (
+              <p className="text-xs text-slate-600 italic">ML não conectado — histórico indisponível</p>
+            )}
+            {!mlOrdersLoading && mlOrdersError && mlOrdersError !== 'not_connected' && (
+              <p className="text-xs text-red-400">{mlOrdersError}</p>
+            )}
+            {!mlOrdersLoading && !mlOrdersError && mlOrders.length === 0 && (
+              <p className="text-xs text-slate-600 italic">Nenhum pedido encontrado no último ano</p>
+            )}
+            {!mlOrdersLoading && !mlOrdersError && mlOrders.length > 0 && (
+              <div className="space-y-2">
+                {mlOrders.slice(0, 8).map(order => {
+                  const statusColor =
+                    order.status === 'paid' || order.status === 'delivered'   ? 'text-green-400 bg-green-400/10'  :
+                    order.status === 'shipped'                                  ? 'text-blue-400 bg-blue-400/10'    :
+                    order.status === 'cancelled'                                ? 'text-red-400 bg-red-400/10'      :
+                    order.status === 'payment_required'                        ? 'text-amber-400 bg-amber-400/10'  :
+                                                                                 'text-slate-400 bg-dark-700'
+                  const statusLabel: Record<string, string> = {
+                    paid: 'Pago', delivered: 'Entregue', shipped: 'Enviado',
+                    cancelled: 'Cancelado', payment_required: 'Aguard. pgto',
+                    confirmed: 'Confirmado',
+                  }
+                  const firstItem = order.order_items[0]
+                  return (
+                    <div key={order.id} className="bg-dark-700 rounded-xl p-3 flex items-start gap-2.5">
+                      {firstItem?.thumbnail
+                        ? <img src={firstItem.thumbnail} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 opacity-80" />
+                        : <div className="w-9 h-9 rounded-lg bg-dark-600 flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-slate-600" /></div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[10px] text-slate-500">#{order.id}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${statusColor}`}>
+                            {statusLabel[order.status] ?? order.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 truncate leading-tight">
+                          {firstItem?.title ?? 'Produto'}
+                          {order.order_items.length > 1 && <span className="text-slate-600"> +{order.order_items.length - 1}</span>}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-slate-600">{new Date(order.date_created).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-[11px] font-bold text-slate-200">{fmtBRL(order.total_amount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {mlOrders.length > 8 && (
+                  <p className="text-[10px] text-slate-600 text-center">+{mlOrders.length - 8} pedidos anteriores</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Anotações */}

@@ -12,14 +12,14 @@ type Params = { params: { pack_id: string } }
 async function getMLUserId(userId: string): Promise<string | null> {
   const { data: conn } = await supabaseAdmin()
     .from('marketplace_connections')
-    .select('data')
+    .select('ml_user_id')
     .eq('user_id', userId)
     .eq('marketplace', 'mercadolivre')
     .eq('connected', true)
     .maybeSingle()
 
   if (!conn) return null
-  return ((conn.data as Record<string, unknown>)?.ml_user_id as string) ?? null
+  return conn.ml_user_id ? String(conn.ml_user_id) : null
 }
 
 /* ── GET ─────────────────────────────────────────────────────────────────── */

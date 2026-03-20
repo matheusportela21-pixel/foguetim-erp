@@ -28,6 +28,7 @@ interface ItemAgg {
   total_vendas:  number
   receita_bruta: number
   taxas_ml:      number
+  visitas?:      number
 }
 
 export async function GET(req: NextRequest) {
@@ -145,7 +146,26 @@ export async function GET(req: NextRequest) {
   const totalVendas  = allItems.reduce((s, x) => s + x.total_vendas, 0)
   const validOrders  = allOrders.filter(o => (o.status as string) !== 'cancelled')
 
-  const items = allItems
+  const sortedItems = allItems.sort((a, b) => b.total_vendas - a.total_vendas)
+
+  // ── Visitas: busca para top 20 itens em paralelo ──────────────────────────
+  const top20 = sortedItems.slice(0, 20)
+  await Promise.allSettled(
+    top20.map(async item => {
+      try {
+        const vr = await fetch(
+          `${ML_API_BASE}/items/${item.item_id}/visits?last=${days}&unit=day`,
+          { headers: auth }
+        )
+        if (vr.ok) {
+          const vd = await vr.json() as { total_visits?: number }
+          item.visitas = vd.total_visits ?? 0
+        }
+      } catch { /* optional — não bloqueia */ }
+    })
+  )
+
+  const items = sortedItems
     .map(x => ({
       item_id:         x.item_id,
       title:           x.title,
@@ -156,8 +176,11 @@ export async function GET(req: NextRequest) {
       receita_liquida: x.receita_bruta - x.taxas_ml,
       ticket_medio:    x.total_vendas > 0 ? x.receita_bruta / x.total_vendas : 0,
       participacao:    totalVendas > 0 ? (x.total_vendas / totalVendas) * 100 : 0,
+      visitas:         x.visitas ?? null,
+      conversao:       (x.visitas != null && x.visitas > 0)
+                         ? (x.total_vendas / x.visitas) * 100
+                         : null,
     }))
-    .sort((a, b) => b.total_vendas - a.total_vendas)
 
   const has_more = pages >= MAX_PAGES && offset < totalFromPaging
 

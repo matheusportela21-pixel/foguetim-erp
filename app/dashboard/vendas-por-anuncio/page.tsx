@@ -24,6 +24,8 @@ interface AnuncioItem {
   receita_liquida: number
   ticket_medio:    number
   participacao:    number
+  visitas:         number | null
+  conversao:       number | null
 }
 
 type SortField = 'total_vendas' | 'receita_bruta' | 'taxas_ml' | 'receita_liquida' | 'ticket_medio' | 'participacao'
@@ -258,6 +260,8 @@ export default function VendasPorAnuncioPage() {
               { key: 'receita_liquida', label: 'Receita Líquida' },
               { key: 'ticket_medio',    label: 'Ticket Médio'    },
               { key: 'participacao',    label: 'Participação %'  },
+              { key: 'visitas',         label: 'Visitas'         },
+              { key: 'conversao',       label: 'Conversão %'     },
             ]}
           />
 
@@ -377,6 +381,8 @@ export default function VendasPorAnuncioPage() {
                           <SortTh field="receita_liquida">Rec. Líquida</SortTh>
                           <SortTh field="ticket_medio">Ticket Médio</SortTh>
                           <SortTh field="participacao">Participação</SortTh>
+                          <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Visitas</th>
+                          <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Conversão</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -484,6 +490,29 @@ export default function VendasPorAnuncioPage() {
                                     {item.participacao.toFixed(1)}%
                                   </span>
                                 </div>
+                              </td>
+
+                              {/* Visitas */}
+                              <td className="px-4 py-3 text-right">
+                                {item.visitas != null ? (
+                                  <span className="text-sm text-slate-400 tabular-nums">{fmtNum(item.visitas)}</span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-700">—</span>
+                                )}
+                              </td>
+
+                              {/* Conversão */}
+                              <td className="px-4 py-3 text-right">
+                                {item.conversao != null ? (
+                                  <span className={`text-sm font-semibold tabular-nums ${
+                                    item.conversao >= 5 ? 'text-green-400' :
+                                    item.conversao >= 2 ? 'text-amber-400' : 'text-red-400'
+                                  }`}>
+                                    {item.conversao.toFixed(1)}%
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-700">—</span>
+                                )}
                               </td>
                             </tr>
                           )

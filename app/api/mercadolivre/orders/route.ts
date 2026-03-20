@@ -26,18 +26,20 @@ export async function GET(req: NextRequest) {
   const token = await getValidToken(user.id)
   if (!token) return NextResponse.json({ error: 'Token inválido — reconecte o ML' }, { status: 401 })
 
-  const sp     = new URL(req.url).searchParams
-  const offset = Number(sp.get('offset') ?? 0)
-  const limit  = Math.min(Number(sp.get('limit') ?? 50), 50)
-  const status = sp.get('status') ?? 'all'
-  const days   = Number(sp.get('days') ?? 30)
+  const sp       = new URL(req.url).searchParams
+  const offset   = Number(sp.get('offset') ?? 0)
+  const limit    = Math.min(Number(sp.get('limit') ?? 50), 50)
+  const status   = sp.get('status') ?? 'all'
+  const days     = Number(sp.get('days') ?? 30)
+  const buyerId  = sp.get('buyer_id') ?? null
 
   const auth = { Authorization: `Bearer ${token}` }
 
   try {
     const dateFrom = new Date(Date.now() - days * 86400_000).toISOString()
     const statusParam = status !== 'all' ? `&order.status=${status}` : ''
-    const url = `${ML_API_BASE}/orders/search?seller=${conn.ml_user_id}&sort=date_desc&offset=${offset}&limit=${limit}&order.date_created.from=${dateFrom}${statusParam}`
+    const buyerParam  = buyerId ? `&buyer=${buyerId}` : ''
+    const url = `${ML_API_BASE}/orders/search?seller=${conn.ml_user_id}&sort=date_desc&offset=${offset}&limit=${limit}&order.date_created.from=${dateFrom}${statusParam}${buyerParam}`
 
     const res = await fetch(url, { headers: auth })
     if (!res.ok) {

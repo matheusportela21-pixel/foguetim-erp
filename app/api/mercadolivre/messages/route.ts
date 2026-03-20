@@ -39,7 +39,7 @@ export async function GET() {
     // 1. Buscar conexão ML do usuário
     const { data: conn } = await supabaseAdmin()
       .from('marketplace_connections')
-      .select('data')
+      .select('ml_user_id')
       .eq('user_id', user.id)
       .eq('marketplace', 'mercadolivre')
       .eq('connected', true)
@@ -47,7 +47,7 @@ export async function GET() {
 
     if (!conn) return NextResponse.json({ messages: [], total_unread: 0 })
 
-    const mlUserId = (conn.data as Record<string, unknown>)?.ml_user_id as string | undefined
+    const mlUserId = String(conn.ml_user_id ?? '')
     if (!mlUserId) return NextResponse.json({ messages: [], total_unread: 0 })
 
     // 2. Buscar packs com mensagens não lidas

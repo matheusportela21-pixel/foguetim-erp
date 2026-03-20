@@ -815,3 +815,134 @@ Retornar HTTP 200 para um estado de erro semântico é inconsistente com as outr
 
 *Auditoria gerada em 2026-03-20 por análise estática de 57 arquivos de route + 3 arquivos de lib core.*
 *Próxima revisão recomendada: após implementação da Fase 2 (webhooks + correção de bugs).*
+
+---
+
+## FASE 2 — Implementação Concluída {#fase-2-concluida}
+
+**Data de conclusão:** 2026-03-20
+
+### 2.1 — Correções de Bugs Implementadas
+
+| Bug | Arquivo | Status | Solução |
+|-----|---------|--------|---------|
+| **Bug #1** — Cálculo de divergência na conciliação | `app/api/mercadolivre/conciliacao/route.ts` | ✅ CORRIGIDO | Divergência agora compara `receita_pedidos` vs `receita_billing` (fontes diferentes) |
+| **Bug #3** — Validação de `state` no OAuth callback | `app/api/mercadolivre/callback/route.ts` | ✅ CORRIGIDO | Nonce aleatório gerado, armazenado em Supabase e validado no callback |
+| **Bug #4** — Falta de `role=seller` nas perguntas | `app/api/mercadolivre/questions/route.ts` | ✅ CORRIGIDO | `role=seller` adicionado à query |
+| **Bug #5** — `vendas-por-anuncio` trunca sem aviso | `app/api/mercadolivre/vendas-por-anuncio/route.ts` | ✅ CORRIGIDO | Campo `has_more` no response; UI exibe banner de aviso quando truncado |
+| **Bug #6** — HTTP 200 para "ML não conectado" | `app/api/mercadolivre/orders/route.ts` | ✅ CORRIGIDO | Padronizado para HTTP 400 `{ error, notConnected: true }` |
+
+> **Bug #2** (rate limit in-memory) migrado para Supabase-based rate limiting — lógica movida para tabela `api_rate_limits` com limpeza periódica.
+
+### 2.2 — Features Implementadas
+
+| Feature | Status | Detalhe |
+|---------|--------|---------|
+| **Criptografia AES-256-GCM** de tokens OAuth | ✅ | `access_token` e `refresh_token` cifrados com chave de ambiente antes de salvar no DB |
+| **Exportação CSV** em módulos ML | ✅ | Pedidos, Vendas por Anúncio, Conciliação — componente `ExportCSVButton` reutilizável |
+| **Templates de resposta** (`response_templates`) | ✅ | Tabela Supabase com RLS; 5 templates padrão semeados; API CRUD completa (`GET/POST/PATCH/DELETE`) |
+| **Rate limiting via Supabase** | ✅ | Substitui Map in-memory ineficaz em serverless |
+
+### 2.3 — Score Atualizado após Fase 2
+
+| Domínio | Score Fase 1 | Score Fase 2 | Variação |
+|---------|-------------|-------------|----------|
+| Auth/OAuth | 8/10 | 9/10 | +1 (CSRF corrigido) |
+| Conciliação | 5/10 | 7/10 | +2 (bug crítico corrigido) |
+| Mensagens/Perguntas | 7/10 | 7.5/10 | +0.5 (role=seller; templates criados) |
+| Segurança | 6/10 | 8/10 | +2 (AES-256, state, rate limit) |
+| **MÉDIA GERAL** | **7.1/10** | **7.7/10** | **+0.6** |
+
+---
+
+## FASE 3 — Pente Fino ML: Inteligência e UX {#fase-3-concluida}
+
+**Data de conclusão:** 2026-03-20
+
+**Objetivo:** Produtividade operacional — SAC unificado, alertas, mini CRM e métricas de conversão.
+
+### 3.1 — SAC Unificado (Perguntas + Mensagens + Reclamações)
+
+**Arquivo:** `app/dashboard/sac/page.tsx` — reescrito do zero.
+
+| Item | Implementado |
+|------|-------------|
+| 3 abas reais: Perguntas, Mensagens, Reclamações | ✅ |
+| KPI cards no topo (perguntas pendentes, mensagens não lidas, reclamações abertas) | ✅ |
+| Resposta inline a perguntas com `window.confirm()` antes de POST no ML | ✅ |
+| Resposta inline a mensagens (pack threads) com confirmação | ✅ |
+| Dropdown de templates (`response_templates`) integrado em ambas as abas | ✅ |
+| Sugestão de resposta por IA (Claude API) baseada no contexto da pergunta | ✅ |
+| KPIs carregados em paralelo via `Promise.allSettled` | ✅ |
+| View local (SAC interno) preservada como toggle | ✅ |
+
+**Endpoint de contagem de perguntas pendentes:** `GET /api/mercadolivre/questions/pending-count`
+- Rota leve (sem paginação), retorna `{ count: number }` para uso no badge do dashboard.
+
+### 3.2 — Alerta de Perguntas Pendentes no Dashboard
+
+**Arquivo:** `app/dashboard/page.tsx`
+
+- Busca `pending-count` ao carregar o dashboard
+- Exibe card amber entre "Reclamações Urgentes" e "Ruptura de Estoque" quando há perguntas sem resposta
+- Link direto para `/dashboard/sac`
+- Mostra subtexto motivacional: "Responda rapidamente para melhorar sua reputação"
+
+### 3.3 — Mini CRM: Histórico ML no Drawer de Clientes
+
+**Arquivos:** `app/dashboard/clientes/page.tsx` + `app/api/mercadolivre/orders/route.ts`
+
+| Item | Implementado |
+|------|-------------|
+| Parâmetro `buyer_id` na rota `/orders` para filtrar por comprador ML | ✅ |
+| Seção "Histórico ML" no drawer de clientes (quando `ml_buyer_id` presente) | ✅ |
+| Shimmer de carregamento durante fetch | ✅ |
+| Cards por pedido: thumbnail do item, status badge, título, data, valor total | ✅ |
+| Estado de erro com mensagem humanizada | ✅ |
+| Estado vazio com ícone informativo | ✅ |
+
+**Campos de comprador usados:** `ml_buyer_id` na tabela `customers` (Supabase).
+
+### 3.4 — Métricas de Visitas e Conversão por Anúncio
+
+**Arquivos:** `app/api/mercadolivre/vendas-por-anuncio/route.ts` + `app/dashboard/vendas-por-anuncio/page.tsx`
+
+| Item | Implementado |
+|------|-------------|
+| Fetch de visitas para top 20 anúncios via `GET /items/{id}/visits?last={days}&unit=day` | ✅ |
+| Fetches em paralelo via `Promise.allSettled` (não bloqueia ranking) | ✅ |
+| Campos `visitas` e `conversao` no response da API | ✅ |
+| Colunas "Visitas" e "Conversão" na tabela de ranking | ✅ |
+| Conversão com código de cores: ≥5% verde, ≥2% âmbar, <2% vermelho | ✅ |
+| Fallback `—` para itens sem dados de visita (posição 21+) | ✅ |
+| Visitas e conversão incluídas na exportação CSV | ✅ |
+
+**Limitação conhecida:** Visitas só disponíveis para top 20 itens (custo de N fetches paralelos). Itens abaixo do 20º mostram `—`.
+
+### 3.5 — Score Final após Fase 3
+
+| Domínio | Score Fase 2 | Score Fase 3 | Variação |
+|---------|-------------|-------------|----------|
+| Mensagens/Perguntas | 7.5/10 | 9/10 | +1.5 (SAC unificado, templates, IA) |
+| Reclamações | 8/10 | 8.5/10 | +0.5 (aba dedicada no SAC) |
+| Vendas por Anúncio | 7.5/10 | 8.5/10 | +1 (visitas, conversão, CSV completo) |
+| Performance (alertas) | 7/10 | 7.5/10 | +0.5 (alerta de perguntas no dashboard) |
+| **MÉDIA GERAL** | **7.7/10** | **8.1/10** | **+0.4** |
+
+### 3.6 — Pendências para Fase 4
+
+| Item | Prioridade | Observação |
+|------|-----------|------------|
+| Webhooks ML (eventos em tempo real) | 🔴 CRÍTICA | Maior gap competitivo — todos os concorrentes têm |
+| NF-e integrada | 🔴 CRÍTICA | Requisito legal para uso em produção |
+| Auto-resposta automática de perguntas (modo auto-approve) | 🟡 ALTA | Templates + threshold de confiança → resposta sem intervenção |
+| Exportação de reviews e financeiro | 🟡 ALTA | CSV/XLSX para contabilidade |
+| Criação de nova campanha de publicidade | 🟠 MÉDIA | Product Ads — apenas edição disponível |
+| Histórico de reputação (trend) | 🟠 MÉDIA | Apenas snapshot atual; sem série temporal |
+| Resposta a avaliações (reviews) | 🟠 MÉDIA | ML API suporta; não implementado |
+| Bulk update de preço/estoque | 🟠 MÉDIA | `bulk-action` só pause/reactivate/close |
+
+---
+
+*Revisado em 2026-03-20 — Fase 3 concluída.*
+*Score geral evoluiu de 7.1/10 (Fase 1) → 7.7/10 (Fase 2) → 8.1/10 (Fase 3).*
