@@ -96,6 +96,7 @@ const TYPE_LABEL: Record<string, string> = {
   VOLUME:                   'Desconto por Volume',
   PRE_NEGOTIATED:           'Pré-negociado',
   PRICE_DISCOUNT:           'Desconto Individual',
+  BANK:                     'Parceria Financeira',
 }
 const TYPE_COLOR: Record<string, string> = {
   SELLER_CAMPAIGN:          'text-purple-400',
@@ -112,6 +113,7 @@ const TYPE_COLOR: Record<string, string> = {
   VOLUME:                   'text-violet-400',
   PRE_NEGOTIATED:           'text-rose-400',
   PRICE_DISCOUNT:           'text-blue-400',
+  BANK:                     'text-pink-400',
 }
 
 function fmtDate(iso: string) {

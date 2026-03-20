@@ -24,6 +24,7 @@ export interface MLPromotion {
                | 'VOLUME'
                | 'PRE_NEGOTIATED'
                | 'PRICE_DISCOUNT'
+               | 'BANK'
   sub_type:    string
   status:      'candidate' | 'pending' | 'pending_approval' | 'started' | 'finished' | 'paused'
   start_date:  string
