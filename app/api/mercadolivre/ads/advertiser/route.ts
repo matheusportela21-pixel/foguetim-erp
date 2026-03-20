@@ -7,6 +7,8 @@ import { NextResponse }                      from 'next/server'
 import { getAuthUser }                       from '@/lib/server-auth'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
+export const dynamic = 'force-dynamic'
+
 const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
 
 export async function GET() {

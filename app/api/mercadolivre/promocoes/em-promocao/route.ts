@@ -81,11 +81,15 @@ export async function GET() {
   }
 
   try {
-    /* 1. Busca todas as promoções */
+    /* 1. Busca todas as promoções — 404 = vendedor sem promoções (lista vazia) */
     const promosData = await mlFetch<{ results?: MLPromotion[] }>(
       user.id,
       `/seller-promotions/users/${conn.ml_user_id}/promotions?app_version=v2`,
-    )
+    ).catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (msg.includes('404')) return { results: [] as MLPromotion[] }
+      throw e
+    })
     const promos = (promosData.results ?? []).filter(
       p => p.status === 'started' || p.status === 'pending',
     )

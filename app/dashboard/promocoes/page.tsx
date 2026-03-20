@@ -14,9 +14,29 @@ import type { EmPromocaoItem } from '@/app/api/mercadolivre/promocoes/em-promoca
 import type { SemPromocaoItem } from '@/app/api/mercadolivre/promocoes/sem-promocao/route'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
-type PromoType = 'SELLER_CAMPAIGN' | 'SELLER_COUPON_CAMPAIGN' | 'DEAL' | 'DOD' | 'PRICE_DISCOUNT'
+// Tipos criados pelo vendedor
+type SellerPromoType = 'SELLER_CAMPAIGN' | 'SELLER_COUPON_CAMPAIGN'
+// Tipos organizados pelo ML (campanhas, convites, ofertas especiais)
+type MLPromoType =
+  | 'DEAL' | 'DOD'
+  | 'MARKETPLACE_CAMPAIGN'
+  | 'LIGHTNING'
+  | 'PRICE_MATCHING'
+  | 'PRICE_MATCHING_MELI_ALL'
+  | 'FULL_BENEFIT'
+  | 'SMART'
+  | 'UNHEALTHY_STOCK'
+  | 'VOLUME'
+  | 'PRE_NEGOTIATED'
+  | 'PRICE_DISCOUNT'
+type PromoType = SellerPromoType | MLPromoType
 type PromoStatus = 'pending' | 'started' | 'finished' | 'paused'
 type NewTabType = 'campanhas-ml' | 'minhas' | 'em-promocao' | 'sem-promocao'
+
+/** Tipos que são criados pelo próprio vendedor */
+const SELLER_TYPES: string[] = ['SELLER_CAMPAIGN', 'SELLER_COUPON_CAMPAIGN']
+/** Retorna true para promoções organizadas pelo ML (não pelo vendedor) */
+const isMLOrganized = (type: string) => !SELLER_TYPES.includes(type)
 
 interface MLPromotion {
   id:          string
@@ -57,19 +77,37 @@ const STATUS_COLOR: Record<PromoStatus, string> = {
   finished: 'bg-slate-800 text-slate-500 border-slate-700/30',
   paused:   'bg-orange-900/30 text-orange-400 border-orange-700/30',
 }
-const TYPE_LABEL: Record<PromoType, string> = {
-  SELLER_CAMPAIGN:        'Campanha Própria',
-  SELLER_COUPON_CAMPAIGN: 'Cupom',
-  DEAL:                   'Campanha ML',
-  DOD:                    'Oferta do Dia',
-  PRICE_DISCOUNT:         'Desconto Individual',
+const TYPE_LABEL: Record<string, string> = {
+  SELLER_CAMPAIGN:          'Campanha Própria',
+  SELLER_COUPON_CAMPAIGN:   'Cupom Próprio',
+  DEAL:                     'Campanha ML',
+  DOD:                      'Oferta do Dia (ML)',
+  MARKETPLACE_CAMPAIGN:     'Campanha Marketplace',
+  LIGHTNING:                'Oferta Relâmpago',
+  PRICE_MATCHING:           'Acompanhe o Preço',
+  PRICE_MATCHING_MELI_ALL:  'Desconto ML (100%)',
+  FULL_BENEFIT:             'Benefício Full',
+  SMART:                    'Anúncio Inteligente',
+  UNHEALTHY_STOCK:          'Liquidação de Estoque',
+  VOLUME:                   'Desconto por Volume',
+  PRE_NEGOTIATED:           'Pré-negociado',
+  PRICE_DISCOUNT:           'Desconto Individual',
 }
-const TYPE_COLOR: Record<PromoType, string> = {
-  SELLER_CAMPAIGN:        'text-purple-400',
-  SELLER_COUPON_CAMPAIGN: 'text-cyan-400',
-  DEAL:                   'text-yellow-400',
-  DOD:                    'text-orange-400',
-  PRICE_DISCOUNT:         'text-blue-400',
+const TYPE_COLOR: Record<string, string> = {
+  SELLER_CAMPAIGN:          'text-purple-400',
+  SELLER_COUPON_CAMPAIGN:   'text-cyan-400',
+  DEAL:                     'text-yellow-400',
+  DOD:                      'text-orange-400',
+  MARKETPLACE_CAMPAIGN:     'text-emerald-400',
+  LIGHTNING:                'text-amber-400',
+  PRICE_MATCHING:           'text-sky-400',
+  PRICE_MATCHING_MELI_ALL:  'text-green-400',
+  FULL_BENEFIT:             'text-teal-400',
+  SMART:                    'text-indigo-400',
+  UNHEALTHY_STOCK:          'text-red-400',
+  VOLUME:                   'text-violet-400',
+  PRE_NEGOTIATED:           'text-rose-400',
+  PRICE_DISCOUNT:           'text-blue-400',
 }
 
 function fmtDate(iso: string) {
@@ -421,7 +459,7 @@ function PromoCard({
           <Eye className="w-3.5 h-3.5" />
           Ver itens
         </button>
-        {!isML && onDelete && editMode && (promo.type === 'SELLER_CAMPAIGN' || promo.type === 'SELLER_COUPON_CAMPAIGN') && promo.status !== 'finished' && (
+        {!isML && onDelete && editMode && SELLER_TYPES.includes(promo.type) && promo.status !== 'finished' && (
           <button
             onClick={() => onDelete(promo)}
             className="flex items-center gap-1 px-3 py-1.5 text-xs text-red-400 bg-red-900/10 hover:bg-red-900/20 border border-red-800/20 rounded-lg transition-all"
@@ -633,7 +671,10 @@ function TabEmPromocao({ editMode }: { editMode: boolean }) {
       setError('')
       try {
         const res = await fetch('/api/mercadolivre/promocoes/em-promocao')
-        if (!res.ok) throw new Error('Erro ao carregar itens')
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({})) as { error?: string }
+          throw new Error(body.error ?? `Erro ${res.status} ao carregar itens em promoção`)
+        }
         const d = await res.json() as { items: EmPromocaoItem[] }
         setItems(d.items ?? [])
       } catch (e) {
@@ -709,11 +750,23 @@ function TabEmPromocao({ editMode }: { editMode: boolean }) {
           className="px-3 py-2 text-sm bg-[#111318] border border-white/[0.08] rounded-xl text-slate-300 focus:outline-none focus:ring-1 focus:ring-purple-500/40"
         >
           <option value="all">Todos os tipos</option>
-          <option value="SELLER_CAMPAIGN">Campanha Própria</option>
-          <option value="DEAL">Campanha ML</option>
-          <option value="DOD">Oferta do Dia</option>
-          <option value="SELLER_COUPON_CAMPAIGN">Cupom</option>
-          <option value="PRICE_DISCOUNT">Desconto Individual</option>
+          <optgroup label="Campanhas do ML">
+            <option value="MARKETPLACE_CAMPAIGN">Campanha Marketplace</option>
+            <option value="LIGHTNING">Oferta Relâmpago</option>
+            <option value="DEAL">Campanha ML (DEAL)</option>
+            <option value="DOD">Oferta do Dia (DOD)</option>
+            <option value="PRICE_MATCHING">Acompanhe o Preço</option>
+            <option value="PRICE_MATCHING_MELI_ALL">Desconto ML (100%)</option>
+            <option value="FULL_BENEFIT">Benefício Full</option>
+            <option value="SMART">Anúncio Inteligente</option>
+            <option value="UNHEALTHY_STOCK">Liquidação de Estoque</option>
+            <option value="VOLUME">Desconto por Volume</option>
+          </optgroup>
+          <optgroup label="Minhas Promoções">
+            <option value="SELLER_CAMPAIGN">Campanha Própria</option>
+            <option value="SELLER_COUPON_CAMPAIGN">Cupom Próprio</option>
+            <option value="PRICE_DISCOUNT">Desconto Individual</option>
+          </optgroup>
         </select>
       </div>
 
@@ -832,7 +885,10 @@ function TabSemPromocao({
     setError('')
     try {
       const res = await fetch(`/api/mercadolivre/promocoes/sem-promocao?q=${encodeURIComponent(q)}`)
-      if (!res.ok) throw new Error('Erro ao carregar anúncios')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(body.error ?? `Erro ${res.status} ao carregar anúncios`)
+      }
       const d = await res.json() as { items: SemPromocaoItem[] }
       setItems(d.items ?? [])
     } catch (e) {
@@ -1011,6 +1067,7 @@ export default function PromocoesPage() {
   const [tab, setTab]                     = useState<NewTabType>('minhas')
   const [promotions, setPromotions]       = useState<MLPromotion[]>([])
   const [loading, setLoading]             = useState(true)
+  const [fetchError, setFetchError]       = useState('')
   const [showCreate, setShowCreate]       = useState(false)
   const [selectedPromo, setSelectedPromo] = useState<MLPromotion | null>(null)
   const [confirmState, setConfirmState]   = useState<ConfirmOtpState | null>(null)
@@ -1020,23 +1077,27 @@ export default function PromocoesPage() {
 
   const fetchPromotions = useCallback(async () => {
     setLoading(true)
+    setFetchError('')
     try {
       const res = await fetch('/api/mercadolivre/promocoes')
       if (res.ok) {
         const d = await res.json() as { promotions: MLPromotion[] }
         setPromotions(d.promotions ?? [])
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        setFetchError(body.error ?? `Erro ${res.status} ao buscar promoções`)
       }
+    } catch (e) {
+      setFetchError(e instanceof Error ? e.message : 'Erro ao conectar com o servidor')
     } finally { setLoading(false) }
   }, [])
 
   useEffect(() => { void fetchPromotions() }, [fetchPromotions])
 
-  const minhasCampanhas = promotions.filter(p =>
-    p.type === 'SELLER_CAMPAIGN' || p.type === 'SELLER_COUPON_CAMPAIGN',
-  )
-  const convidadoML = promotions.filter(p =>
-    p.type === 'DEAL' || p.type === 'DOD',
-  )
+  /* Criadas pelo vendedor */
+  const minhasCampanhas = promotions.filter(p => SELLER_TYPES.includes(p.type))
+  /* Todas as demais: organizadas / convidadas pelo ML */
+  const convidadoML = promotions.filter(p => isMLOrganized(p.type))
 
   function handleDeletePromo(promo: MLPromotion) {
     setConfirmState({
@@ -1056,7 +1117,7 @@ export default function PromocoesPage() {
     })
   }
 
-  const TABS: { id: NewTabType; label: string; count?: number; icon: React.ReactNode }[] = [
+  const TABS: { id: NewTabType; label: string; count?: number; icon: JSX.Element }[] = [
     { id: 'campanhas-ml',  label: 'Campanhas do ML',    count: convidadoML.length,     icon: <Star className="w-3.5 h-3.5" /> },
     { id: 'minhas',        label: 'Minhas Promoções',   count: minhasCampanhas.length, icon: <Tag className="w-3.5 h-3.5" /> },
     { id: 'em-promocao',   label: 'Em Promoção',        icon: <BadgePercent className="w-3.5 h-3.5" /> },
@@ -1128,6 +1189,17 @@ export default function PromocoesPage() {
           </div>
         )}
 
+        {/* Erro de carregamento das promoções */}
+        {fetchError && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-700/30 rounded-xl text-sm">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <p className="text-red-300 flex-1">{fetchError}</p>
+            <button onClick={() => void fetchPromotions()} className="text-red-400 hover:text-red-200 text-xs underline">
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
         {/* KPI cards */}
         {!loading && promotions.length > 0 && (
           <KpiCards promotions={promotions} />
@@ -1162,11 +1234,11 @@ export default function PromocoesPage() {
             <div className="dash-card p-4 flex items-start gap-3 text-xs">
               <Gift className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-slate-300 font-medium mb-0.5">Campanhas geridas pelo Mercado Livre</p>
+                <p className="text-slate-300 font-medium mb-0.5">Campanhas e convites do Mercado Livre</p>
                 <p className="text-slate-500">
-                  <strong className="text-slate-300">DEAL</strong> e <strong className="text-slate-300">Oferta do Dia (DOD)</strong> são campanhas que o ML organiza.
-                  Quando convidado, você pode aderir com seus produtos elegíveis.
-                  Em campanhas DOD, o ML pode subsidiar parte do desconto — indicado em verde.
+                  Campanhas como <strong className="text-slate-300">Marketplace Campaign</strong>, <strong className="text-slate-300">Oferta Relâmpago</strong>,{' '}
+                  <strong className="text-slate-300">Acompanhe o Preço</strong> e <strong className="text-slate-300">Oferta do Dia</strong> são organizadas pelo ML.
+                  Em campanhas subsidiadas, o ML cobre parte do desconto — indicado em verde.
                 </p>
               </div>
             </div>
@@ -1178,7 +1250,9 @@ export default function PromocoesPage() {
               <div className="dash-card p-12 text-center space-y-2">
                 <Star className="w-10 h-10 text-slate-700 mx-auto" />
                 <p className="text-sm text-slate-500">Nenhuma campanha do ML disponível no momento</p>
-                <p className="text-xs text-slate-600">Campanhas DEAL e DOD aparecerão aqui quando você for convidado</p>
+                <p className="text-xs text-slate-600">
+                  Campanhas sazonais do ML (Marketplace Campaign, Oferta Relâmpago, Acompanhe o Preço…) aparecerão aqui quando sua conta for elegível
+                </p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
