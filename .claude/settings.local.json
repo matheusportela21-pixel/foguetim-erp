@@ -150,7 +150,8 @@
       "Bash(grep -n \"as BlogPost\\\\|as BlogCategory\" app/api/blog/posts/route.ts app/api/blog/posts/[slug]/route.ts app/api/blog/posts/popular/route.ts app/api/blog/posts/related/route.ts app/api/blog/search/route.ts)",
       "Bash(sed -i 's/\\(data ?? \\\\[\\\\]\\) as BlogPost\\\\[\\\\]/\\(data ?? []\\) as unknown as BlogPost[]/g' app/api/blog/posts/route.ts app/api/blog/posts/popular/route.ts app/api/blog/posts/related/route.ts app/api/blog/search/route.ts)",
       "Bash(sed -i 's/const post = data as BlogPost/const post = data as unknown as BlogPost/' app/api/blog/posts/[slug]/route.ts)",
-      "Bash(tail -20 \"app/\\(public\\)/blog/busca/page.tsx\")"
+      "Bash(tail -20 \"app/\\(public\\)/blog/busca/page.tsx\")",
+      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/agentes/)"
     ]
   }
 }

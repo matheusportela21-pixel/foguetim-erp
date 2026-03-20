@@ -24,45 +24,44 @@ export async function GET(req: NextRequest) {
   const alertsSent: string[] = []
 
   // ── Check 1: Auth failures in last 5 minutes ────────────────────────────────
-  const { data: authLogs } = await db
-    .from('activity_logs')
-    .select('id')
-    .eq('acao', 'login_failed')
-    .gte('created_at', since5min)
-    .catch(() => ({ data: [] as { id: string }[] }))
-  const authFailureCount = (authLogs ?? []).length
+  let authFailureCount = 0
+  try {
+    const { data } = await db
+      .from('activity_logs').select('id').eq('acao', 'login_failed').gte('created_at', since5min)
+    authFailureCount = (data ?? []).length
+  } catch { /* ignore */ }
 
   // ── Check 2: Expiring ML tokens (within next 1 hour) ────────────────────────
   const in1hour = new Date(Date.now() + 60 * 60 * 1000).toISOString()
-  const { data: expiringTokens } = await db
-    .from('marketplace_connections')
-    .select('id, user_id, expires_at')
-    .eq('status', 'active')
-    .lt('expires_at', in1hour)
-    .catch(() => ({ data: [] as { id: string; user_id: string; expires_at: string }[] }))
-  const expiringCount = (expiringTokens ?? []).length
+  let expiringCount = 0
+  try {
+    const { data } = await db
+      .from('marketplace_connections').select('id, user_id, expires_at')
+      .eq('status', 'active').lt('expires_at', in1hour)
+    expiringCount = (data ?? []).length
+  } catch { /* ignore */ }
 
   // ── Check 3: DB health ──────────────────────────────────────────────────────
   const { error: dbError } = await db.from('profiles').select('id').limit(1)
   const dbHealthy = !dbError
 
   // ── Check 4: Error count in activity_logs ───────────────────────────────────
-  const { data: errorLogs } = await db
-    .from('activity_logs')
-    .select('id')
-    .in('acao', ['error', 'webhook_error', 'payment_error'])
-    .gte('created_at', since5min)
-    .catch(() => ({ data: [] as { id: string }[] }))
-  const errorCount = (errorLogs ?? []).length
+  let errorCount = 0
+  try {
+    const { data } = await db
+      .from('activity_logs').select('id')
+      .in('acao', ['error', 'webhook_error', 'payment_error'])
+      .gte('created_at', since5min)
+    errorCount = (data ?? []).length
+  } catch { /* ignore */ }
 
   // ── Check 5: Webhook errors ─────────────────────────────────────────────────
-  const { data: webhookErrors } = await db
-    .from('webhook_queue')
-    .select('id')
-    .eq('status', 'error')
-    .gte('created_at', since5min)
-    .catch(() => ({ data: [] as { id: string }[] }))
-  const webhookErrorCount = (webhookErrors ?? []).length
+  let webhookErrorCount = 0
+  try {
+    const { data } = await db
+      .from('webhook_queue').select('id').eq('status', 'error').gte('created_at', since5min)
+    webhookErrorCount = (data ?? []).length
+  } catch { /* ignore */ }
 
   // ── Alert rules ─────────────────────────────────────────────────────────────
 
@@ -97,20 +96,21 @@ export async function GET(req: NextRequest) {
   }
 
   // Regra 3: Token ML ativo já expirado
-  const { data: expiredTokens } = await db
-    .from('marketplace_connections')
-    .select('id')
-    .eq('status', 'active')
-    .lt('expires_at', new Date().toISOString())
-    .catch(() => ({ data: [] as { id: string }[] }))
+  let expiredCount = 0
+  try {
+    const { data } = await db
+      .from('marketplace_connections').select('id')
+      .eq('status', 'active').lt('expires_at', new Date().toISOString())
+    expiredCount = (data ?? []).length
+  } catch { /* ignore */ }
 
-  if ((expiredTokens ?? []).length > 0) {
+  if (expiredCount > 0) {
     const subject = '⚠️ [Foguetim] Token ML expirado'
     await sendEmail({
       to:      ADMIN_EMAIL,
       subject,
       html:    `
-        <p>Existem <strong>${(expiredTokens ?? []).length} conexão(ões)</strong> com o Mercado Livre marcadas como ativas,
+        <p>Existem <strong>${expiredCount} conexão(ões)</strong> com o Mercado Livre marcadas como ativas,
         mas com token já expirado.</p>
         <p>Acesse o painel e reconecte a conta do marketplace.</p>
         <p><small>Checado em: ${new Date().toISOString()}</small></p>
@@ -131,18 +131,19 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Persistir no banco ───────────────────────────────────────────────────────
-  await db
-    .from('sentinela_checks')
-    .insert({
+  try {
+    await db.from('sentinela_checks').insert({
       tipo:     'check_5min',
       resultado,
       alertas:  alertsSent.length > 0 ? { alerts: alertsSent } : null,
     })
-    .catch(console.error)
+  } catch { /* non-critical */ }
 
   // ── Limpar registros antigos (> 7 dias) ──────────────────────────────────────
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  await db.from('sentinela_checks').delete().lt('created_at', cutoff).catch(console.error)
+  try {
+    await db.from('sentinela_checks').delete().lt('created_at', cutoff)
+  } catch { /* non-critical */ }
 
   console.log(`[cron/sentinela-check] Done — alerts: ${alertsSent.length}, authFail: ${authFailureCount}, dbHealthy: ${dbHealthy}`)
 
