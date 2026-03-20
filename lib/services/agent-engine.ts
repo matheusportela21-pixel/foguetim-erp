@@ -992,15 +992,31 @@ export async function executeAgent(agentSlug: string): Promise<AgentExecutionRes
     })
 
     if (agentSlug === 'coordenador' && parsedData) {
-      const { data: agentsAtivos } = await db.from('ai_agents').select('slug').eq('ativo', true)
+      const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+      const [{ data: agentsAtivos }, { data: recentReports }] = await Promise.all([
+        db.from('ai_agents').select('slug').eq('ativo', true),
+        db.from('ai_agent_reports').select('id').gte('created_at', since48h).limit(100),
+      ])
+      const proximos_passos = ((parsedData.proximos_passos ?? []) as Array<Record<string, unknown>>).map(p => ({
+        ...p, status: 'pendente', concluido_em: null,
+      }))
+      const decisoes = ((parsedData.top_5_prioridades ?? []) as Array<Record<string, unknown>>).map(d => ({
+        ...d, status: 'pendente', resolvido_em: null,
+      }))
       await db.from('ai_agent_meetings').insert({
-        titulo:           `Reunião ${new Date().toLocaleDateString('pt-BR')}`,
-        participantes:    (agentsAtivos ?? []).map((a: { slug: string }) => a.slug),
-        resumo_executivo: String(parsedData.resumo_executivo ?? ''),
-        ata:              responseText,
-        decisoes:         parsedData.top_5_prioridades ?? [],
-        conflitos:        parsedData.conflitos         ?? [],
-        proximos_passos:  parsedData.proximos_passos   ?? [],
+        titulo:             `Reunião ${new Date().toLocaleDateString('pt-BR')}`,
+        participantes:      (agentsAtivos ?? []).map((a: { slug: string }) => a.slug),
+        report_ids:         (recentReports ?? []).map((r: { id: string }) => r.id),
+        resumo_executivo:   String(parsedData.resumo_executivo ?? ''),
+        ata:                responseText,
+        decisoes,
+        conflitos:          parsedData.conflitos ?? [],
+        proximos_passos,
+        status:             'nova',
+        custo_usd:          aiRes.costUsd,
+        tokens_input:       aiRes.usage.input_tokens,
+        tokens_output:      aiRes.usage.output_tokens,
+        tempo_execucao_ms:  tempoMs,
       })
     }
 

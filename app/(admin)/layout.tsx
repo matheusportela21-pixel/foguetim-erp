@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
+
+interface AgentBadge { criticos: number; altos: number }
 
 const ADMIN_ROLE_LABELS: Record<string, string> = {
   admin:            'Administrador',
@@ -36,6 +38,20 @@ function AdminSidebar() {
   const pathname = usePathname()
   const router   = useRouter()
   const { profile } = useAuth()
+  const [badge, setBadge] = useState<AgentBadge>({ criticos: 0, altos: 0 })
+
+  useEffect(() => {
+    const fetchBadge = async () => {
+      try {
+        const res  = await fetch('/api/admin/agentes/badge')
+        const data = await res.json() as AgentBadge
+        setBadge(data)
+      } catch { /* ignore */ }
+    }
+    fetchBadge()
+    const interval = setInterval(fetchBadge, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -70,19 +86,56 @@ function AdminSidebar() {
             ? pathname === '/admin'
             : pathname.startsWith(item.href)
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group ${
-                active
-                  ? 'bg-red-600/20 text-red-400 font-semibold'
-                  : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
-              }`}
-            >
-              <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-red-400' : 'text-slate-600 group-hover:text-slate-400'}`} />
-              {item.label}
-              {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-red-400" />}
-            </Link>
+            <React.Fragment key={item.href}>
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group ${
+                  active
+                    ? 'bg-red-600/20 text-red-400 font-semibold'
+                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-red-400' : 'text-slate-600 group-hover:text-slate-400'}`} />
+                {item.label}
+                {item.href === '/admin/agentes' && (badge.criticos > 0 || badge.altos > 0) && (
+                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
+                    badge.criticos > 0 ? 'bg-red-600 text-white' : 'bg-orange-600 text-white'
+                  }`}>
+                    {badge.criticos > 0 ? badge.criticos : badge.altos}
+                  </span>
+                )}
+                {active && !(badge.criticos > 0 || badge.altos > 0) && item.href === '/admin/agentes' && (
+                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-red-400" />
+                )}
+                {active && item.href !== '/admin/agentes' && <ChevronRight className="w-3.5 h-3.5 ml-auto text-red-400" />}
+              </Link>
+              {item.href === '/admin/agentes' && pathname.startsWith('/admin/agentes') && (
+                <div className="ml-7 mt-0.5 space-y-0.5">
+                  {[
+                    { href: '/admin/agentes',          label: 'Dashboard'  },
+                    { href: '/admin/agentes/achados',  label: 'Achados'    },
+                    { href: '/admin/agentes/reunioes', label: 'Reuniões'   },
+                  ].map(sub => {
+                    const subActive = sub.href === '/admin/agentes'
+                      ? pathname === '/admin/agentes'
+                      : pathname.startsWith(sub.href)
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className={`flex items-center px-2.5 py-1.5 rounded-md text-xs transition-all ${
+                          subActive ? 'text-red-400 font-medium' : 'text-slate-600 hover:text-slate-300'
+                        }`}
+                      >
+                        {subActive && <span className="w-1 h-1 rounded-full bg-red-400 mr-2 shrink-0" />}
+                        {!subActive && <span className="w-1 h-1 mr-2 shrink-0" />}
+                        {sub.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </React.Fragment>
           )
         })}
       </nav>

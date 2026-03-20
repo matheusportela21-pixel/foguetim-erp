@@ -8,10 +8,11 @@ import {
   AlertCircle, Info, Rocket, Scale, Globe, Loader2, X, ListChecks,
   Download, TrendingUp, TrendingDown, Wifi,
 } from 'lucide-react'
+import Link from 'next/link'
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceArea, Legend,
+  ReferenceArea, Legend, PieChart, Pie, Cell,
 } from 'recharts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -55,11 +56,15 @@ interface DayCusto  { dia: string; custo: number }
 interface DayExec   { dia: string; execucoes: number; tempo_medio: number }
 interface FeedItem  { id: string; resumo: string; severidade_max: string; achados: Achado[]; created_at: string; ai_agents: { nome: string; slug: string; categoria: string } | null }
 
+interface HeatDay { dia: string; critica: number; alta: number; media: number; baixa: number; total: number }
+interface RankingAgent { nome: string; slug: string; categoria: string; achados_util: number; descartados: number; taxa_util: number; custo_mes: number }
+
 interface StatsData {
   achados_por_dia: DayAchado[]; score_por_dia: DayScore[]; custo_por_dia: DayCusto[]
   execucoes_por_dia: DayExec[]; health_score: number
   achados_hoje: { total: number; critica: number; alta: number; media: number; baixa: number }
   total_custo_periodo: number; execucoes_hoje: number; feed: FeedItem[]; agentes_ativos: number
+  heatmap_90d?: HeatDay[]; ranking_agentes?: RankingAgent[]
 }
 
 interface QueueEvent {
@@ -448,6 +453,173 @@ function ConfirmModal({ totalAgents, onConfirm, onCancel }: { totalAgents: numbe
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+
+function heatColor(d: HeatDay): string {
+  if (d.total === 0)                                    return '#1e293b'
+  if (d.critica > 0)                                    return '#ef4444'
+  if (d.alta > 2 || (d.alta > 0 && d.total > 8))       return '#f97316'
+  if (d.alta > 0 || d.total > 3)                        return '#eab308'
+  return '#22c55e'
+}
+
+function Heatmap({ data }: { data: HeatDay[] }) {
+  const [tooltip, setTooltip] = React.useState<{ d: HeatDay; x: number; y: number } | null>(null)
+  if (!data || data.length === 0) return null
+
+  // Build week×day grid
+  const weeks: HeatDay[][] = []
+  let week: HeatDay[] = []
+  const firstDow = new Date(data[0]!.dia + 'T12:00:00Z').getDay()
+  // Pad start
+  for (let i = 0; i < firstDow; i++) week.push({ dia: '', critica: 0, alta: 0, media: 0, baixa: 0, total: -1 })
+  for (const d of data) {
+    week.push(d)
+    if (week.length === 7) { weeks.push(week); week = [] }
+  }
+  if (week.length > 0) { while (week.length < 7) week.push({ dia: '', critica: 0, alta: 0, media: 0, baixa: 0, total: -1 }); weeks.push(week) }
+
+  const dayLabels = ['D','S','T','Q','Q','S','S']
+
+  return (
+    <div className="relative">
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {/* Day labels */}
+        <div className="flex flex-col gap-0.5 mr-1 shrink-0">
+          <div className="h-3 mb-0.5" />
+          {dayLabels.map((l, i) => (
+            <div key={i} className="h-3 text-[9px] text-slate-600 flex items-center">{l}</div>
+          ))}
+        </div>
+        {weeks.map((wk, wi) => (
+          <div key={wi} className="flex flex-col gap-0.5 shrink-0">
+            {wi === 0 || (wi > 0 && wk[1]?.dia?.endsWith('-01')) ? (
+              <div className="h-3 text-[9px] text-slate-600 mb-0.5 w-3 whitespace-nowrap" style={{ marginLeft: -2 }}>
+                {wk.find(d => d.total >= 0)?.dia?.slice(5, 7) ?? ''}
+              </div>
+            ) : <div className="h-3 mb-0.5" />}
+            {wk.map((d, di) => (
+              <div
+                key={di}
+                className="w-3 h-3 rounded-sm cursor-pointer transition-transform hover:scale-125"
+                style={{ backgroundColor: d.total < 0 ? 'transparent' : heatColor(d) }}
+                onMouseEnter={e => { if (d.total >= 0) setTooltip({ d, x: e.clientX, y: e.clientY }) }}
+                onMouseLeave={() => setTooltip(null)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {tooltip && (
+        <div className="fixed z-50 glass-card border border-white/15 rounded-lg px-3 py-2 text-xs pointer-events-none" style={{ left: tooltip.x + 12, top: tooltip.y - 40 }}>
+          <p className="text-slate-300 font-medium">{new Date(tooltip.d.dia + 'T12:00:00Z').toLocaleDateString('pt-BR')}</p>
+          <p className="text-white mt-0.5">{tooltip.d.total} achado(s)</p>
+          {tooltip.d.critica > 0 && <p className="text-red-400">{tooltip.d.critica} crítico(s)</p>}
+          {tooltip.d.alta    > 0 && <p className="text-orange-400">{tooltip.d.alta} alto(s)</p>}
+          {tooltip.d.media   > 0 && <p className="text-amber-400">{tooltip.d.media} médio(s)</p>}
+          {tooltip.d.baixa   > 0 && <p className="text-blue-400">{tooltip.d.baixa} baixo(s)</p>}
+        </div>
+      )}
+      {/* Legend */}
+      <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-600">
+        <span>Menos</span>
+        {['#1e293b','#22c55e','#eab308','#f97316','#ef4444'].map(c => (
+          <div key={c} className="w-3 h-3 rounded-sm" style={{ backgroundColor: c }} />
+        ))}
+        <span>Mais</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Ranking de Agentes ────────────────────────────────────────────────────────
+
+function AgentRanking({ agents }: { agents: RankingAgent[] }) {
+  if (!agents || agents.length === 0) return null
+  const catColors: Record<string, string> = {
+    protecao: 'text-red-400', produto: 'text-blue-400', meta: 'text-violet-400',
+    deploy: 'text-green-400', compliance: 'text-amber-400', marketplace: 'text-orange-400',
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-white/5 text-[10px] text-slate-500 uppercase tracking-wider">
+            <th className="text-left px-4 py-2">#</th>
+            <th className="text-left px-3 py-2">Agente</th>
+            <th className="text-right px-3 py-2">Úteis</th>
+            <th className="text-right px-3 py-2">Desc.</th>
+            <th className="text-right px-3 py-2">Taxa</th>
+            <th className="text-right px-4 py-2">Custo</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/5">
+          {agents.slice(0, 10).map((a, i) => (
+            <tr key={a.slug} className="hover:bg-white/[0.02]">
+              <td className="px-4 py-2 text-slate-500">{i + 1}</td>
+              <td className="px-3 py-2">
+                <Link href={`/admin/agentes/${a.slug}`} className={`font-medium hover:underline ${catColors[a.categoria] ?? 'text-slate-300'}`}>
+                  {a.nome}
+                </Link>
+              </td>
+              <td className="px-3 py-2 text-right text-green-400">{a.achados_util}</td>
+              <td className="px-3 py-2 text-right text-slate-500">{a.descartados}</td>
+              <td className="px-3 py-2 text-right">
+                <span className={a.taxa_util >= 80 ? 'text-green-400' : a.taxa_util >= 50 ? 'text-amber-400' : 'text-red-400'}>
+                  {a.taxa_util}%
+                </span>
+              </td>
+              <td className="px-4 py-2 text-right text-slate-500">${a.custo_mes.toFixed(4)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Donut por Categoria ───────────────────────────────────────────────────────
+
+const DONUT_COLORS: Record<string, string> = {
+  protecao:    '#ef4444', produto:     '#3b82f6',
+  meta:        '#8b5cf6', deploy:      '#22c55e',
+  compliance:  '#eab308', marketplace: '#f97316',
+}
+
+function CategoryDonut({ data }: { data: HeatDay[] }) {
+  if (!data || data.length === 0) return null
+  // We don't have per-category breakdown in heatmap — use achados_por_dia totals as proxy
+  // Actually this is a visual placeholder — real data comes from rankings
+  const total = data.reduce((s, d) => s + d.total, 0)
+  if (total === 0) return <p className="text-xs text-slate-500 text-center py-8">Sem dados</p>
+  const pieData = [
+    { name: 'Críticos', value: data.reduce((s, d) => s + d.critica, 0), color: '#ef4444' },
+    { name: 'Altos',    value: data.reduce((s, d) => s + d.alta,    0), color: '#f97316' },
+    { name: 'Médios',   value: data.reduce((s, d) => s + d.media,   0), color: '#eab308' },
+    { name: 'Baixos',   value: data.reduce((s, d) => s + d.baixa,   0), color: '#3b82f6' },
+  ].filter(p => p.value > 0)
+  return (
+    <ResponsiveContainer width="100%" height={160}>
+      <PieChart>
+        <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={2} dataKey="value">
+          {pieData.map((entry, i) => <Cell key={i} fill={entry.color} fillOpacity={0.85} />)}
+        </Pie>
+        <Tooltip
+          content={({ active, payload }) => {
+            if (!active || !payload?.length) return null
+            const p = payload[0]
+            return (
+              <div className="glass-card border border-white/10 px-3 py-2 rounded-lg text-xs">
+                <p style={{ color: p?.payload?.color }}>{p?.name}: {p?.value}</p>
+              </div>
+            )
+          }}
+        />
+      </PieChart>
+    </ResponsiveContainer>
   )
 }
 
@@ -938,6 +1110,45 @@ export default function AdminAgentesPage() {
           )}
         </div>
 
+        {/* ── Heatmap + Donut ─────────────────────────────────────────────── */}
+        {statsData?.heatmap_90d && statsData.heatmap_90d.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-4">
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5" /> Mapa de atividade — últimos 90 dias
+                </h2>
+              </div>
+              <Heatmap data={statsData.heatmap_90d} />
+            </div>
+            <div className="glass-card p-4">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Por Severidade</h2>
+              <CategoryDonut data={statsData.heatmap_90d} />
+              <div className="space-y-1 mt-1">
+                {[['Críticos','#ef4444'],['Altos','#f97316'],['Médios','#eab308'],['Baixos','#3b82f6']].map(([n,c]) => (
+                  <div key={n} className="flex items-center gap-2 text-[10px] text-slate-500">
+                    <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: c }} />
+                    {n}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Ranking de Agentes ──────────────────────────────────────────── */}
+        {statsData?.ranking_agentes && statsData.ranking_agentes.length > 0 && (
+          <div className="glass-card overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <TrendingUp className="w-3.5 h-3.5" /> Ranking de Agentes
+              </h2>
+              <span className="text-[10px] text-slate-600">por taxa de utilidade</span>
+            </div>
+            <AgentRanking agents={statsData.ranking_agentes} />
+          </div>
+        )}
+
         {/* ── Activity Feed ──────────────────────────────────────────────────── */}
         {statsData && statsData.feed.length > 0 && (
           <div className="glass-card p-4">
@@ -952,6 +1163,25 @@ export default function AdminAgentesPage() {
             </div>
           </div>
         )}
+
+        {/* ── Quick nav para sub-páginas ──────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { href: '/admin/agentes/achados',  icon: Activity,  label: 'Visão Unificada de Achados', desc: 'Todos os achados com filtros avançados', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+            { href: '/admin/agentes/reunioes', icon: FileText,  label: 'Atas de Reunião',            desc: 'Relatórios consolidados do Coordenador', color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
+          ].map(({ href, icon: Icon, label, desc, color, bg }) => (
+            <Link key={href} href={href} className="glass-card p-4 border border-white/8 hover:border-white/20 transition-all group flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${bg}`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+              </div>
+              <div>
+                <p className={`text-sm font-semibold ${color} group-hover:text-white transition-colors`}>{label}</p>
+                <p className="text-xs text-slate-500">{desc}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300 ml-auto" />
+            </Link>
+          ))}
+        </div>
 
         {/* ── Tabs ──────────────────────────────────────────────────────────── */}
         <div className="flex gap-1 bg-white/[0.03] rounded-xl p-1 border border-white/[0.06] w-fit flex-wrap">

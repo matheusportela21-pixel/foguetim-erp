@@ -30,6 +30,7 @@ interface ReportRow {
   severidade_max: string
   custo_usd:     number | null
   created_at:    string
+  status:        string
   ai_agents:     { nome: string; slug: string; categoria: string } | null
 }
 
@@ -148,7 +149,7 @@ export async function GET(req: NextRequest) {
     db
       .from('ai_agent_reports')
       .select(`
-        id, achados, severidade_max, custo_usd, created_at,
+        id, achados, severidade_max, custo_usd, created_at, status,
         ai_agents ( nome, slug, categoria )
       `)
       .gte('created_at', sinceIso)
@@ -307,6 +308,77 @@ export async function GET(req: NextRequest) {
   // -----------------------------------------------------------------------
   // Resposta
   // -----------------------------------------------------------------------
+  // -----------------------------------------------------------------------
+  // Heatmap (always 90 days, only when no agent filter)
+  // -----------------------------------------------------------------------
+  let heatmap_90d: Array<{ dia: string; critica: number; alta: number; media: number; baixa: number; total: number }> = []
+  if (!agente) {
+    const since90 = new Date(Date.now() - 90 * 86_400_000)
+    const range90 = buildDayRange(90, since90)
+    const map90: Record<string, { critica: number; alta: number; media: number; baixa: number }> = {}
+    for (const dia of range90) map90[dia] = { critica: 0, alta: 0, media: 0, baixa: 0 }
+
+    // Re-query if period < 90d
+    let reports90 = reports
+    if (days < 90) {
+      const { data: r90 } = await db
+        .from('ai_agent_reports')
+        .select('achados, created_at')
+        .gte('created_at', since90.toISOString())
+        .limit(5000)
+      reports90 = (r90 ?? []) as unknown as ReportRow[]
+    }
+    for (const r of reports90) {
+      const dia = r.created_at.slice(0, 10)
+      if (!map90[dia]) continue
+      const sev = countSeveridades(r.achados)
+      map90[dia].critica += sev.critica
+      map90[dia].alta    += sev.alta
+      map90[dia].media   += sev.media
+      map90[dia].baixa   += sev.baixa
+    }
+    heatmap_90d = range90.map(dia => {
+      const d = map90[dia]
+      return { dia, critica: d.critica, alta: d.alta, media: d.media, baixa: d.baixa, total: d.critica + d.alta + d.media + d.baixa }
+    })
+  }
+
+  // -----------------------------------------------------------------------
+  // Ranking de agentes (apenas sem filtro de agente)
+  // -----------------------------------------------------------------------
+  interface RankingAgent { nome: string; slug: string; categoria: string; achados_util: number; descartados: number; taxa_util: number; custo_mes: number }
+  let ranking_agentes: RankingAgent[] = []
+  if (!agente) {
+    const agentStats: Record<string, { nome: string; slug: string; categoria: string; util: number; descartados: number; custo: number }> = {}
+    for (const r of reports) {
+      const ag = r.ai_agents
+      if (!ag) continue
+      if (!agentStats[ag.slug]) agentStats[ag.slug] = { nome: ag.nome, slug: ag.slug, categoria: ag.categoria, util: 0, descartados: 0, custo: 0 }
+      const achados = r.achados ?? []
+      if (r.status === 'resolvido' || r.status === 'em_andamento') {
+        agentStats[ag.slug].util += achados.length
+      } else if (r.status === 'descartado') {
+        agentStats[ag.slug].descartados += achados.length
+      }
+      agentStats[ag.slug].custo += Number(r.custo_usd ?? 0)
+    }
+    ranking_agentes = Object.values(agentStats)
+      .map(a => {
+        const total = a.util + a.descartados
+        return {
+          nome:        a.nome,
+          slug:        a.slug,
+          categoria:   a.categoria,
+          achados_util: a.util,
+          descartados:  a.descartados,
+          taxa_util:    total > 0 ? Math.round((a.util / total) * 100) : 0,
+          custo_mes:    parseFloat(a.custo.toFixed(8)),
+        }
+      })
+      .sort((a, b) => b.taxa_util - a.taxa_util || b.achados_util - a.achados_util)
+      .slice(0, 15)
+  }
+
   return NextResponse.json({
     // Séries
     achados_por_dia,
@@ -321,6 +393,10 @@ export async function GET(req: NextRequest) {
     agentes_ativos,
     // Feed
     feed,
+    // Heatmap
+    heatmap_90d,
+    // Ranking
+    ranking_agentes,
     // Meta
     period,
     days,

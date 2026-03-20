@@ -128,7 +128,10 @@
       "Bash(findstr :3000)",
       "Bash(tasklist /FI \"PID eq 25544\")",
       "Bash(find \"C:/Users/mathe/foguetim/app/\\(admin\\)\" -name \"*.tsx\")",
-      "Bash(grep -E 300[0-9].*LISTEN)"
+      "Bash(grep -E 300[0-9].*LISTEN)",
+      "Bash(grep -n \"tab === ''reunioes''\" C:/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/agentes/page.tsx)",
+      "mcp__55eae62f-40bf-450a-aecd-a7ddd0c237d0__list_tables",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(d[''''text'''']\\) for d in data if ''''ai_agent'''' in d.get\\(''''text'''',''''''''\\).lower\\(\\) or ''''meeting'''' in d.get\\(''''text'''',''''''''\\).lower\\(\\)]\")"
     ]
   }
 }
