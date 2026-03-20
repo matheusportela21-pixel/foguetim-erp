@@ -30,7 +30,7 @@ type MLPromoType =
   | 'PRE_NEGOTIATED'
   | 'PRICE_DISCOUNT'
 type PromoType = SellerPromoType | MLPromoType
-type PromoStatus = 'pending' | 'started' | 'finished' | 'paused'
+type PromoStatus = 'candidate' | 'pending' | 'pending_approval' | 'started' | 'finished' | 'paused'
 type NewTabType = 'campanhas-ml' | 'minhas' | 'em-promocao' | 'sem-promocao'
 
 /** Tipos que são criados pelo próprio vendedor */
@@ -66,16 +66,20 @@ interface ItemEligibility {
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const STATUS_LABEL: Record<PromoStatus, string> = {
-  pending:  'Pendente',
-  started:  'Ativa',
-  finished: 'Encerrada',
-  paused:   'Pausada',
+  candidate:        'Convite',
+  pending:          'Pendente',
+  pending_approval: 'Aguardando',
+  started:          'Ativa',
+  finished:         'Encerrada',
+  paused:           'Pausada',
 }
 const STATUS_COLOR: Record<PromoStatus, string> = {
-  pending:  'bg-amber-900/30 text-amber-400 border-amber-700/30',
-  started:  'bg-green-900/30 text-green-400 border-green-700/30',
-  finished: 'bg-slate-800 text-slate-500 border-slate-700/30',
-  paused:   'bg-orange-900/30 text-orange-400 border-orange-700/30',
+  candidate:        'bg-blue-900/30 text-blue-400 border-blue-700/30',
+  pending:          'bg-amber-900/30 text-amber-400 border-amber-700/30',
+  pending_approval: 'bg-violet-900/30 text-violet-400 border-violet-700/30',
+  started:          'bg-green-900/30 text-green-400 border-green-700/30',
+  finished:         'bg-slate-800 text-slate-500 border-slate-700/30',
+  paused:           'bg-orange-900/30 text-orange-400 border-orange-700/30',
 }
 const TYPE_LABEL: Record<string, string> = {
   SELLER_CAMPAIGN:          'Campanha Própria',

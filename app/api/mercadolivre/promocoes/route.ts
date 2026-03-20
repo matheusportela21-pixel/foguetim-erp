@@ -10,9 +10,22 @@ import { getMLConnection, mlFetch }        from '@/lib/mercadolivre'
 export interface MLPromotion {
   id:          string
   name:        string
-  type:        'SELLER_CAMPAIGN' | 'SELLER_COUPON_CAMPAIGN' | 'DEAL' | 'DOD' | 'PRICE_DISCOUNT'
+  type:        | 'SELLER_CAMPAIGN'
+               | 'SELLER_COUPON_CAMPAIGN'
+               | 'DEAL'
+               | 'DOD'
+               | 'MARKETPLACE_CAMPAIGN'
+               | 'LIGHTNING'
+               | 'PRICE_MATCHING'
+               | 'PRICE_MATCHING_MELI_ALL'
+               | 'FULL_BENEFIT'
+               | 'SMART'
+               | 'UNHEALTHY_STOCK'
+               | 'VOLUME'
+               | 'PRE_NEGOTIATED'
+               | 'PRICE_DISCOUNT'
   sub_type:    string
-  status:      'pending' | 'started' | 'finished' | 'paused'
+  status:      'candidate' | 'pending' | 'pending_approval' | 'started' | 'finished' | 'paused'
   start_date:  string
   finish_date: string
   items_count?: number
