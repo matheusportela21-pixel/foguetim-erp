@@ -9,7 +9,7 @@ import {
   Shield, Menu, X, CheckCircle2, Zap, MessageCircle,
   Info, Star, Warehouse, RefreshCw, CalendarDays,
   Printer, Globe, Truck, MapPin, Tags,
-  Instagram, Linkedin,
+  Instagram, Linkedin, Newspaper, Clock,
 } from 'lucide-react'
 
 /* ── Cancelled banner ─────────────────────────────────────────────────────── */
@@ -393,6 +393,118 @@ function MockupSac() {
         </div>
       ))}
     </div>
+  )
+}
+
+/* ── Blog preview ─────────────────────────────────────────────────────────── */
+interface LandingBlogPost {
+  id: string
+  title: string
+  slug: string
+  summary: string | null
+  category: string
+  category_slug: string | null
+  reading_time_min: number | null
+  published_at: string
+  cover_image_url: string | null
+}
+
+const BLOG_GRADIENTS: Record<string, string> = {
+  'ecommerce-marketplaces':  'from-amber-400 to-amber-600',
+  'mercado-livre':           'from-yellow-400 to-yellow-600',
+  'gestao-empreendedorismo': 'from-blue-400 to-blue-600',
+  'financas-economia':       'from-green-400 to-green-600',
+  'fiscal-tributario':       'from-red-400 to-red-600',
+  'estoque-logistica':       'from-emerald-400 to-emerald-600',
+  'marketing-digital':       'from-pink-400 to-pink-600',
+  'setores-nichos':          'from-purple-400 to-purple-600',
+  'novidades-foguetim':      'from-violet-400 to-violet-600',
+  'ferramentas-tecnologia':  'from-cyan-400 to-cyan-600',
+}
+
+function BlogPreview() {
+  const [posts, setPosts] = useState<LandingBlogPost[]>([])
+
+  useEffect(() => {
+    fetch('/api/blog/posts/popular?limit=3')
+      .then(r => r.json())
+      .then(d => setPosts((Array.isArray(d.posts) ? d.posts : d.results ?? []).slice(0, 3)))
+      .catch(() => {})
+  }, [])
+
+  if (!posts.length) return null
+
+  return (
+    <section className="relative z-10 py-20 px-6 bg-gray-50 border-t border-gray-100">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+                <Newspaper className="w-4 h-4 text-violet-600" />
+              </div>
+              <span className="text-xs font-bold text-violet-600 uppercase tracking-widest">Blog Foguetim</span>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Conteúdo para quem vende online
+            </h2>
+            <p className="text-gray-500 max-w-lg">
+              Dicas de e-commerce, finanças, fiscal, marketing e gestão para empreendedores.
+            </p>
+          </div>
+          <Link
+            href="/blog"
+            className="shrink-0 inline-flex items-center gap-2 text-sm font-semibold text-violet-600 hover:text-violet-700 border border-violet-200 hover:border-violet-300 bg-white px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap shadow-sm"
+          >
+            Ver todos os artigos <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {posts.map(post => {
+            const grad = BLOG_GRADIENTS[post.category_slug ?? ''] ?? 'from-violet-400 to-violet-600'
+            return (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-violet-200 transition-all"
+              >
+                {/* Thumbnail */}
+                <div className={`h-44 bg-gradient-to-br ${grad} relative overflow-hidden`}>
+                  {post.cover_image_url && (
+                    <img src={post.cover_image_url} alt={post.title} className="w-full h-full object-cover" />
+                  )}
+                </div>
+                {/* Content */}
+                <div className="p-5">
+                  <span className="inline-block text-xs font-semibold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-full mb-3">
+                    {post.category}
+                  </span>
+                  <h3 className="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors line-clamp-2 leading-snug mb-2 text-[15px]">
+                    {post.title}
+                  </h3>
+                  {post.summary && (
+                    <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{post.summary}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-3 text-xs text-gray-400">
+                    {post.reading_time_min && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {post.reading_time_min} min
+                      </span>
+                    )}
+                    <span>
+                      {new Date(post.published_at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -881,6 +993,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Blog preview ───────────────────────────────────────────────────── */}
+      <BlogPreview />
+
       {/* ── CTA Final ─────────────────────────────────────────────────────── */}
       <section className="relative z-10 py-20 px-6 bg-white">
         <div className="max-w-3xl mx-auto text-center">
@@ -890,9 +1005,14 @@ export default function LandingPage() {
           <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto">
             Crie sua conta em menos de 2 minutos e conecte seu Mercado Livre agora mesmo.
           </p>
-          <Link href="/registro" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-lg text-base transition-colors">
-            Criar conta grátis <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/registro" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-lg text-base transition-colors">
+              Criar conta grátis <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link href="/login" className="inline-flex items-center gap-2 border border-indigo-300 text-indigo-600 hover:bg-indigo-50 font-semibold px-8 py-4 rounded-lg text-base transition-colors">
+              Começar grátis
+            </Link>
+          </div>
           <p className="text-sm text-gray-400 mt-4">Sem cartão de crédito. Cancele quando quiser.</p>
         </div>
       </section>
