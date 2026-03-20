@@ -98,19 +98,29 @@ const STATUS_REPORT_CFG: Record<string, { label: string; color: string }> = {
 
 const CAT_ICON: Record<string, React.ElementType> = {
   protecao: Shield, produto: BarChart3, meta: Users,
-  deploy: Rocket, compliance: Scale, marketplace: Globe, default: Bot,
+  deploy: Rocket, compliance: Scale, marketplace: Globe,
+  ux_docs: Zap, blog_seo: FileText, marketing: TrendingUp, marca: Activity,
+  default: Bot,
 }
 
 const CAT_CFG: Record<string, { label: string; emoji: string; accent: string; iconBg: string }> = {
-  protecao:    { label: 'Proteção',    emoji: '🛡️', accent: 'text-red-400',    iconBg: 'bg-red-500/10 border-red-500/20'     },
-  produto:     { label: 'Produto',     emoji: '📊', accent: 'text-blue-400',   iconBg: 'bg-blue-500/10 border-blue-500/20'   },
-  meta:        { label: 'Meta',        emoji: '🧠', accent: 'text-violet-400', iconBg: 'bg-violet-500/10 border-violet-500/20' },
-  deploy:      { label: 'Deploy',      emoji: '🚀', accent: 'text-green-400',  iconBg: 'bg-green-500/10 border-green-500/20' },
-  compliance:  { label: 'Compliance',  emoji: '⚖️', accent: 'text-amber-400',  iconBg: 'bg-amber-500/10 border-amber-500/20' },
-  marketplace: { label: 'Marketplace', emoji: '🔶', accent: 'text-orange-400', iconBg: 'bg-orange-500/10 border-orange-500/20' },
+  protecao:    { label: 'Proteção',       emoji: '🛡️', accent: 'text-red-400',     iconBg: 'bg-red-500/10 border-red-500/20'      },
+  produto:     { label: 'Produto',        emoji: '📊', accent: 'text-blue-400',    iconBg: 'bg-blue-500/10 border-blue-500/20'    },
+  meta:        { label: 'Meta',           emoji: '🧠', accent: 'text-violet-400',  iconBg: 'bg-violet-500/10 border-violet-500/20'},
+  deploy:      { label: 'Deploy',         emoji: '🚀', accent: 'text-green-400',   iconBg: 'bg-green-500/10 border-green-500/20'  },
+  compliance:  { label: 'Compliance',     emoji: '⚖️', accent: 'text-amber-400',   iconBg: 'bg-amber-500/10 border-amber-500/20'  },
+  marketplace: { label: 'Marketplace',    emoji: '🔶', accent: 'text-orange-400',  iconBg: 'bg-orange-500/10 border-orange-500/20'},
+  ux_docs:     { label: 'UX/Docs',        emoji: '🎨', accent: 'text-cyan-400',    iconBg: 'bg-cyan-500/10 border-cyan-500/20'    },
+  blog_seo:    { label: 'Blog/SEO',       emoji: '📝', accent: 'text-lime-400',    iconBg: 'bg-lime-500/10 border-lime-500/20'    },
+  marketing:   { label: 'Marketing',      emoji: '📣', accent: 'text-pink-400',    iconBg: 'bg-pink-500/10 border-pink-500/20'    },
+  marca:       { label: 'Marca',          emoji: '✨', accent: 'text-fuchsia-400', iconBg: 'bg-fuchsia-500/10 border-fuchsia-500/20'},
 }
 const CAT_DEFAULT_CFG = { label: 'Outros', emoji: '🤖', accent: 'text-slate-400', iconBg: 'bg-slate-500/10 border-slate-500/20' }
-const CAT_ORDER = ['protecao', 'produto', 'marketplace', 'deploy', 'compliance', 'meta']
+const CAT_ORDER = [
+  'protecao', 'produto', 'marketplace',
+  'ux_docs', 'blog_seo', 'marketing', 'marca',
+  'deploy', 'compliance', 'meta',
+]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

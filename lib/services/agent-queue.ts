@@ -19,7 +19,7 @@ export interface AgentQueueEvent {
   nome:      string
   current:   number
   total:     number
-  progress:  string  // "3/23"
+  progress:  string  // "3/39"
   result?:   AgentExecutionResult
   error?:    string
   summary?:  QueueSummary
@@ -37,7 +37,7 @@ export interface QueueSummary {
 export type QueueEventCallback = (event: AgentQueueEvent) => void
 
 // ── Ordem de execução ─────────────────────────────────────────────────────────
-// Regra: dados primeiro (proteção + marketplace), análise depois (produto + deploy/compliance), meta por último
+// Regra: dados primeiro (proteção + marketplace), análise depois, meta por último
 
 const EXECUTION_ORDER = [
   // 1. Proteção — coletam dados base do sistema
@@ -48,9 +48,15 @@ const EXECUTION_ORDER = [
   'ml_novidades', 'ml_feature_coverage',
   // 3. Produto — analisam padrões de uso
   'observador', 'integrador', 'arquiteto', 'guardiao_custos',
-  // 4. Deploy + Compliance
+  // 4. UX/Docs — experiência e documentação
+  'onboarding', 'acessibilidade', 'changelog_agent', 'documentador', 'teste',
+  // 5. Blog/SEO — conteúdo e otimização
+  'seo_tecnico', 'palavras_chave', 'redator', 'editor', 'reciclador',
+  // 6. Marketing/Marca — crescimento e identidade
+  'social_media', 'copywriter', 'growth', 'layout', 'marca', 'concorrencia',
+  // 7. Deploy + Compliance
   'deploy', 'uptime', 'lgpd', 'multitenancy',
-  // 5. Meta — precisam dos relatórios anteriores; Coordenador SEMPRE por último
+  // 8. Meta — precisam dos relatórios anteriores; Coordenador SEMPRE por último
   'auditor', 'sugestor', 'coordenador',
 ]
 

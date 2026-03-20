@@ -1,7 +1,7 @@
 /**
  * lib/services/agent-engine.ts
  * Engine de execução dos Agentes de IA do Foguetim ERP.
- * FASE 3: 23 agentes — Proteção, Produto, Meta, Deploy, Compliance, Marketplace.
+ * FASES 1-6: 39 agentes — Proteção, Marketplace, Produto, UX/Docs, Blog/SEO, Marketing/Marca, Deploy, Compliance, Meta.
  *
  * REGRA CRÍTICA: Agentes NUNCA executam ações — apenas analisam e recomendam.
  * ML: APENAS chamadas GET à API do Mercado Livre. NUNCA POST/PUT/DELETE.
@@ -820,6 +820,323 @@ async function collectMlFeatureCoverageData(_db: DB): Promise<string> {
   }, null, 2)
 }
 
+// ── Fases 4-6: Collectors UX/Docs, Blog/SEO, Marketing/Marca ─────────────────
+
+async function collectOnboardingData(db: DB): Promise<string> {
+  const cutoff = since(7)
+  const [newUsers, connected, recentOrders] = await Promise.all([
+    safeQuery<{ count: number }>(db.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', cutoff)),
+    safeQuery<{ count: number }>(db.from('ml_credentials').select('*', { count: 'exact', head: true }).gte('created_at', cutoff)),
+    safeQuery<{ count: number }>(db.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', cutoff)),
+  ])
+  return JSON.stringify({
+    periodo: '7 dias',
+    novos_usuarios: Array.isArray(newUsers) ? newUsers.length : 0,
+    conectaram_mercadolivre: Array.isArray(connected) ? connected.length : 0,
+    tiveram_primeiros_pedidos: Array.isArray(recentOrders) ? recentOrders.length : 0,
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectAcessibilidadeData(_db: DB): Promise<string> {
+  return JSON.stringify({
+    instrucao: 'Audite padrões de acessibilidade WCAG 2.1 com base no design system do Foguetim',
+    design_system: {
+      cor_primaria: 'violet-600 (#7C3AED)',
+      background: 'slate-950 (#020617)',
+      texto_principal: 'slate-200',
+      texto_secundario: 'slate-400',
+      border: 'white/[0.06]',
+    },
+    paginas_publicas: ['/ajuda', '/sobre', '/planos', '/changelog', '/privacidade', '/termos', '/contato'],
+    paginas_dashboard: ['/dashboard', '/pedidos', '/produtos', '/precificacao', '/estoque', '/sac'],
+    componentes_criticos: ['Sidebar', 'Header', 'Modal', 'Table', 'Form inputs', 'Buttons'],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectChangelogAgentData(db: DB): Promise<string> {
+  const [entries, reports] = await Promise.all([
+    safeQuery<{ titulo: string; descricao: string; categoria: string; versao: string; created_at: string }>(
+      db.from('changelog_entries').select('titulo, descricao, categoria, versao, created_at')
+        .eq('is_published', false).order('created_at', { ascending: false }).limit(10)
+    ),
+    safeQuery<{ resumo: string; created_at: string }>(
+      db.from('ai_agent_reports').select('resumo, created_at')
+        .gte('created_at', since(1)).order('created_at', { ascending: false }).limit(5)
+    ),
+  ])
+  return JSON.stringify({
+    rascunhos_changelog_pendentes: entries,
+    relatorios_agentes_recentes: reports,
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectDocumentadorData(db: DB): Promise<string> {
+  const [articles, categories] = await Promise.all([
+    safeQuery<{ titulo: string; slug: string; is_published: boolean; help_categories: unknown }>(
+      db.from('help_articles').select('titulo, slug, is_published, help_categories!inner(nome, slug)')
+        .order('created_at', { ascending: false }).limit(50)
+    ),
+    safeQuery<{ nome: string; slug: string; descricao: string }>(
+      db.from('help_categories').select('nome, slug, descricao').order('nome')
+    ),
+  ])
+  return JSON.stringify({
+    total_artigos: Array.isArray(articles) ? articles.length : 0,
+    artigos_publicados: Array.isArray(articles) ? articles.filter((a: { is_published: boolean }) => a.is_published).length : 0,
+    categorias: categories,
+    funcionalidades_sem_documentacao_provavel: [
+      'Expedição em lote', 'Regras de precificação automática', 'Multi-conta ML',
+      'Relatórios personalizados', 'Webhooks de pedidos', 'API pública Foguetim',
+    ],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectTesteData(db: DB): Promise<string> {
+  const [recentRuns, failedRuns] = await Promise.all([
+    safeQuery<{ agent_id: string; status: string; started_at: string; finished_at: string; custo_usd: number }>(
+      db.from('ai_agent_runs').select('agent_id, status, started_at, finished_at, custo_usd')
+        .gte('started_at', since(7)).order('started_at', { ascending: false }).limit(20)
+    ),
+    safeQuery<{ agent_id: string; status: string; started_at: string }>(
+      db.from('ai_agent_runs').select('agent_id, status, started_at')
+        .eq('status', 'failed').gte('started_at', since(7))
+    ),
+  ])
+  return JSON.stringify({
+    execucoes_7d: Array.isArray(recentRuns) ? recentRuns.length : 0,
+    falhas_7d: Array.isArray(failedRuns) ? failedRuns.length : 0,
+    taxa_sucesso: Array.isArray(recentRuns) && recentRuns.length > 0
+      ? `${(((recentRuns.length - (Array.isArray(failedRuns) ? failedRuns.length : 0)) / recentRuns.length) * 100).toFixed(1)}%`
+      : 'N/A',
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectSeoTecnicoData(_db: DB): Promise<string> {
+  return JSON.stringify({
+    instrucao: 'Audite SEO técnico do site público foguetim.com.br',
+    paginas_publicas: {
+      home: '/',
+      planos: '/planos',
+      ajuda: '/ajuda',
+      changelog: '/changelog',
+      sobre: '/sobre',
+      contato: '/contato',
+      privacidade: '/privacidade',
+      termos: '/termos',
+    },
+    sitemap_url: 'https://foguetim.com.br/sitemap.xml',
+    robots_url: 'https://foguetim.com.br/robots.txt',
+    meta_verificar: ['title', 'description', 'og:title', 'og:description', 'og:image', 'canonical', 'schema.org'],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectPalavrasChaveData(_db: DB): Promise<string> {
+  return JSON.stringify({
+    instrucao: 'Use web search para pesquisar oportunidades de palavras-chave para o Foguetim ERP',
+    termos_sementes: [
+      'ERP marketplace Brasil', 'gestão Mercado Livre', 'sistema para vendedores online',
+      'software gestão pedidos marketplace', 'integração Mercado Livre ERP',
+      'controle estoque marketplace', 'precificação Mercado Livre automático',
+      'gestão anúncios Mercado Livre', 'ERP e-commerce pequena empresa',
+    ],
+    concorrentes: ['Bling ERP', 'Tiny ERP', 'Olist', 'Plugg.to', 'Eccosys'],
+    publico_alvo: 'Vendedores de marketplace brasileiro, foco Mercado Livre, pequeno e médio porte',
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectRedatorData(db: DB): Promise<string> {
+  const reports = await safeQuery<{ resumo: string; created_at: string; ai_agents: unknown }>(
+    db.from('ai_agent_reports')
+      .select('resumo, created_at, ai_agents!inner(slug, categoria)')
+      .in('ai_agents.slug' as never, ['palavras_chave', 'documentador', 'seo_tecnico'] as never)
+      .order('created_at', { ascending: false })
+      .limit(5)
+  )
+  return JSON.stringify({
+    instrucao: 'Crie 1-2 rascunhos de artigos educativos para o blog do Foguetim',
+    temas_sugeridos: [
+      'Como precificar produtos no Mercado Livre para ter lucro real',
+      'Gestão de estoque para quem vende em múltiplos marketplaces',
+      '5 métricas essenciais para vendedores de marketplace',
+      'Como responder perguntas do Mercado Livre mais rápido',
+      'Erros comuns de quem está começando no e-commerce',
+    ],
+    insights_recentes: reports,
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectEditorData(db: DB): Promise<string> {
+  const drafts = await safeQuery<{ id: string; title: string; slug: string; summary: string; status: string; created_at: string }>(
+    db.from('blog_posts').select('id, title, slug, summary, status, created_at')
+      .in('status', ['draft', 'review']).order('created_at', { ascending: false }).limit(10)
+  )
+  return JSON.stringify({
+    rascunhos_para_revisao: drafts,
+    criterios_aprovacao: {
+      tamanho_minimo_palavras: 600,
+      requer_cta: true,
+      requer_meta_description: true,
+      tom: 'educativo, prático, direto ao ponto, sem jargão excessivo',
+    },
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectRecicladorData(db: DB): Promise<string> {
+  const old = await safeQuery<{ id: string; title: string; slug: string; status: string; published_at: string; updated_at: string }>(
+    db.from('blog_posts').select('id, title, slug, status, published_at, updated_at')
+      .eq('status', 'published')
+      .lt('updated_at', since(180))
+      .order('updated_at', { ascending: true }).limit(10)
+  )
+  return JSON.stringify({
+    posts_desatualizados: old,
+    criterio: 'posts publicados há mais de 6 meses sem atualização',
+    oportunidades: ['Atualizar dados de API ML', 'Reformatar como série', 'Transformar em infográfico', 'Republica com nova data'],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectSocialMediaData(db: DB): Promise<string> {
+  const [changelog, reports] = await Promise.all([
+    safeQuery<{ titulo: string; descricao: string; categoria: string; created_at: string }>(
+      db.from('changelog_entries').select('titulo, descricao, categoria, created_at')
+        .eq('is_published', true).order('created_at', { ascending: false }).limit(5)
+    ),
+    safeQuery<{ resumo: string; severidade_max: string; created_at: string }>(
+      db.from('ai_agent_reports').select('resumo, severidade_max, created_at')
+        .gte('created_at', since(7)).eq('severidade_max', 'baixa').limit(3)
+    ),
+  ])
+  return JSON.stringify({
+    novidades_produto: changelog,
+    insights_positivos: reports,
+    plataformas_alvo: ['Instagram', 'LinkedIn'],
+    persona: 'Vendedores de marketplace, pequeno e médio porte, interesse em automação e eficiência',
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectCopywriterData(db: DB): Promise<string> {
+  const [plans, recentSignups] = await Promise.all([
+    safeQuery<{ name: string; price_monthly: number; features: unknown }>(
+      db.from('plans').select('name, price_monthly, features').order('price_monthly')
+    ),
+    safeQuery<{ count: number }>(
+      db.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', since(30))
+    ),
+  ])
+  return JSON.stringify({
+    planos: plans,
+    novos_usuarios_30d: Array.isArray(recentSignups) ? recentSignups.length : 0,
+    proposta_valor: 'ERP para vendedores de marketplace brasileiro — foco Mercado Livre',
+    diferenciais: ['Integração oficial ML', 'Multi-armazém', 'Precificação com tarifas reais', 'Gestão de SAC'],
+    objecoes_comuns: ['Preço', 'Complexidade', 'Migração', 'Suporte'],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectGrowthData(db: DB): Promise<string> {
+  const [totalUsers, freePlan, paidPlan, churnCandidates] = await Promise.all([
+    safeQuery<{ count: number }>(db.from('profiles').select('*', { count: 'exact', head: true })),
+    safeQuery<{ count: number }>(db.from('profiles').select('*', { count: 'exact', head: true }).eq('plano', 'explorador')),
+    safeQuery<{ count: number }>(db.from('profiles').select('*', { count: 'exact', head: true }).neq('plano', 'explorador')),
+    safeQuery<{ count: number }>(
+      db.from('profiles').select('*', { count: 'exact', head: true }).lt('updated_at', since(30)).eq('plano', 'explorador')
+    ),
+  ])
+  return JSON.stringify({
+    total_usuarios: Array.isArray(totalUsers) ? totalUsers.length : 0,
+    plano_gratuito: Array.isArray(freePlan) ? freePlan.length : 0,
+    plano_pago: Array.isArray(paidPlan) ? paidPlan.length : 0,
+    inativos_30d_free: Array.isArray(churnCandidates) ? churnCandidates.length : 0,
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectLayoutData(_db: DB): Promise<string> {
+  return JSON.stringify({
+    instrucao: 'Audite consistência visual do design system do Foguetim ERP',
+    design_tokens: {
+      cor_primaria: 'violet-600 (#7C3AED)',
+      cor_primaria_hover: 'violet-700',
+      background_app: 'slate-950 / #020617',
+      background_card: 'rgba(255,255,255,0.02)',
+      border: 'white/[0.06]',
+      texto_primario: 'slate-200',
+      texto_secundario: 'slate-400',
+      fonte: 'Inter / system-ui',
+    },
+    paginas_auditar: [
+      '/dashboard', '/pedidos', '/produtos', '/precificacao',
+      '/estoque', '/sac', '/configuracoes',
+      '/ajuda', '/sobre', '/planos',
+    ],
+    padroes_verificar: [
+      'Botões primários: bg-violet-600',
+      'Cards: glass-card class',
+      'Inputs: border-white/[0.06] bg-transparent',
+      'Estados: loading skeleton, empty state, error state',
+      'Responsividade mobile (sm: breakpoints)',
+    ],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectMarcaData(_db: DB): Promise<string> {
+  return JSON.stringify({
+    instrucao: 'Verifique consistência da identidade de marca em todos os pontos de contato',
+    identidade: {
+      nome_correto: 'Foguetim ERP',
+      nome_incorreto: ['foguetim', 'FOGUETIM', 'Foguetim erp'],
+      cor_primaria: 'violet-600',
+      email_oficial: 'contato@foguetim.com.br',
+      cnpj: '33.685.241/0001-70',
+      localizacao: 'Fortaleza, CE',
+    },
+    tom_de_voz: 'Direto, prático, amigável, sem jargão técnico excessivo',
+    pontos_verificar: [
+      'Título das páginas (meta title)',
+      'Rodapés (copyright, CNPJ)',
+      'Emails transacionais',
+      'Mensagens de erro',
+      'Textos de botões',
+      'Páginas de onboarding',
+    ],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
+async function collectConcorrenciaData(_db: DB): Promise<string> {
+  return JSON.stringify({
+    instrucao: 'Use web search para monitorar concorrentes e o mercado de ERP para marketplace',
+    concorrentes_principais: [
+      { nome: 'Bling ERP', foco: 'ERP geral, múltiplas integrações' },
+      { nome: 'Tiny ERP', foco: 'E-commerce, NF-e, ML' },
+      { nome: 'Olist', foco: 'Concentrador de marketplace' },
+      { nome: 'Plugg.to', foco: 'Integração marketplace multi-canal' },
+      { nome: 'Nuvemshop', foco: 'Loja própria + marketplace' },
+      { nome: 'Eccosys', foco: 'ERP marketplace enterprise' },
+    ],
+    termos_monitorar: [
+      'ERP marketplace Brasil 2025',
+      'Bling ERP novidades',
+      'Tiny ERP atualização',
+      'Mercado Livre API mudanças',
+      'e-commerce Brasil tendências',
+    ],
+    data_analise: new Date().toISOString(),
+  }, null, 2)
+}
+
 // ── Seletor de Collector ──────────────────────────────────────────────────────
 
 async function collectData(slug: string, db: DB): Promise<string> {
@@ -853,6 +1170,25 @@ async function collectData(slug: string, db: DB): Promise<string> {
     case 'ml_webhook_inspector': return collectMlWebhookInspectorData(db)
     case 'ml_error_patterns':    return collectMlErrorPatternsData(db)
     case 'ml_feature_coverage':  return collectMlFeatureCoverageData(db)
+    // UX/Docs
+    case 'onboarding':           return collectOnboardingData(db)
+    case 'acessibilidade':       return collectAcessibilidadeData(db)
+    case 'changelog_agent':      return collectChangelogAgentData(db)
+    case 'documentador':         return collectDocumentadorData(db)
+    case 'teste':                return collectTesteData(db)
+    // Blog/SEO
+    case 'seo_tecnico':          return collectSeoTecnicoData(db)
+    case 'palavras_chave':       return collectPalavrasChaveData(db)
+    case 'redator':              return collectRedatorData(db)
+    case 'editor':               return collectEditorData(db)
+    case 'reciclador':           return collectRecicladorData(db)
+    // Marketing/Marca
+    case 'social_media':         return collectSocialMediaData(db)
+    case 'copywriter':           return collectCopywriterData(db)
+    case 'growth':               return collectGrowthData(db)
+    case 'layout':               return collectLayoutData(db)
+    case 'marca':                return collectMarcaData(db)
+    case 'concorrencia':         return collectConcorrenciaData(db)
     default:
       return JSON.stringify({ mensagem: `Agente ${slug} sem collector específico. Análise geral do sistema.` })
   }
@@ -883,7 +1219,10 @@ function parseJSON(text: string): Record<string, unknown> {
 const META_AGENTS = new Set(['coordenador'])
 
 // Agentes com web search habilitado
-const WEB_SEARCH_AGENTS = new Set(['ml_novidades', 'ml_feature_coverage'])
+const WEB_SEARCH_AGENTS = new Set([
+  'ml_novidades', 'ml_feature_coverage',
+  'palavras_chave', 'concorrencia',
+])
 
 // ── Engine principal ──────────────────────────────────────────────────────────
 
