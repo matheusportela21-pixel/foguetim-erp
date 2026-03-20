@@ -69,42 +69,47 @@
 
 ### A.3 — Concorrentes: Bling ERP
 
-**Fontes:** bling.com.br, documentação pública, reviews
+**Fontes:** bling.com.br, ajuda.bling.com.br (verificado 2026-03-20)
 
 **Funcionalidades ML:**
-- ✅ Sincronização de pedidos via webhooks ML
-- ✅ Emissão de NF-e / NFS-e integrada ao pedido ML
+- ✅ Sincronização de pedidos automática (atualização conforme chegam)
+- ✅ Emissão de NF-e / NFS-e automática (trigger configurável quando pedido disponível para envio)
 - ✅ Gestão de estoque multi-depósito com baixa automática
-- ✅ Catálogo de produtos integrado ao ML (sincronização bidirecional)
+- ✅ Importação/exportação de produtos e variações (bidirecional)
 - ✅ Atualização automática de preço e estoque no ML
+- ✅ **Gestão de perguntas** (responder perguntas pré-venda diretamente no Bling)
+- ✅ Sistema de bloqueio de compradores problemáticos com alertas
+- ✅ Etiqueta de envio + DANFE juntos; integração Mercado Envios
+- ✅ Suporte a **até 10 contas ML** via feature "Meu Negócio"
 - ✅ Integração com +100 plataformas (ML, SP, AMZ, B2W, Via, etc.)
 - ✅ Financeiro completo (contas a pagar/receber, fluxo de caixa, DRE)
-- ✅ Relatórios de vendas por marketplace
-- ✅ Suporte a múltiplas contas ML por plano
 - ✅ Conciliação bancária
 - ❌ Sem gestão de Product Ads ML
-- ❌ Sem monitoramento de reputação ML em tempo real
-- ❌ Sem gestão de reclamações dedicada
-- ❌ Sem intelligence de concorrentes
+- ❌ Sem monitoramento de reputação/saúde da conta em tempo real
+- ❌ Sem gestão de reclamações pós-venda dedicada
+- ❌ Sem inteligência de concorrentes
 
 ### A.4 — Concorrentes: Tiny ERP (Olist Store)
 
-**Fontes:** tiny.com.br, olist.com, reviews
+**Fontes:** tiny.com.br, ajuda.olist.com, tiny.com.br/api-docs (verificado 2026-03-20)
+**Nota:** Tiny tem parceria Platinum oficial com o Mercado Livre.
 
 **Funcionalidades ML:**
-- ✅ Sincronização de pedidos via webhooks
-- ✅ Emissão de NF-e integrada
+- ✅ Sincronização de pedidos via **webhooks** (planos Evoluir/Potencializar; até 10 retentativas com delay progressivo de 5 min)
+- ✅ Emissão de NF-e automática; DANFE PDF; XML por e-mail ao cliente
 - ✅ Gestão de estoque com baixa automática
-- ✅ Criação de anúncios no ML pelo ERP
-- ✅ Atualização de preço/estoque automática
-- ✅ Financeiro básico (faturamento, DRE)
+- ✅ Centralização de pedidos de múltiplas contas ML
+- ✅ Atualização de preço/estoque com cálculo de margem + comissão + frete
+- ✅ Sugestões automáticas de correção de listagem
+- ✅ Múltiplas contas ML centralizadas em uma interface
+- ✅ Detecção de fraude (pedidos marcados + alertas)
 - ✅ Integração com múltiplos marketplaces
-- ✅ Múltiplas contas ML suportadas
-- ❌ Sem gestão de reclamações
+- ⚠️ Gestão de Q&A básica (visibilidade limitada nos resultados de busca)
 - ❌ Sem Product Ads management
-- ❌ Sem monitoramento de reputação/saúde
+- ❌ Sem monitoramento de reputação/saúde dedicado
 - ❌ Sem inteligência de concorrentes
 - ❌ Sem conciliação billing ML detalhada
+- ⚠️ Problemas reportados: erros de sincronia de regras fiscais, incompatibilidade de atributos, duplicação de anúncios na edição
 
 ---
 
@@ -513,9 +518,9 @@ Com isso desativado, qualquer usuário pode conectar ilimitadas contas ML indepe
 | **Gestão de Estoque** | ✅ Via PATCH | ✅ Automático | ✅ Multi-depósito | ✅ Automático |
 | **Criação de Anúncios** | ✅ | ✅ | ✅ | ✅ |
 | **Edição em Bulk** | ✅ Pause/reactivate/close | ✅ + preço/estoque bulk | ✅ | ✅ |
-| **Gestão de Mensagens** | ✅ | ✅ + auto-resposta IA | ❌ | ❌ |
-| **Gestão de Perguntas** | ✅ | ✅ + auto-resposta | ❌ | ❌ |
-| **Gestão de Reclamações** | ✅ | ✅ | ❌ | ❌ |
+| **Gestão de Mensagens** | ✅ | ✅ + auto-resposta IA | ✅ Básico | ⚠️ Limitado |
+| **Gestão de Perguntas** | ✅ | ✅ + auto-resposta IA | ✅ + bloqueio compradores | ⚠️ Básico |
+| **Gestão de Reclamações** | ✅ | ✅ | ⚠️ Via Q&A | ⚠️ Detecção fraude |
 | **Saúde da Conta ML** | ✅ Score próprio | ✅ | ❌ | ❌ |
 | **Reputação / Nível ML** | ✅ | ✅ | ❌ | ❌ |
 | **Performance de Vendas** | ✅ | ✅ | ⚠️ Básico | ⚠️ Básico |
@@ -523,12 +528,12 @@ Com isso desativado, qualquer usuário pode conectar ilimitadas contas ML indepe
 | **Conciliação Billing ML** | ✅ | ✅ | ⚠️ Parcial | ❌ |
 | **Promoções ML** | ✅ | ✅ | ❌ | ❌ |
 | **Product Ads Management** | ✅ | ✅ Completo | ❌ | ❌ |
-| **Inteligência de Concorrentes** | ⚠️ Por nickname | ✅ Tempo real | ❌ | ❌ |
+| **Inteligência de Concorrentes** | ⚠️ Por nickname | ✅ Até 5 concorrentes + ajuste auto | ❌ | ❌ |
 | **Vendas por Anúncio** | ✅ | ✅ | ⚠️ Básico | ⚠️ Básico |
 | **Emissão de NF-e** | 🔴 AUSENTE | ✅ | ✅ | ✅ |
 | **Webhooks ML** | 🔴 AUSENTE | ✅ | ✅ | ✅ |
-| **Múltiplas contas ML** | ✅ | ✅ | ✅ | ✅ |
-| **Auto-resposta IA (Q&A)** | 🔴 AUSENTE | ✅ | ❌ | ❌ |
+| **Múltiplas contas ML** | ✅ | ✅ | ✅ Até 10 (Meu Negócio) | ✅ |
+| **Auto-resposta IA (Q&A)** | 🔴 AUSENTE | ✅ (ChatGPT integrado) | ❌ | ❌ |
 | **Catálogo Oficial ML** | 🔴 AUSENTE | ✅ | ⚠️ Parcial | ⚠️ Parcial |
 | **Exportação CSV/XLSX** | 🔴 AUSENTE | ✅ | ✅ | ✅ |
 | **Multi-marketplace** | ❌ ML only | ✅ ML+SP+AMZ | ✅ 100+ | ✅ 20+ |
