@@ -1,0 +1,60 @@
+[    2512ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/armazem/categorias:0
+[    2525ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/armazem/produtos?page=1&limit=20:0
+[    2537ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[    2543ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/armazem/armazens:0
+[    2647ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/armazem/produtos?page=1&limit=20:0
+[    2657ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[    2661ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/armazem/armazens:0
+[    2663ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:3001/icon?590ee0fb6d894540:0
+[    2666ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/armazem/categorias:0
+[   61873ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  121862ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  181845ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  241875ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  301841ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  361843ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  421864ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3001/api/notifications:0
+[  449689ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/_next/static/css/app/layout.css?v=1773966087775:0
+[  450126ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/css/app/layout.css?v=1773966092105:0
+[  450135ms] Event
+[  453136ms] [WARNING] The resource http://localhost:3001/_next/static/css/app/layout.css?v=1773966087775 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3001/dashboard/armazem/produtos:0
+[  481862ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/api/notifications:0
+[  510267ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard/armazem/produtos?_rsc=1ep4s:0
+[  510317ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/dashboard/armazem/produtos:0
+[  510680ms] Error: Cannot find module './1682.js'
+Require stack:
+- C:\Users\mathe\foguetim\.next\server\webpack-runtime.js
+- C:\Users\mathe\foguetim\.next\server\app\dashboard\armazem\produtos\page.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\require.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\load-components.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\build\utils.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\dev\hot-middleware.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\dev\hot-reloader-webpack.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\lib\router-server.js
+- C:\Users\mathe\foguetim\node_modules\next\dist\server\lib\start-server.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1456:15)
+    at <unknown> (file://C:\Users\mathe\foguetim\node_modules\next\dist\server\require-hook.js:55:36)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1066:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1071:22)
+    at Module._load (node:internal/modules/cjs/loader:1242:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1556:12)
+    at mod.require (file://C:\Users\mathe\foguetim\node_modules\next\dist\server\require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at __webpack_require__.f.require (file://C:\Users\mathe\foguetim\.next\server\webpack-runtime.js:203:28)
+    at <unknown> (file://C:\Users\mathe\foguetim\.next\server\webpack-runtime.js:116:40)
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (file://C:\Users\mathe\foguetim\.next\server\webpack-runtime.js:115:67)
+    at Array.map (<anonymous>)
+    at __webpack_require__.X (file://C:\Users\mathe\foguetim\.next\server\webpack-runtime.js:167:22)
+[  510697ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/favicon.ico:0
+[  533009ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/webpack/41259a0a4ae977f4.webpack.hot-update.json:0
+[  533010ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:349
+[  533168ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/css/app/layout.css?v=1773966175284:0
+[  533225ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/app/dashboard/armazem/produtos/page.js:0
+[  533225ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/main-app.js?v=1773966175284:0
+[  533226ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/app/dashboard/layout.js:0
+[  533227ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/app-pages-internals.js:0
+[  533231ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/app/error.js:0
+[  533248ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/app/not-found.js:0

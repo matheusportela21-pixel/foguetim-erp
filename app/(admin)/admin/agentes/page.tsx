@@ -107,9 +107,18 @@ const STATUS_REPORT_CFG: Record<string, { label: string; color: string }> = {
 
 const CAT_ICON: Record<string, React.ElementType> = {
   protecao: Shield,
+  produto:  BarChart3,
   meta:     Users,
   default:  Bot,
 }
+
+const CAT_CFG: Record<string, { label: string; emoji: string; accent: string; iconBg: string }> = {
+  protecao: { label: 'Proteção', emoji: '🛡️', accent: 'text-red-400',    iconBg: 'bg-red-500/10 border-red-500/20'     },
+  produto:  { label: 'Produto',  emoji: '📊', accent: 'text-blue-400',   iconBg: 'bg-blue-500/10 border-blue-500/20'   },
+  meta:     { label: 'Meta',     emoji: '🧠', accent: 'text-violet-400', iconBg: 'bg-violet-500/10 border-violet-500/20' },
+}
+const CAT_DEFAULT_CFG = { label: 'Outros', emoji: '🤖', accent: 'text-slate-400', iconBg: 'bg-slate-500/10 border-slate-500/20' }
+const CAT_ORDER = ['protecao', 'produto', 'meta']
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
@@ -163,6 +172,7 @@ function AgentCard({
   executing: boolean
 }) {
   const Icon       = CAT_ICON[agent.categoria] ?? CAT_ICON.default
+  const catCfg     = CAT_CFG[agent.categoria] ?? CAT_DEFAULT_CFG
   const lastRun    = agent.ultimo_run
   const lastReport = agent.ultimo_relatorio
   const sevCfg     = lastReport ? (SEV_CFG[lastReport.severidade_max] ?? SEV_CFG.media) : null
@@ -172,8 +182,8 @@ function AgentCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-            <Icon className="w-5 h-5 text-violet-400" />
+          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${catCfg.iconBg}`}>
+            <Icon className={`w-5 h-5 ${catCfg.accent}`} />
           </div>
           <div>
             <p className="font-semibold text-white text-sm">{agent.nome}</p>
@@ -219,7 +229,7 @@ function AgentCard({
       <button
         onClick={() => onExecutar(agent.slug)}
         disabled={executing || !agent.ativo}
-        className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/20 text-violet-300 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${catCfg.iconBg} hover:opacity-80 ${catCfg.accent}`}
       >
         {executing
           ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Executando...</>
@@ -640,23 +650,38 @@ export default function AdminAgentesPage() {
 
         {/* ── Tab: Agentes ────────────────────────────────────────────────── */}
         {tab === 'agentes' && (
-          <div>
+          <div className="space-y-8">
             {loadingAgents ? (
               <div className="flex items-center justify-center py-16">
                 <RefreshCw className="w-6 h-6 text-violet-400 animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {agents.map(agent => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    onExecutar={slug => void handleExecutar(slug)}
-                    onToggle={(slug, ativo) => void handleToggle(slug, ativo)}
-                    executing={executing === agent.slug}
-                  />
-                ))}
-              </div>
+              CAT_ORDER.map(cat => {
+                const catAgents = agents.filter(a => a.categoria === cat)
+                if (catAgents.length === 0) return null
+                const cfg = CAT_CFG[cat] ?? CAT_DEFAULT_CFG
+                return (
+                  <div key={cat}>
+                    {/* Category header */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-base leading-none">{cfg.emoji}</span>
+                      <h2 className={`text-xs font-bold uppercase tracking-widest ${cfg.accent}`}>{cfg.label}</h2>
+                      <span className="text-[11px] text-slate-600 ml-1">{catAgents.length} agente{catAgents.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {catAgents.map(agent => (
+                        <AgentCard
+                          key={agent.id}
+                          agent={agent}
+                          onExecutar={slug => void handleExecutar(slug)}
+                          onToggle={(slug, ativo) => void handleToggle(slug, ativo)}
+                          executing={executing === agent.slug}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
             )}
           </div>
         )}

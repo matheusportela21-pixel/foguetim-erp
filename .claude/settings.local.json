@@ -104,7 +104,31 @@
       "Bash(grep -n \"Section 6\\\\|Mapeamentos\\\\|mapping\" /c/Users/mathe/foguetim/app/dashboard/armazem/produtos/[id]/page.tsx)",
       "Bash(find /c/Users/mathe/foguetim -name auth*.ts -o -name server-auth.ts)",
       "Bash(grep -r ml_listings /c/Users/mathe/foguetim --include=*.ts --include=*.tsx --include=*.sql)",
-      "WebFetch(domain:www.upseller.com)"
+      "WebFetch(domain:www.upseller.com)",
+      "Bash(xargs ls:*)",
+      "Bash(ls C:/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/)",
+      "Bash(find \"app/\\(admin\\)\" -name \"*.tsx\")",
+      "Bash(xargs wc:*)",
+      "Bash(head -5 \"app/\\(admin\\)/admin/page.tsx\" \"app/\\(admin\\)/admin/logs/page.tsx\" \"app/\\(admin\\)/admin/usuarios/page.tsx\")",
+      "Bash(find /c/Users/mathe/foguetim -type f \\\\\\(-name *ticket* -o -name *feedback* -o -name *support* \\\\\\))",
+      "Bash(find /c/Users/mathe/foguetim -type f \\\\\\(-name *.sql -o -name *schema* -o -name *db* \\\\\\))",
+      "Bash(grep -r \"support_tickets\\\\|ticket_messages\" /c/Users/mathe/foguetim --include=*.ts --include=*.tsx --exclude-dir=node_modules --exclude-dir=.next)",
+      "WebFetch(domain:www.mercadolivre.com.br)",
+      "Bash(find /c/Users/mathe/foguetim/supabase/migrations -type f -name *.sql)",
+      "Bash(find /c/Users/mathe/foguetim -path */node_modules -prune -o -name *.sql -type f -print)",
+      "Bash(grep -E \"\\\\.ts$|\\\\.tsx$\")",
+      "Bash(head -5 grep -rn \"ml_user_id\\\\|seller_reputation\\\\|mlUser\\\\|ml_seller\" C:/Users/mathe/foguetim/lib/)",
+      "WebFetch(domain:ecommercenapratica.com)",
+      "WebFetch(domain:www.koncili.com)",
+      "WebFetch(domain:vendedores.mercadolivre.com.br)",
+      "Bash(npx next:*)",
+      "Read(//c/Users/mathe/**)",
+      "Read(//c//**)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(tasklist /FI \"PID eq 25544\")",
+      "Bash(find \"C:/Users/mathe/foguetim/app/\\(admin\\)\" -name \"*.tsx\")",
+      "Bash(grep -E 300[0-9].*LISTEN)"
     ]
   }
 }
