@@ -8,7 +8,7 @@ import {
   Truck, FileCheck, Plus, Tag, Calculator, Zap, BarChart3,
   Eye, Clock, Megaphone, Bell, Sparkles, Loader2, Link2, ShieldCheck, Menu,
   Shield, ChevronRight, MessageSquare, Archive, Activity, Calendar,
-  Wrench, X, ExternalLink, ChevronDown,
+  Wrench, X, ExternalLink, ChevronDown, BookOpen,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -925,6 +925,25 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Blog card ─────────────────────────────────────────────────── */}
+        <Link
+          href="/blog"
+          className="dash-card rounded-2xl p-4 flex items-center gap-4 hover:ring-1 hover:ring-violet-500/30 transition-all group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5 text-violet-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Blog Foguetim</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Dicas de e-commerce, finanças, fiscal, marketing e gestão para quem vende online.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 text-xs font-semibold text-violet-400 group-hover:text-violet-300 transition-colors shrink-0">
+            Ver artigos <ArrowUpRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
 
       </div>
     </div>
