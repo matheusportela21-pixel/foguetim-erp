@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/server-auth'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
+import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser()
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const statusParam = status === 'all' ? '' : `&status=${status}`
-    const url = `${ML_API_BASE}/questions/search?seller_id=${conn.ml_user_id}&sort_fields=date_created&sort_types=DESC&limit=${limit}&offset=${offset}${statusParam}`
+    const url = `${ML_API_BASE}/questions/search?seller_id=${conn.ml_user_id}&role=seller&sort_fields=date_created&sort_types=DESC&limit=${limit}&offset=${offset}${statusParam}`
     const res = await fetch(url, { headers: auth })
     if (!res.ok) {
       const txt = await res.text()
@@ -99,6 +100,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Rate limit: 60 respostas por hora por usuário
+  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/questions'), 60, 3_600_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas requisições. Tente novamente mais tarde.' },
+      { status: 429, headers: { ...rateLimitHeaders(rl, 60), 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
 
   const { question_id, text } = await req.json()
   if (!question_id || !text) {

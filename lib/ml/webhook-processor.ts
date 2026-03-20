@@ -3,6 +3,7 @@
  * Chamado em background após o endpoint retornar 200 para o ML.
  */
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getValidToken } from '@/lib/mercadolivre'
 import { sendEmail } from '@/lib/email/email.service'
 import { newOrderTemplate }    from '@/lib/email/templates/new-order'
 import { newClaimTemplate }    from '@/lib/email/templates/new-claim'
@@ -45,31 +46,18 @@ async function sendEmailIfEnabled(
 export async function processWebhookAsync(payload: MLWebhookPayload): Promise<void> {
   const db = supabaseAdmin()
 
-  // Resolver ml_user_id → foguetim user_id via marketplace_connections
+  // Resolver ml_user_id (coluna direta) → foguetim user_id via marketplace_connections
   const { data: connection } = await db
     .from('marketplace_connections')
     .select('user_id')
     .eq('marketplace', 'mercadolivre')
     .eq('connected', true)
-    .filter('data->>ml_user_id', 'eq', String(payload.user_id))
+    .eq('ml_user_id', payload.user_id)
     .maybeSingle()
 
   if (!connection) {
-    // Tentar pelo campo ml_seller_id como fallback
-    const { data: fallback } = await db
-      .from('marketplace_connections')
-      .select('user_id')
-      .eq('marketplace', 'mercadolivre')
-      .eq('connected', true)
-      .filter('data->>ml_seller_id', 'eq', String(payload.user_id))
-      .maybeSingle()
-
-    if (!fallback) {
-      console.warn('[Webhook] Usuário ML não encontrado:', payload.user_id)
-      return
-    }
-
-    return dispatchTopic(payload, fallback.user_id)
+    console.warn('[Webhook] Usuário ML não encontrado:', payload.user_id)
+    return
   }
 
   return dispatchTopic(payload, connection.user_id)
@@ -132,14 +120,7 @@ async function handleOrderWebhook(payload: MLWebhookPayload, userId: string): Pr
 
   // Tentar buscar dados do pedido para o email
   try {
-    const { data: conn } = await db
-      .from('marketplace_connections')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('marketplace', 'mercadolivre')
-      .maybeSingle()
-
-    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    const token = await getValidToken(userId)
     if (token) {
       const r = await fetch(
         `https://api.mercadolibre.com/orders/${orderId}`,
@@ -191,14 +172,7 @@ async function handleQuestionWebhook(payload: MLWebhookPayload, userId: string):
 
   // Tentar buscar dados da pergunta para o email
   try {
-    const { data: conn } = await supabaseAdmin()
-      .from('marketplace_connections')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('marketplace', 'mercadolivre')
-      .maybeSingle()
-
-    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    const token = await getValidToken(userId)
     if (token && questionId) {
       const r = await fetch(
         `https://api.mercadolibre.com/questions/${questionId}`,
@@ -244,14 +218,7 @@ async function handleClaimWebhook(payload: MLWebhookPayload, userId: string): Pr
 
   // Tentar buscar dados da reclamação para o email
   try {
-    const { data: conn } = await db
-      .from('marketplace_connections')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('marketplace', 'mercadolivre')
-      .maybeSingle()
-
-    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    const token = await getValidToken(userId)
     if (token && claimId) {
       const r = await fetch(
         `https://api.mercadolibre.com/claims/${claimId}`,
@@ -304,14 +271,7 @@ async function handleShipmentWebhook(payload: MLWebhookPayload, userId: string):
   let notifType: 'info' | 'warning' | 'success' = 'info'
 
   try {
-    const { data: conn } = await db
-      .from('marketplace_connections')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('marketplace', 'mercadolivre')
-      .maybeSingle()
-
-    const token = (conn?.data as Record<string, unknown>)?.access_token as string | undefined
+    const token = await getValidToken(userId)
     if (token) {
       const r = await fetch(
         `https://api.mercadolibre.com/shipments/${shipmentId}`,

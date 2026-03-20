@@ -10,6 +10,7 @@ import { NextResponse }   from 'next/server'
 import { getAuthUser }    from '@/lib/server-auth'
 import { mlFetch }        from '@/lib/mercadolivre'
 import { supabaseAdmin }  from '@/lib/supabase-admin'
+import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
 
 type BulkAction = 'pause' | 'reactivate' | 'close'
 
@@ -30,6 +31,15 @@ function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
 export async function POST(req: Request) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Rate limit: 10 ações em massa por hora por usuário
+  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/items/bulk-action'), 10, 3_600_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas requisições. Tente novamente mais tarde.' },
+      { status: 429, headers: { ...rateLimitHeaders(rl, 10), 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
 
   let action: BulkAction
   let item_ids: string[]

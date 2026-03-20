@@ -33,8 +33,13 @@ export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
   const code  = searchParams.get('code')
   const error = searchParams.get('error')
+  const state = searchParams.get('state')
 
-  const redirect = (path: string) => NextResponse.redirect(`${origin}${path}`)
+  const redirect = (path: string) => {
+    const res = NextResponse.redirect(`${origin}${path}`)
+    res.cookies.delete('ml_oauth_state')
+    return res
+  }
 
   // ML cancelled or denied
   if (error) {
@@ -45,6 +50,13 @@ export async function GET(req: NextRequest) {
   if (!code) {
     console.error('[ML callback] No code in query params')
     return redirect('/dashboard/integracoes?ml_error=no_code')
+  }
+
+  // Validação de state CSRF — compara com nonce armazenado no cookie httpOnly
+  const expectedState = req.cookies.get('ml_oauth_state')?.value
+  if (!expectedState || !state || state !== expectedState) {
+    console.error('[ML callback] CSRF state mismatch — possível ataque CSRF')
+    return redirect('/dashboard/integracoes?ml_error=csrf_invalid')
   }
 
   // Authenticate user from session cookies

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse }  from 'next/server'
 import { getAuthUser }                from '@/lib/server-auth'
 import { getMLConnection, mlFetch }   from '@/lib/mercadolivre'
 import { supabaseAdmin }              from '@/lib/supabase-admin'
+import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
 
 interface CreateBody {
   name:        string
@@ -25,6 +26,15 @@ interface MLCreateResponse {
 export async function POST(req: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+  // Rate limit: 10 campanhas criadas por hora por usuário
+  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/promocoes/criar'), 10, 3_600_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas requisições. Tente novamente mais tarde.' },
+      { status: 429, headers: { ...rateLimitHeaders(rl, 10), 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
 
   const conn = await getMLConnection(user.id)
   if (!conn?.connected) {

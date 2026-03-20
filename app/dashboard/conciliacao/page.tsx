@@ -11,6 +11,7 @@ import {
   CheckCircle, AlertTriangle, RefreshCw, Link2, Loader2,
 } from 'lucide-react'
 import type { ConciliacaoResult, ConciliacaoOrder } from '@/app/api/mercadolivre/conciliacao/route'
+import ExportCSVButton from '@/components/ExportCSVButton'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface BillingPeriod {
@@ -198,9 +199,30 @@ export default function ConciliacaoPage() {
               </button>
 
               {data && (
-                <span className="text-xs text-slate-600 ml-auto">
-                  {data.period_label}
-                </span>
+                <>
+                  <ExportCSVButton
+                    data={data.orders.map((o: ConciliacaoOrder) => ({
+                      id:                 o.id,
+                      comprador:          o.buyer_nickname,
+                      total:              o.total_amount,
+                      comissao_estimada:  o.comissao_estimada,
+                      liquido_estimado:   o.liquido_estimado,
+                      status:             o.status,
+                    }))}
+                    filename={`conciliacao-${data.period_key}`}
+                    columns={[
+                      { key: 'id',                label: 'Nº Pedido'          },
+                      { key: 'comprador',          label: 'Comprador'          },
+                      { key: 'total',              label: 'Valor Total'        },
+                      { key: 'comissao_estimada',  label: 'Comissão Est.'      },
+                      { key: 'liquido_estimado',   label: 'Líquido Est.'       },
+                      { key: 'status',             label: 'Status'             },
+                    ]}
+                  />
+                  <span className="text-xs text-slate-600 ml-auto">
+                    {data.period_label}
+                  </span>
+                </>
               )}
             </div>
 

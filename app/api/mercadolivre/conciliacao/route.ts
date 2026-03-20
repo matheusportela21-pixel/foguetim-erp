@@ -46,7 +46,13 @@ export interface ConciliacaoResult {
   bonuses:              ConciliacaoCharge[]
 
   // Conciliação
+  // divergencia: diferença entre a taxa de comissão efetiva e o intervalo esperado (5–22%).
+  // Valor positivo = excesso cobrado acima do limite; negativo = abaixo do mínimo esperado.
+  // Zero = dentro do intervalo normal. null = sem dados de billing para comparar.
   divergencia:          number
+  divergencia_pct:      number   // taxa efetiva − 13.5% (ponto médio referência ML)
+  deducao_liquida:      number   // total_taxas_ml − total_bonus (impacto real no caixa)
+  billing_disponivel:   boolean  // true = billing carregado com sucesso para o período
   status:               'ok' | 'divergente' | 'pendente'
 }
 
@@ -196,8 +202,27 @@ export async function GET(req: NextRequest) {
       : { total: 0, items: [] }
 
     const receita_liquida      = receita_bruta - total_taxas_ml + total_bonus
+    const deducao_liquida      = total_taxas_ml - total_bonus  // impacto real no caixa do vendedor
     const comissao_percentual  = receita_bruta > 0 ? (total_taxas_ml / receita_bruta) * 100 : 0
-    const divergencia          = receita_bruta - total_taxas_ml - receita_liquida // deve ser ≈0
+    const billing_disponivel   = summaryRaw !== null
+
+    // ── Divergência com significado operacional ────────────────────────────
+    // Compara a taxa efetiva cobrada vs o intervalo esperado do ML (5–22%).
+    // Ponto médio de referência: 13.5% (média das comissões ML Brasil).
+    // divergencia > 0: ML cobrou acima do esperado (suspeito).
+    // divergencia < 0: ML cobrou abaixo (pode indicar bônus não refletidos ou erro).
+    // Zero (ou billing indisponível): dentro do normal / sem dados para comparar.
+    const ML_FEE_REF_PCT  = 13.5  // referência central (%)
+    const ML_FEE_MIN_PCT  = 5     // mínimo aceitável (%)
+    const ML_FEE_MAX_PCT  = 22    // máximo aceitável (%)
+
+    let divergencia     = 0
+    let divergencia_pct = 0
+    if (billing_disponivel && receita_bruta > 0) {
+      divergencia_pct = comissao_percentual - ML_FEE_REF_PCT
+      // Divergência em reais: quanto o vendedor pagou a mais/menos vs referência
+      divergencia = (comissao_percentual - ML_FEE_REF_PCT) / 100 * receita_bruta
+    }
 
     // ── Montar pedidos com comissão estimada ──────────────────────────────
     const orders: ConciliacaoOrder[] = activeOrders.slice(0, 100).map(o => {
@@ -224,12 +249,12 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    const billingAvailable = summaryRaw !== null
-    const statusResult: 'ok' | 'divergente' | 'pendente' = !billingAvailable
+    // Status: pendente (sem billing), divergente (taxa fora do intervalo esperado), ok
+    const statusResult: 'ok' | 'divergente' | 'pendente' = !billing_disponivel
       ? 'pendente'
-      : Math.abs(divergencia) < 10
-        ? 'ok'
-        : 'divergente'
+      : (comissao_percentual > ML_FEE_MAX_PCT || comissao_percentual < ML_FEE_MIN_PCT) && receita_bruta > 0
+        ? 'divergente'
+        : 'ok'
 
     const result: ConciliacaoResult = {
       period_key,
@@ -245,6 +270,9 @@ export async function GET(req: NextRequest) {
       charges,
       bonuses,
       divergencia,
+      divergencia_pct,
+      deducao_liquida,
+      billing_disponivel,
       status: statusResult,
     }
 

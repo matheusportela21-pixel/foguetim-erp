@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   const conn = await getMLConnection(user.id)
   if (!conn?.connected) {
-    return NextResponse.json({ error: 'ML não conectado', notConnected: true }, { status: 200 })
+    return NextResponse.json({ error: 'ML não conectado', notConnected: true }, { status: 400 })
   }
 
   const token = await getValidToken(user.id)

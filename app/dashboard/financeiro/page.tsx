@@ -10,6 +10,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, Gift, Loader2, Link2,
   ChevronDown, FileText, List, BarChart3, Info, RefreshCw, ExternalLink, Scale, ArrowRight,
 } from 'lucide-react'
+import ExportCSVButton from '@/components/ExportCSVButton'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -578,6 +579,23 @@ export default function FinanceiroPage() {
 
                 {!loading && (billingData?.details ?? []).length > 0 && (
                   <div className="overflow-x-auto">
+                    <div className="flex justify-end mb-3">
+                      <ExportCSVButton
+                        data={(billingData?.details ?? []).map(d => ({
+                          data:       d.date ?? '',
+                          descricao:  d.description ?? '',
+                          tipo:       d.type ?? '',
+                          valor:      d.amount ?? 0,
+                        }))}
+                        filename={`financeiro-billing-${selectedKey ?? 'periodo'}`}
+                        columns={[
+                          { key: 'data',      label: 'Data'       },
+                          { key: 'descricao', label: 'Descrição'  },
+                          { key: 'tipo',      label: 'Tipo'       },
+                          { key: 'valor',     label: 'Valor (R$)' },
+                        ]}
+                      />
+                    </div>
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-white/[0.06]">

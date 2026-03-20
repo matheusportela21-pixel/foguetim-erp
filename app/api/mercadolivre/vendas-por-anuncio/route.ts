@@ -159,11 +159,14 @@ export async function GET(req: NextRequest) {
     }))
     .sort((a, b) => b.total_vendas - a.total_vendas)
 
+  const has_more = pages >= MAX_PAGES && offset < totalFromPaging
+
   return NextResponse.json(
     {
       connected:    true,
       days,
       totalPedidos: validOrders.length,
+      has_more,
       items,
     },
     {

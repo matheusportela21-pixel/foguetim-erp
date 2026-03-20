@@ -8,6 +8,7 @@
  * Sincronização é apenas LEITURA (importar dados para visualização).
  */
 import { supabaseAdmin } from './supabase-admin'
+import { encrypt, decrypt } from './crypto'
 
 // ─── Constants (lazy — lidos dentro das funções para garantir disponibilidade) ──
 
@@ -152,16 +153,25 @@ export async function getValidToken(userId: string): Promise<string | null> {
   const c = conn as MLConnection
   const expiresAt = new Date(c.expires_at)
 
+  // Descriptografar refresh_token (suporta plaintext legado sem prefixo "enc:")
+  let plainRefresh: string
+  try {
+    plainRefresh = await decrypt(c.refresh_token)
+  } catch {
+    console.error('[ML] decrypt refresh_token failed')
+    return null
+  }
+
   // Renova se vencer em menos de 5 minutos
   if (expiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
     try {
-      const tokens = await refreshToken(c.refresh_token)
+      const tokens = await refreshToken(plainRefresh)
       const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
       await db
         .from('marketplace_connections')
         .update({
-          access_token:  tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          access_token:  await encrypt(tokens.access_token),
+          refresh_token: await encrypt(tokens.refresh_token),
           expires_at:    newExpiry,
           updated_at:    new Date().toISOString(),
         })
@@ -173,7 +183,13 @@ export async function getValidToken(userId: string): Promise<string | null> {
     }
   }
 
-  return c.access_token
+  // Descriptografar access_token (suporta plaintext legado)
+  try {
+    return await decrypt(c.access_token)
+  } catch {
+    console.error('[ML] decrypt access_token failed')
+    return null
+  }
 }
 
 // ─── mlFetch — chamada autenticada à API ML ───────────────────────────────────
@@ -219,6 +235,10 @@ export async function saveConnection(
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
   const now       = new Date().toISOString()
 
+  // Criptografar tokens antes de armazenar
+  const encAccess  = await encrypt(tokens.access_token)
+  const encRefresh = await encrypt(tokens.refresh_token)
+
   // Verificar se esta conta ML já está registrada para este usuário
   const { data: existing } = await db
     .from('marketplace_connections')
@@ -234,8 +254,8 @@ export async function saveConnection(
       .from('marketplace_connections')
       .update({
         ml_nickname:   mlNickname,
-        access_token:  tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token:  encAccess,
+        refresh_token: encRefresh,
         expires_at:    expiresAt,
         connected:     true,
         updated_at:    now,
@@ -259,8 +279,8 @@ export async function saveConnection(
         ml_user_id:    tokens.user_id,
         ml_nickname:   mlNickname,
         account_label: null,
-        access_token:  tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token:  encAccess,
+        refresh_token: encRefresh,
         expires_at:    expiresAt,
         connected:     true,
         is_primary:    (count ?? 0) === 0,

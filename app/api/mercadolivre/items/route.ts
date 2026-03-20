@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser }               from '@/lib/server-auth'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
+import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
 
 interface ListingPlan {
   listing_type_id: string
@@ -42,6 +43,15 @@ interface CreateBody {
 export async function POST(req: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Rate limit: 20 criações de anúncios por hora por usuário
+  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/items'), 20, 3_600_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas requisições. Tente novamente mais tarde.' },
+      { status: 429, headers: { ...rateLimitHeaders(rl, 20), 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
 
   const conn = await getMLConnection(user.id)
   if (!conn?.connected) {
