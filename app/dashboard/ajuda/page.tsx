@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
-import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2, History } from 'lucide-react'
+import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2, History, BookOpen, ExternalLink } from 'lucide-react'
 
 const faqs = [
   {
@@ -110,6 +110,24 @@ export default function AjudaPage() {
       <Header title="Central de Ajuda" subtitle="Tutoriais, FAQ e suporte" />
 
       <div className="p-6 space-y-8">
+
+        {/* Link para a Central de Ajuda pública */}
+        <Link
+          href="/ajuda"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-4 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/15 transition-colors group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5 text-violet-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Central de Ajuda</p>
+            <p className="text-xs text-slate-500 mt-0.5">Acesse guias completos, tutoriais e artigos sobre todos os módulos do Foguetim</p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-violet-400 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+        </Link>
+
         {/* Search */}
         <div className="dash-card p-6 rounded-2xl text-center">
           <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">

@@ -96,7 +96,7 @@ export default async function HelpHomePage() {
   ])
 
   const categories: HelpCategory[] = rawCategories ?? []
-  const featuredArticles: HelpArticle[] = (featured as HelpArticle[]) ?? []
+  const featuredArticles: HelpArticle[] = (featured as unknown as HelpArticle[]) ?? []
 
   return (
     <>

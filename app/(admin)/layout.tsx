@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, XCircle,
   FileText, Bell, LogOut, Shield, ChevronRight,
-  Ticket, UserCog, Wrench, Webhook, Megaphone, Bot,
+  Ticket, UserCog, Wrench, Webhook, Megaphone, Bot, BookOpen,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
@@ -32,6 +32,7 @@ const NAV = [
   { href: '/admin/ferramentas',   icon: Wrench,          label: 'Ferramentas'      },
   { href: '/admin/webhooks',      icon: Webhook,         label: 'Webhooks ML'      },
   { href: '/admin/agentes',       icon: Bot,             label: 'Agentes de IA'    },
+  { href: '/admin/ajuda',         icon: BookOpen,        label: 'Central de Ajuda' },
 ]
 
 function AdminSidebar() {
