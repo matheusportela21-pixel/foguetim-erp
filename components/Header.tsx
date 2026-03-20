@@ -1,6 +1,7 @@
 'use client'
 
-import { Bell, Search, Sun, Moon, Menu, Info, AlertTriangle, XCircle, CheckCircle2, CheckCheck, ExternalLink } from 'lucide-react'
+import { Bell, Search, Sun, Moon, Menu, Info, AlertTriangle, XCircle, CheckCircle2, CheckCheck, ExternalLink, HelpCircle } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/context/ThemeContext'
@@ -173,6 +174,17 @@ export default function Header({ title, subtitle }: HeaderProps) {
         >
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
+
+        {/* Help */}
+        <Link
+          href="/ajuda"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Central de Ajuda"
+          className="p-2 rounded-lg border border-white/[0.06] text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-all"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </Link>
 
         {/* ── Notifications bell ─────────────────────────────────────────── */}
         <div className="relative" ref={dropdownRef}>

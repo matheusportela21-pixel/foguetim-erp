@@ -424,6 +424,7 @@ export default function LandingPage() {
             <a href="#funcionalidades" className="hover:text-gray-900 transition-colors">Funcionalidades</a>
             <Link href="/planos"       className="hover:text-gray-900 transition-colors">Planos</Link>
             <Link href="/integracoes"  className="hover:text-gray-900 transition-colors">Integrações</Link>
+            <Link href="/ajuda"        className="hover:text-gray-900 transition-colors">Ajuda</Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -445,6 +446,7 @@ export default function LandingPage() {
             <a href="#funcionalidades" onClick={() => setMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">Funcionalidades</a>
             <Link href="/planos"       onClick={() => setMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">Planos</Link>
             <Link href="/integracoes"  onClick={() => setMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">Integrações</Link>
+            <Link href="/ajuda"        onClick={() => setMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">Ajuda</Link>
             <div className="flex gap-3 pt-3 border-t border-gray-100">
               <Link href="/login"    className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg text-center hover:bg-gray-50 transition-colors">Entrar</Link>
               <Link href="/registro" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg text-center transition-colors">Cadastrar</Link>
@@ -924,6 +926,7 @@ export default function LandingPage() {
                 <li><Link href="/planos"        className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Planos</Link></li>
                 <li><Link href="/integracoes"   className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Integrações</Link></li>
                 <li><a href="#planos"           className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Preços</a></li>
+                <li><Link href="/ajuda"         className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Central de Ajuda</Link></li>
               </ul>
             </div>
 
