@@ -9,11 +9,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin }              from '@/lib/admin-guard'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
+import { generateMonthlyPDF, type MonthlyStats } from '@/lib/utils/pdf-generator'
 // jsPDF is a CJS module — dynamic import needed in edge-compatible env
 // We use Node runtime (not edge) so direct import works
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+export const dynamic    = 'force-dynamic'
+export const runtime    = 'nodejs'
+export const maxDuration = 60
 
 // ── Color helpers ────────────────────────────────────────────────────────────
 
@@ -292,21 +294,116 @@ export async function GET(req: NextRequest) {
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status })
 
   const sp         = req.nextUrl.searchParams
-  const reportId   = sp.get('report_id')  ?? ''
+  const reportId   = sp.get('report_id')  ?? sp.get('id') ?? ''
   const meetingId  = sp.get('meeting_id') ?? ''
+  const type       = sp.get('type')   ?? ''
+  const month      = sp.get('month')  ?? ''
 
   try {
     let pdfBytes: ArrayBuffer
     let filename: string
 
-    if (reportId) {
+    if (type === 'monthly' || (type === '' && month)) {
+      // ── PDF Consolidado Mensal ──────────────────────────────────────────────
+      const targetMonth = month || (() => {
+        const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      })()
+
+      const [y, m] = targetMonth.split('-').map(Number)
+      const start  = new Date(y!, m! - 1, 1).toISOString()
+      const end    = new Date(y!, m!,     1).toISOString()
+      const db     = supabaseAdmin()
+
+      const [reportsRes, meetingsRes, agentsRes] = await Promise.all([
+        db.from('ai_agent_reports')
+          .select('id, achados, severidade_max, custo_usd, created_at, status, ai_agents(nome, slug, categoria)')
+          .gte('created_at', start).lt('created_at', end).limit(500),
+        db.from('ai_agent_meetings')
+          .select('id, titulo, resumo_executivo, created_at')
+          .gte('created_at', start).lt('created_at', end).limit(20),
+        db.from('ai_agents').select('nome, slug, categoria').eq('ativo', true),
+      ])
+
+      const reports  = (reportsRes.data  ?? []) as Array<Record<string, unknown>>
+      const meetings = (meetingsRes.data ?? []) as Array<Record<string, unknown>>
+      const agents   = (agentsRes.data   ?? []) as Array<{ slug: string; categoria: string }>
+
+      // Compute stats
+      let criticos = 0, altos = 0, medios = 0, baixos = 0, custoTotal = 0
+      const byAgent: Record<string, { nome: string; slug: string; categoria: string; achados: number; custo: number }> = {}
+      const problemMap: Record<string, { titulo: string; severidade: string; agent: string; count: number }> = {}
+      const weekMap: Record<string, { critica: number; alta: number; media: number; baixa: number }> = {}
+      const catCost: Record<string, number> = {}
+
+      for (const r of reports) {
+        custoTotal += Number(r.custo_usd ?? 0)
+        const ag = r.ai_agents as { nome: string; slug: string; categoria: string } | null
+        if (ag) {
+          if (!byAgent[ag.slug]) byAgent[ag.slug] = { nome: ag.nome, slug: ag.slug, categoria: ag.categoria, achados: 0, custo: 0 }
+          byAgent[ag.slug]!.custo += Number(r.custo_usd ?? 0)
+          catCost[ag.categoria] = (catCost[ag.categoria] ?? 0) + Number(r.custo_usd ?? 0)
+          // Week grouping
+          const d   = new Date(r.created_at as string)
+          const wk  = `Semana ${Math.ceil(d.getDate() / 7)}`
+          if (!weekMap[wk]) weekMap[wk] = { critica: 0, alta: 0, media: 0, baixa: 0 }
+          for (const a of (r.achados ?? []) as Array<{ severidade?: string; titulo?: string }>) {
+            const s = (a.severidade ?? '').toLowerCase()
+            if (s === 'critica' || s === 'crítica') { criticos++; weekMap[wk]!.critica++ }
+            else if (s === 'alta')                   { altos++;    weekMap[wk]!.alta++ }
+            else if (s === 'media' || s === 'média') { medios++;   weekMap[wk]!.media++ }
+            else                                     { baixos++;   weekMap[wk]!.baixa++ }
+            byAgent[ag.slug]!.achados++
+            if (a.titulo) {
+              const k = a.titulo.slice(0, 60)
+              if (!problemMap[k]) problemMap[k] = { titulo: a.titulo, severidade: s, agent: ag.nome, count: 0 }
+              problemMap[k]!.count++
+            }
+          }
+        }
+      }
+
+      const totalCat = Object.values(catCost).reduce((s, v) => s + v, 0)
+      const penalty = criticos * 15 + altos * 8 + medios * 3 + baixos
+      const score   = Math.max(0, 100 - Math.min(100, penalty))
+
+      // Find existing monthly report for resumo
+      const { data: monthly } = await db
+        .from('ai_agent_reports')
+        .select('metadata')
+        .gte('created_at', start).lt('created_at', end)
+        .eq('severidade_max', 'relatorio_mensal')
+        .limit(1).single()
+
+      const meta = monthly?.metadata as Record<string, unknown> | null
+
+      const stats: MonthlyStats = {
+        month:           targetMonth,
+        total_reports:   reports.length,
+        total_achados:   criticos + altos + medios + baixos,
+        criticos, altos, medios, baixos,
+        score_medio:     score,
+        custo_total_usd: custoTotal,
+        reunioes_total:  meetings.length,
+        top_agents: Object.values(byAgent).sort((a, b) => b.achados - a.achados).slice(0, 8),
+        top_problems: Object.values(problemMap).sort((a, b) => b.count - a.count).slice(0, 10),
+        costs_by_category: Object.entries(catCost).map(([cat, c]) => ({
+          categoria: cat, custo: c, pct: totalCat > 0 ? Math.round((c / totalCat) * 100) : 0,
+        })).sort((a, b) => b.custo - a.custo),
+        weeks: Object.entries(weekMap).map(([label, v]) => ({ label, ...v })),
+        resumo_executivo: meta?.resumo_executivo as string | undefined,
+      }
+
+      pdfBytes = await generateMonthlyPDF(stats)
+      filename  = `relatorio-mensal-${targetMonth}-${new Date().toISOString().slice(0, 10)}.pdf`
+    } else if (reportId) {
       pdfBytes = await buildReportPdf(reportId)
       filename  = `relatorio-${reportId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.pdf`
     } else if (meetingId) {
       pdfBytes = await buildMeetingPdf(meetingId)
       filename  = `ata-reuniao-${meetingId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.pdf`
     } else {
-      return NextResponse.json({ error: 'Informe report_id ou meeting_id' }, { status: 400 })
+      return NextResponse.json({ error: 'Informe report_id, meeting_id, ou type=monthly' }, { status: 400 })
     }
 
     return new NextResponse(pdfBytes, {

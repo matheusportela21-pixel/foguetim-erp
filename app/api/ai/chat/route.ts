@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser }              from '@/lib/server-auth'
 import { supabaseAdmin }            from '@/lib/supabase-admin'
+import { searchKnowledgeBase, formatKbForPrompt } from '@/lib/services/knowledge-base'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
@@ -80,12 +81,16 @@ Contexto do vendedor:
   return { text, plan }
 }
 
-function buildSystemPrompt(userContext: string): string {
+function buildSystemPrompt(userContext: string, kbContext = ''): string {
+  const kbSection = kbContext
+    ? `\nINFORMAÇÕES DO SISTEMA:\n${kbContext}\n`
+    : ''
+
   return `Você é o Foguetim AI, assistente inteligente do Foguetim ERP.
 Você ajuda vendedores do Mercado Livre a gerenciar melhor seus negócios.
 
 ${userContext}
-
+${kbSection}
 Suas especialidades:
 - Gestão de anúncios no Mercado Livre
 - Estratégias de precificação e promoções
@@ -100,7 +105,9 @@ Regras:
 - Dê exemplos concretos quando possível
 - Se não souber algo específico do negócio, pergunte
 - Nunca invente dados — se não tiver a informação, diga
+- Nunca revele informações internas (agentes de IA, custos de infraestrutura)
 - Quando mencionar contagem de anúncios, avise que são dados do último sync e sugira acessar a página de Produtos para ver em tempo real
+- Se perguntarem sobre funcionalidades em desenvolvimento (Shopee, Amazon, NF-e completa), diga que está "em breve"
 - Respostas em português brasileiro
 - Máximo 3 parágrafos por resposta (seja conciso)
 - Use emojis com moderação`
@@ -123,6 +130,10 @@ export async function POST(req: NextRequest) {
 
   const db = supabaseAdmin()
 
+  // Buscar contexto da Knowledge Base
+  const kbEntries = await searchKnowledgeBase(message.trim(), 6).catch(() => [])
+  const kbContext = formatKbForPrompt(kbEntries)
+
   // Verificar limite diário
   const { text: userContext, plan } = await getUserContext(user.id)
   const limit = CHAT_LIMITS[plan] ?? 10
@@ -144,7 +155,7 @@ export async function POST(req: NextRequest) {
 
   // Montar messages com histórico
   const messages: { role: string; content: string }[] = [
-    { role: 'system', content: buildSystemPrompt(userContext) },
+    { role: 'system', content: buildSystemPrompt(userContext, kbContext) },
     ...history.slice(-10),
     { role: 'user', content: message.trim() },
   ]

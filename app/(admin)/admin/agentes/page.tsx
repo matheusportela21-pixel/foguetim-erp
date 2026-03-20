@@ -224,19 +224,41 @@ function ExportDropdown({ period }: { period: Period }) {
     setOpen(false)
   }
 
+  const now = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:border-white/20 text-sm transition-colors">
         <Download className="w-3.5 h-3.5" /> Exportar <ChevronDown className="w-3 h-3" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-20 py-1 min-w-[120px]">
+        <div className="absolute right-0 top-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-20 py-1 min-w-[180px]">
+          <p className="px-3 pt-2 pb-1 text-[10px] text-slate-600 uppercase tracking-wider">Dados</p>
           {(['JSON', 'CSV', 'Markdown'] as const).map(f => (
             <button key={f} onClick={() => dl(f.toLowerCase())}
               className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors">
               {f}
             </button>
           ))}
+          <div className="border-t border-white/[0.06] my-1" />
+          <p className="px-3 pt-1 pb-1 text-[10px] text-slate-600 uppercase tracking-wider">PDF</p>
+          <button
+            onClick={() => { window.open(`/api/admin/agentes/export/pdf?type=monthly&month=${currentMonth}`, '_blank'); setOpen(false) }}
+            className="w-full text-left px-3 py-2 text-sm text-violet-300 hover:bg-violet-500/10 hover:text-violet-200 transition-colors flex items-center gap-2"
+          >
+            <FileText className="w-3.5 h-3.5" /> PDF Consolidado (mês atual)
+          </button>
+          <button
+            onClick={() => {
+              const after = new Date(Date.now() - 30 * 86_400_000).toISOString()
+              window.open(`/api/admin/agentes/export/zip?after=${after}`, '_blank')
+              setOpen(false)
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-green-300 hover:bg-green-500/10 hover:text-green-200 transition-colors flex items-center gap-2"
+          >
+            <Download className="w-3.5 h-3.5" /> ZIP com PDFs individuais
+          </button>
         </div>
       )}
     </div>
@@ -685,6 +707,14 @@ export default function AdminAgentesPage() {
   const [failedSlugs,      setFailedSlugs]      = useState<Set<string>>(new Set())
   const abortRef = useRef<boolean>(false)
 
+  // Monthly report state
+  const [monthlyReport,     setMonthlyReport]     = useState<Record<string, unknown> | null>(null)
+  const [generatingMonthly, setGeneratingMonthly] = useState(false)
+  const [monthlyMonth,      setMonthlyMonth]      = useState(() => {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+
   // Derived
   const totalAtivos    = agents.filter(a => a.ativo).length
   const achCriticos    = reports.filter(r => r.severidade_max === 'critica' && r.status === 'novo').length
@@ -736,7 +766,32 @@ export default function AdminAgentesPage() {
     } finally { setLoadingCosts(false) }
   }, [])
 
-  useEffect(() => { void loadAgents(); void loadStats(); void loadMeetings() }, [loadAgents, loadStats, loadMeetings])
+  // Monthly report loaders
+  const loadMonthlyReport = useCallback(async (m: string) => {
+    try {
+      const res = await fetch(`/api/admin/agentes/relatorio-mensal?month=${m}`)
+      if (res.ok) {
+        const d = await res.json() as { relatorio?: Record<string, unknown>; exists: boolean }
+        if (d.exists && d.relatorio) setMonthlyReport(d.relatorio)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  async function handleGenerateMonthly() {
+    setGeneratingMonthly(true)
+    try {
+      const res = await fetch('/api/admin/agentes/relatorio-mensal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: monthlyMonth }),
+      })
+      const d = await res.json() as { relatorio?: Record<string, unknown> }
+      if (d.relatorio) setMonthlyReport(d.relatorio)
+    } catch { /* ignore */ }
+    finally { setGeneratingMonthly(false) }
+  }
+
+  useEffect(() => { void loadAgents(); void loadStats(); void loadMeetings(); void loadMonthlyReport(monthlyMonth) }, [loadAgents, loadStats, loadMeetings, loadMonthlyReport, monthlyMonth])
   useEffect(() => { void loadStats() }, [loadStats])
 
   // Auto-refresh every 60s
@@ -1181,6 +1236,86 @@ export default function AdminAgentesPage() {
               <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300 ml-auto" />
             </Link>
           ))}
+        </div>
+
+        {/* ── Card: Relatório Mensal ────────────────────────────────────────── */}
+        <div className="glass-card rounded-xl p-5 border border-indigo-700/20 bg-indigo-900/5">
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-indigo-300">
+                  {monthlyReport
+                    ? String(monthlyReport.titulo ?? `Relatório Mensal — ${monthlyMonth}`)
+                    : `Relatório Mensal — ${monthlyMonth}`}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {monthlyReport
+                    ? `Score: ${monthlyReport.score_medio ?? '—'}/100 · ${(monthlyReport.principais_riscos as string[] | undefined)?.length ?? 0} riscos · ${(monthlyReport.recomendacoes as string[] | undefined)?.length ?? 0} recomendações`
+                    : 'Gerar o relatório consolidado com IA para este mês'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Seletor de mês */}
+              <select
+                value={monthlyMonth}
+                onChange={e => { setMonthlyMonth(e.target.value); setMonthlyReport(null); void loadMonthlyReport(e.target.value) }}
+                className="input-cyber h-8 text-xs px-2 rounded-lg"
+              >
+                {Array.from({ length: 6 }, (_, i) => {
+                  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i)
+                  const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+                  const l = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+                  return <option key={v} value={v}>{l}</option>
+                })}
+              </select>
+
+              {monthlyReport && (
+                <button
+                  onClick={() => window.open(`/api/admin/agentes/export/pdf?type=monthly&month=${monthlyMonth}`, '_blank')}
+                  className="h-8 px-3 text-xs rounded-lg flex items-center gap-1.5 text-slate-400 border border-white/10 hover:text-white hover:border-white/20 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" /> PDF
+                </button>
+              )}
+
+              <button
+                onClick={() => void handleGenerateMonthly()}
+                disabled={generatingMonthly}
+                className="btn-neon h-8 px-3 text-xs rounded-lg flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {generatingMonthly
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Gerando…</>
+                  : <><Zap className="w-3.5 h-3.5" /> {monthlyReport ? 'Regenerar' : 'Gerar Relatório'}</>}
+              </button>
+            </div>
+          </div>
+
+          {monthlyReport && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Score',       value: `${monthlyReport.score_medio ?? 0}/100`,    color: 'text-indigo-300' },
+                { label: 'Principais riscos', value: String((monthlyReport.principais_riscos as string[] | undefined)?.length ?? 0), color: 'text-red-300' },
+                { label: 'Conquistas',  value: String((monthlyReport.conquistas as string[] | undefined)?.length ?? 0),    color: 'text-green-300' },
+                { label: 'Recomendações', value: String((monthlyReport.recomendacoes as string[] | undefined)?.length ?? 0), color: 'text-amber-300' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-white/[0.03] rounded-lg px-3 py-2 text-center">
+                  <p className={`text-lg font-bold font-mono ${color}`}>{value}</p>
+                  <p className="text-[10px] text-slate-500">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {typeof monthlyReport?.resumo_executivo === 'string' && (
+            <p className="mt-3 text-xs text-slate-400 line-clamp-2 border-t border-white/5 pt-3">
+              {monthlyReport.resumo_executivo}
+            </p>
+          )}
         </div>
 
         {/* ── Tabs ──────────────────────────────────────────────────────────── */}

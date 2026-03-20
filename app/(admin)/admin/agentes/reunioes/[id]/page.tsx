@@ -287,6 +287,13 @@ export default function MeetingDetailPage() {
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 items-start">
             <a
+              href={`/api/admin/agentes/export/pdf?meeting_id=${id}`}
+              target="_blank"
+              className="h-9 px-3 text-xs rounded-lg flex items-center gap-1.5 border border-violet-700/30 text-violet-400 hover:text-violet-200 hover:border-violet-500/40 transition-all"
+            >
+              <Download size={13} /> Baixar Ata PDF
+            </a>
+            <a
               href={`/api/admin/agentes/export?format=markdown&meeting_id=${id}`}
               className="h-9 px-3 text-xs rounded-lg flex items-center gap-1.5 border border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20 transition-all"
             >

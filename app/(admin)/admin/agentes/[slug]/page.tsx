@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import {
   Bot, Shield, BarChart3, Users, Rocket, Scale, Globe,
   ArrowLeft, RefreshCw, Activity, Clock, DollarSign, FileText,
-  AlertCircle, XCircle, Info, AlertTriangle, CheckCircle2, Zap,
+  AlertCircle, XCircle, Info, AlertTriangle, CheckCircle2, Zap, Download,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ComposedChart, Line,
@@ -424,6 +424,15 @@ export default function AgentSlugPage() {
                           </span>
                           <StatusBadge status={report.status} />
                           <span className="text-slate-600">{fmtDate(report.created_at)}</span>
+                          <a
+                            href={`/api/admin/agentes/export/pdf?report_id=${report.id}`}
+                            target="_blank"
+                            onClick={e => e.stopPropagation()}
+                            className="text-slate-500 hover:text-violet-400 transition-colors"
+                            title="Baixar PDF"
+                          >
+                            <Download size={13} />
+                          </a>
                         </div>
                         <span className="text-slate-600 ml-1">{isExpanded ? '▲' : '▼'}</span>
                       </button>

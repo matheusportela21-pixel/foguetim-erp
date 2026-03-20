@@ -256,6 +256,15 @@ export default function AchadosPage() {
           >
             {saving ? <RefreshCw size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Aplicar
           </button>
+          <button
+            onClick={() => {
+              const ids = Array.from(selected).join(',')
+              window.open(`/api/admin/agentes/export/zip?agentes=&after=${new Date(Date.now() - 90 * 86_400_000).toISOString()}&report_ids=${ids}`, '_blank')
+            }}
+            className="h-8 px-3 text-xs rounded-lg flex items-center gap-1.5 border border-violet-700/30 text-violet-400 hover:text-violet-200 hover:border-violet-500/40 transition-all"
+          >
+            <Download size={12} /> Exportar ZIP
+          </button>
           <button onClick={clearSelect} className="text-xs text-slate-500 hover:text-slate-300 ml-auto">Cancelar</button>
         </div>
       )}

@@ -232,6 +232,14 @@ export default function ReunioesPage() {
                       Ver detalhes <ChevronRight size={12} />
                     </Link>
                     <a
+                      href={`/api/admin/agentes/export/pdf?meeting_id=${m.id}`}
+                      className="h-7 px-2.5 text-xs rounded-lg flex items-center gap-1 text-violet-400 hover:text-violet-200 border border-violet-700/30 hover:border-violet-500/40 transition-all"
+                      title="Baixar Ata PDF"
+                      target="_blank"
+                    >
+                      <Download size={12} /> PDF
+                    </a>
+                    <a
                       href={`/api/admin/agentes/export?format=markdown&meeting_id=${m.id}`}
                       className="h-7 px-2.5 text-xs rounded-lg flex items-center gap-1 text-slate-400 hover:text-slate-200 border border-white/10 hover:border-white/20 transition-all"
                       title="Baixar Markdown"
