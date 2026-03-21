@@ -51,8 +51,8 @@ export default function CategoriasPage() {
     try {
       const res = await fetch('/api/armazem/categorias')
       if (!res.ok) throw new Error('Erro ao carregar categorias')
-      const data = await res.json()
-      setCategories(data.categories ?? data ?? [])
+      const json = await res.json()
+      setCategories(json.data ?? [])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {

@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Plus, Pencil, Star, Eye, EyeOff, X } from 'lucide-react'
+import Link from 'next/link'
+import { Building2, Plus, Pencil, Star, Eye, EyeOff, X, AlertTriangle } from 'lucide-react'
 import Header from '@/components/Header'
+import { useAuth } from '@/lib/auth-context'
+import { getWarehouseLimit } from '@/lib/plan-limits'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface Warehouse {
@@ -27,9 +30,14 @@ function formatDate(iso: string) {
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function ArmazensPage() {
+  const { profile } = useAuth()
+
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
+
+  const warehouseLimit = getWarehouseLimit(profile?.plan)
+  const atLimit        = warehouses.length >= warehouseLimit
 
   const [showModal, setShowModal]           = useState(false)
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null)
@@ -46,8 +54,8 @@ export default function ArmazensPage() {
     try {
       const res = await fetch('/api/armazem/armazens')
       if (!res.ok) throw new Error('Erro ao carregar armazéns')
-      const data = await res.json()
-      setWarehouses(data.warehouses ?? data ?? [])
+      const json = await res.json()
+      setWarehouses(json.data ?? [])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {
@@ -80,6 +88,10 @@ export default function ArmazensPage() {
   /* ── save ── */
   async function handleSave() {
     if (!form.name.trim()) { showToast('Nome é obrigatório', 'error'); return }
+    if (!editingWarehouse && atLimit && isFinite(warehouseLimit)) {
+      showToast(`Limite de ${warehouseLimit} armazém${warehouseLimit !== 1 ? 's' : ''} atingido. Faça upgrade do plano.`, 'error')
+      return
+    }
     setSaving(true)
     try {
       const body = {
@@ -137,14 +149,51 @@ export default function ArmazensPage() {
       <div className="p-6 space-y-4">
         {/* Toolbar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-sm text-slate-500">
-            Cada armazém tem seu próprio estoque, localizações e histórico de movimentações.
-          </p>
-          <button onClick={openCreate} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 rounded-lg">
-            <Plus className="w-4 h-4" />
-            Novo Armazém
-          </button>
+          <div>
+            <p className="text-sm text-slate-500">
+              Cada armazém tem seu próprio estoque, localizações e histórico de movimentações.
+            </p>
+            {!loading && (
+              <p className="text-xs text-slate-600 mt-0.5">
+                {warehouses.length} de {isFinite(warehouseLimit) ? warehouseLimit : '∞'} armazéns usados
+                {isFinite(warehouseLimit) && (
+                  <> · Plano <span className="text-slate-500 font-medium">{profile?.plan ?? 'Explorador'}</span></>
+                )}
+              </p>
+            )}
+          </div>
+          {atLimit && isFinite(warehouseLimit) ? (
+            <Link
+              href="/planos"
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Limite atingido · Fazer upgrade
+            </Link>
+          ) : (
+            <button onClick={openCreate} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 rounded-lg">
+              <Plus className="w-4 h-4" />
+              Novo Armazém
+            </button>
+          )}
         </div>
+
+        {/* Plan limit banner */}
+        {!loading && atLimit && isFinite(warehouseLimit) && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-purple-950/30 border border-purple-800/40">
+            <AlertTriangle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-purple-300">
+                Limite de {warehouseLimit} armazém{warehouseLimit !== 1 ? 's' : ''} atingido
+              </p>
+              <p className="text-xs text-purple-400/70 mt-0.5">
+                Seu plano permite até {warehouseLimit} armazém{warehouseLimit !== 1 ? 's' : ''}.{' '}
+                <Link href="/planos" className="underline hover:text-purple-300">Faça upgrade</Link>{' '}
+                para criar mais.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         {loading ? (

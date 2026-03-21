@@ -66,8 +66,8 @@ export default function LocalizacoesPage() {
     try {
       const res = await fetch('/api/armazem/armazens')
       if (!res.ok) return
-      const data = await res.json()
-      setWarehouses(data.warehouses ?? data ?? [])
+      const json = await res.json()
+      setWarehouses(json.data ?? [])
     } catch {
       // non-critical
     }
@@ -82,8 +82,8 @@ export default function LocalizacoesPage() {
       if (selectedWarehouse) params.set('warehouse_id', selectedWarehouse)
       const res = await fetch(`/api/armazem/localizacoes?${params}`)
       if (!res.ok) throw new Error('Erro ao carregar localizações')
-      const data = await res.json()
-      setLocations(data.locations ?? data ?? [])
+      const json = await res.json()
+      setLocations(json.data ?? [])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {

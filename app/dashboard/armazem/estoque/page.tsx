@@ -92,8 +92,8 @@ export default function EstoquePage() {
     try {
       const res = await fetch('/api/armazem/armazens')
       if (!res.ok) return
-      const data = await res.json()
-      setWarehouses(data.warehouses ?? data ?? [])
+      const json = await res.json()
+      setWarehouses(json.data ?? [])
     } catch {
       // non-critical
     }
@@ -126,7 +126,7 @@ export default function EstoquePage() {
           low_stock_threshold?: number | null
           average_cost?: number | null
         }>
-      }> = data.products ?? data ?? []
+      }> = data.data ?? []
 
       const items: InventoryItem[] = []
       for (const product of products) {

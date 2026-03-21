@@ -15,7 +15,7 @@ import { supabase, isConfigured } from '@/lib/supabase'
 import { useSidebar } from '@/context/SidebarContext'
 import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
 
-type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean; exact?: boolean }
+type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean; exact?: boolean; divider?: string }
 type NavGroup = {
   label: string
   marketplaceDot?: string // color for dot indicator e.g. 'bg-yellow-400'
@@ -73,6 +73,13 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/performance',  icon: BarChart2,     label: 'Performance'    },
       { href: '/dashboard/saude',        icon: Activity,      label: 'Saúde da Conta' },
       { href: '/dashboard/conciliacao',  icon: Scale,         label: 'Conciliação',   roles: ['admin', 'super_admin', 'owner', 'foguetim_support', 'diretor', 'director'] },
+      // ── Análise (sub-seção dentro do grupo ML) ──────────────────────────
+      { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp, label: 'Vendas por Anúncio', divider: 'Análise' },
+      { href: '/dashboard/concorrentes',       icon: Users,      label: 'Concorrentes'         },
+      { href: '/dashboard/reviews',            icon: Star,       label: 'Reviews'              },
+      { href: '/dashboard/relatorios',         icon: BarChart3,  label: 'Relatórios'           },
+      { href: '/dashboard/clientes',           icon: UserCheck,  label: 'Clientes'             },
+      { href: '/dashboard/publicidade',        icon: Megaphone,  label: 'Publicidade', badge: 'Beta', roles: ['admin', 'foguetim_support'] },
     ],
   },
   {
@@ -85,18 +92,6 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/shopee/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
       { href: '/dashboard/shopee/produtos',  icon: Package,         label: 'Produtos'    },
       { href: '/dashboard/shopee/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
-    ],
-  },
-  {
-    label: 'Análise',
-    requiresAnyMarketplace: true,
-    items: [
-      { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp, label: 'Vendas por Anúncio' },
-      { href: '/dashboard/concorrentes',       icon: Users,      label: 'Concorrentes'        },
-      { href: '/dashboard/reviews',            icon: Star,       label: 'Reviews'             },
-      { href: '/dashboard/relatorios',         icon: BarChart3,  label: 'Relatórios'          },
-      { href: '/dashboard/clientes',           icon: UserCheck,  label: 'Clientes'            },
-      { href: '/dashboard/publicidade',        icon: Megaphone,  label: 'Publicidade', badge: 'Beta', roles: ['admin', 'foguetim_support'] },
     ],
   },
   {
@@ -325,11 +320,18 @@ export default function Sidebar() {
 
                 {!isCollapsed && (
                   <ul className="space-y-0.5">
-                    {visibleItems.map(({ href, icon: Icon, label, badge, disabled, exact }) => {
+                    {visibleItems.map(({ href, icon: Icon, label, badge, disabled, exact, divider }) => {
                       const active = !disabled && (pathname === href || (!exact && href !== '/dashboard' && pathname.startsWith(href + '/')))
                       const isPosVenda = href === '/dashboard/pos-venda'
                       return (
                         <li key={href}>
+                          {divider && (
+                            <div className="flex items-center gap-1.5 px-3 pt-3 pb-1">
+                              <div className="flex-1 h-px bg-white/[0.06]" />
+                              <span className="text-[9px] font-semibold text-slate-700 uppercase tracking-widest">{divider}</span>
+                              <div className="flex-1 h-px bg-white/[0.06]" />
+                            </div>
+                          )}
                           {disabled ? (
                             <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm font-medium opacity-40 cursor-not-allowed select-none">
                               <Icon className="w-4 h-4 shrink-0 text-slate-700" />
