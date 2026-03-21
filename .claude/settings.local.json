@@ -157,7 +157,12 @@
       "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__get_deployment_build_logs",
       "Bash(head -40 app/\\\\\\(dashboard\\\\\\)/dashboard/publicidade/page.tsx)",
       "Bash(grep -r \"INSERT.*ai_knowledge_base\\\\|\\\\.insert.*ai_knowledge_base\" /c/Users/mathe/foguetim --include=*.ts --include=*.tsx)",
-      "Bash(node C:/Users/mathe/.claude/get-shit-done/bin/gsd-tools.cjs init execute-phase)"
+      "Bash(node C:/Users/mathe/.claude/get-shit-done/bin/gsd-tools.cjs init execute-phase)",
+      "Bash(find /c/Users/mathe/foguetim/app/admin -type f -name *.tsx -o -name *.ts)",
+      "Bash(grep -r \"interface.*Agent\\\\|type.*Agent\" /c/Users/mathe/foguetim/lib --include=*.ts)",
+      "Bash(cat -n \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/achados/page.tsx\")",
+      "Bash(wc -l \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")",
+      "Bash(head -100 \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")"
     ]
   }
 }
