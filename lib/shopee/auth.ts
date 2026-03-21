@@ -58,16 +58,17 @@ export function getShopeeAuthUrl(): string {
   const sign = shopeeSign(partnerKey, partnerId, SHOPEE_PATH_AUTH, timestamp)
 
   // ── DIAGNÓSTICO (sem expor a key) ─────────────────────────────────────────
-  console.log('[Shopee auth] DIAGNÓSTICO ─────────────────────')
-  console.log('[Shopee auth] partnerId       :', partnerId, '| tipo:', typeof partnerId)
-  console.log('[Shopee auth] partnerKeyLength:', partnerKey.length)
-  console.log('[Shopee auth] partnerKeyStart :', partnerKey.slice(0, 6) + '…')
-  console.log('[Shopee auth] timestamp       :', timestamp, '| tipo:', typeof timestamp)
-  console.log('[Shopee auth] baseString      :', baseString)
-  console.log('[Shopee auth] sign            :', sign)
-  console.log('[Shopee auth] redirectUri     :', redirectUri)
-  console.log('[Shopee auth] baseUrl         :', getShopeeBaseUrl())
-  console.log('[Shopee auth] ──────────────────────────────────')
+  // Usando console.error para garantir visibilidade nos logs do Vercel
+  console.error('[Shopee auth] DIAGNÓSTICO ─────────────────────')
+  console.error('[Shopee auth] partnerId       :', partnerId, '| tipo:', typeof partnerId)
+  console.error('[Shopee auth] partnerKeyLength:', partnerKey.length)
+  console.error('[Shopee auth] partnerKeyStart :', partnerKey.slice(0, 6) + '...')
+  console.error('[Shopee auth] timestamp       :', timestamp, '| tipo:', typeof timestamp)
+  console.error('[Shopee auth] baseString      :', baseString)
+  console.error('[Shopee auth] sign            :', sign)
+  console.error('[Shopee auth] redirectUri     :', redirectUri)
+  console.error('[Shopee auth] baseUrl         :', getShopeeBaseUrl())
+  console.error('[Shopee auth] ──────────────────────────────────')
 
   const params = new URLSearchParams({
     partner_id: String(partnerId),
@@ -77,7 +78,7 @@ export function getShopeeAuthUrl(): string {
   })
 
   const url = `${getShopeeBaseUrl()}${SHOPEE_PATH_AUTH}?${params.toString()}`
-  console.log('[Shopee auth] URL final:', url.replace(sign, sign.slice(0, 8) + '…'))
+  console.error('[Shopee auth] URL final:', url.replace(sign, sign.slice(0, 8) + '...'))
   return url
 }
 

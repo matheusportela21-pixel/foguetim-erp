@@ -23,8 +23,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    console.error('[Shopee auth] iniciando para user:', user.id)
     const authUrl = getShopeeAuthUrl()
-    console.log('[Shopee auth] Redirecionando user:', user.id)
+    console.error('[Shopee auth] redirecionando...')
     return NextResponse.redirect(authUrl)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
