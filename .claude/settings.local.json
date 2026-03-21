@@ -151,7 +151,13 @@
       "Bash(sed -i 's/\\(data ?? \\\\[\\\\]\\) as BlogPost\\\\[\\\\]/\\(data ?? []\\) as unknown as BlogPost[]/g' app/api/blog/posts/route.ts app/api/blog/posts/popular/route.ts app/api/blog/posts/related/route.ts app/api/blog/search/route.ts)",
       "Bash(sed -i 's/const post = data as BlogPost/const post = data as unknown as BlogPost/' app/api/blog/posts/[slug]/route.ts)",
       "Bash(tail -20 \"app/\\(public\\)/blog/busca/page.tsx\")",
-      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/agentes/)"
+      "Bash(ls /c/Users/mathe/foguetim/app/\\\\\\(admin\\\\\\)/admin/agentes/)",
+      "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__deploy_to_vercel",
+      "Bash(npx vercel:*)",
+      "mcp__2c2c2cca-d2ab-497c-ab14-69faf722108b__get_deployment_build_logs",
+      "Bash(head -40 app/\\\\\\(dashboard\\\\\\)/dashboard/publicidade/page.tsx)",
+      "Bash(grep -r \"INSERT.*ai_knowledge_base\\\\|\\\\.insert.*ai_knowledge_base\" /c/Users/mathe/foguetim --include=*.ts --include=*.tsx)",
+      "Bash(node C:/Users/mathe/.claude/get-shit-done/bin/gsd-tools.cjs init execute-phase)"
     ]
   }
 }
