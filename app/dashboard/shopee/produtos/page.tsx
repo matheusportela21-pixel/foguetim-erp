@@ -1098,11 +1098,12 @@ export default function ShopeeProdutosPage() {
   }
   function dismissToast(id: string) { setToasts(p => p.filter(t => t.id !== id)) }
 
-  // ── Fetch KPI counts (4 parallel calls with page_size=1) ──────────────────
+  // ── Fetch KPI counts (3 parallel calls — one per valid status) ────────────
+  // Nota: a API Shopee NÃO aceita múltiplos status numa única chamada.
+  // O total é calculado como soma de NORMAL + UNLIST + BANNED.
 
   const fetchKpi = useCallback(async () => {
-    const statuses: Array<{ key: keyof KpiCounts; status: string }> = [
-      { key: 'total',  status: 'NORMAL,UNLIST,BANNED' },
+    const statuses: Array<{ key: Exclude<keyof KpiCounts, 'total'>; status: string }> = [
       { key: 'normal', status: 'NORMAL' },
       { key: 'unlist', status: 'UNLIST' },
       { key: 'banned', status: 'BANNED' },
@@ -1110,16 +1111,19 @@ export default function ShopeeProdutosPage() {
     const results = await Promise.all(
       statuses.map(async ({ key, status }) => {
         try {
-          const r = await fetch(`/api/shopee/products?item_status=${encodeURIComponent(status)}&page_size=1&offset=0`)
+          const r = await fetch(`/api/shopee/products?item_status=${status}&page_size=1&offset=0`)
           const d = await r.json() as ProductsResponse
+          // If Shopee returns an error for this status, count = 0 (not a fatal error)
+          if (d.error) return { key, count: 0 }
           return { key, count: d.response?.total_count ?? 0 }
         } catch {
           return { key, count: 0 }
         }
       })
     )
-    const counts = { total: null, normal: null, unlist: null, banned: null } as KpiCounts
+    const counts = { total: 0, normal: 0, unlist: 0, banned: 0 } as { total: number; normal: number; unlist: number; banned: number }
     results.forEach(r => { counts[r.key] = r.count })
+    counts.total = counts.normal + counts.unlist + counts.banned
     setKpi(counts)
   }, [])
 
@@ -1166,11 +1170,17 @@ export default function ShopeeProdutosPage() {
     }
   }, [filter, offset, pageSize, debouncedSearch])
 
-  // Smarter fetch: load base_info for all items to get price/stock/sku
+  // ── Fetch products with base_info details ─────────────────────────────────
+  // A API Shopee get_item_list retorna apenas item_id + item_status.
+  // Para ter nome, preço, estoque e imagens, chamamos get_item_base_info
+  // via /api/shopee/products/[item_id] para cada item (em paralelo, 5 por vez).
+  //
+  // Nota: 'ALL' envia NORMAL,UNLIST,BANNED — o servidor faz 3 chamadas paralelas.
   const fetchProductsWithDetails = useCallback(async (opts?: { status?: FilterKey; off?: number; size?: number }) => {
     const status    = opts?.status ?? filter
     const off       = opts?.off    ?? offset
     const size      = opts?.size   ?? pageSize
+    // 'ALL' → enviar múltiplos status: o route.ts trata isso com chamadas paralelas
     const apiStatus = status === 'ALL' ? 'NORMAL,UNLIST,BANNED' : status
 
     setLoading(true)
@@ -1179,38 +1189,52 @@ export default function ShopeeProdutosPage() {
       const r = await fetch(`/api/shopee/products?item_status=${encodeURIComponent(apiStatus)}&page_size=${size}&offset=${off}`)
       const d = await r.json() as ProductsResponse
 
-      if (d.error) { addToast('error', d.message ?? d.error); return }
+      // Shopee pode retornar error_param se o status for inválido — logar mas não crashar
+      if (d.error) {
+        console.error('[Shopee produtos] API error na listagem:', d.error, d.message)
+        // Se mesmo com a correção de multi-status houver erro, mostrar aviso e encerrar
+        addToast('error', `Erro Shopee: ${d.message ?? d.error}`)
+        setItems([])
+        return
+      }
 
-      const itemIds = (d.response?.item ?? []).map(i => i.item_id)
+      const listItems = d.response?.item ?? []
       setTotalCount(d.response?.total_count ?? 0)
       setHasNextPage(d.response?.has_next_page ?? false)
 
-      if (itemIds.length === 0) { setItems([]); return }
+      if (listItems.length === 0) { setItems([]); return }
 
-      // Fetch detailed info for items (use get_item_base_info via our API)
-      // Our existing /api/shopee/products/[item_id] only handles single items
-      // So we fetch details for all in parallel (with concurrency limit)
+      // Fetch detalhes completos (nome, preço, estoque, imagens) via base_info
       const CONCURRENCY = 5
       const detailed: ShopeeItemDetail[] = []
-      for (let i = 0; i < itemIds.length; i += CONCURRENCY) {
-        const batch = itemIds.slice(i, i + CONCURRENCY)
+      for (let i = 0; i < listItems.length; i += CONCURRENCY) {
+        const batch = listItems.slice(i, i + CONCURRENCY)
         const results = await Promise.allSettled(
-          batch.map(id =>
-            fetch(`/api/shopee/products/${id}`)
+          batch.map(basic =>
+            fetch(`/api/shopee/products/${basic.item_id}`)
               .then(res => res.json() as Promise<DetailResponse>)
-              .then(data => data.response?.item_list?.[0] ?? { item_id: id, item_name: 'Produto', item_status: 'NORMAL' })
+              .then(data => {
+                // Se base_info retornar item_list, usar; senão fallback para basic
+                const det = data.response?.item_list?.[0]
+                if (det) return det
+                return {
+                  item_id:     basic.item_id,
+                  item_name:   basic.item_name,
+                  item_status: basic.item_status,
+                } as ShopeeItemDetail
+              })
           )
         )
         results.forEach((r, idx) => {
           if (r.status === 'fulfilled') {
-            detailed.push(r.value as ShopeeItemDetail)
+            detailed.push(r.value)
           } else {
-            // Fallback to basic info from list
-            const basic = d.response?.item?.[i + idx]
-            if (basic) detailed.push({ item_id: basic.item_id, item_name: basic.item_name, item_status: basic.item_status })
+            // Fallback: usar info básica da listagem
+            const basic = batch[idx]
+            detailed.push({ item_id: basic.item_id, item_name: basic.item_name, item_status: basic.item_status })
           }
         })
-        if (i + CONCURRENCY < itemIds.length) await new Promise(res => setTimeout(res, 200))
+        if (i + CONCURRENCY < listItems.length) await new Promise(res => setTimeout(res, 200))
       }
       setItems(detailed)
     } catch (e) {
