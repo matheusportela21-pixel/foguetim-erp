@@ -38,10 +38,24 @@ export const SHOPEE_PATH_UPDATE_PRICE  = '/api/v2/product/update_price'
 export const SHOPEE_PATH_UPDATE_STOCK  = '/api/v2/product/update_stock'
 export const SHOPEE_PATH_UNLIST_ITEM   = '/api/v2/product/unlist_item'
 export const SHOPEE_PATH_ORDER_LIST      = '/api/v2/order/get_order_list'
+export const SHOPEE_PATH_ORDER_DETAIL    = '/api/v2/order/get_order_detail'
+export const SHOPEE_PATH_ORDER_SHIP      = '/api/v2/order/ship_order'
+export const SHOPEE_PATH_ORDER_CANCEL    = '/api/v2/order/cancel_order'
+export const SHOPEE_PATH_TRACKING_NUM    = '/api/v2/logistics/get_tracking_number'
+export const SHOPEE_PATH_SHIP_PARAM      = '/api/v2/logistics/get_shipping_parameter'
+export const SHOPEE_PATH_CREATE_SHIP_DOC = '/api/v2/logistics/create_shipping_document'
+export const SHOPEE_PATH_SHIP_DOC_RESULT = '/api/v2/logistics/get_shipping_document_result'
+export const SHOPEE_PATH_ESCROW_DETAIL   = '/api/v2/payment/get_escrow_detail'
 export const SHOPEE_PATH_PERFORMANCE     = '/api/v2/shop/get_shop_performance'
 export const SHOPEE_PATH_ITEM_EXTRA_INFO = '/api/v2/product/get_item_extra_info'
 export const SHOPEE_PATH_UPDATE_ITEM     = '/api/v2/product/update_item'
 export const SHOPEE_PATH_GET_MODELS      = '/api/v2/product/get_model_list'
+
+/** Campos opcionais padrão para get_order_detail */
+export const SHOPEE_ORDER_OPTIONAL_FIELDS =
+  'buyer_user_id,buyer_username,recipient_address,item_list,pay_time,' +
+  'shipping_carrier,payment_method,total_amount,package_list,note,' +
+  'cancel_reason,cancel_by,actual_shipping_fee,estimated_shipping_fee'
 
 /** Retorna 'sandbox' ou 'prod' para uso em componentes de UI */
 export function getShopeeEnvLabel(): 'sandbox' | 'prod' {
