@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuth } from '@/lib/auth-context'
 import {
   Tag, Plus, RefreshCw, Loader2, X, ChevronRight,
   Calendar, Package, Trash2, AlertTriangle, CheckCircle,
@@ -1069,7 +1070,12 @@ function TabSemPromocao({
 }
 
 /* ── Main Page ───────────────────────────────────────────────────────────── */
+const ADMIN_ROLES = ['admin', 'super_admin', 'owner', 'foguetim_support']
+
 export default function PromocoesPage() {
+  const { profile } = useAuth()
+  const isAdmin = profile !== undefined && profile !== null && ADMIN_ROLES.includes(profile.role ?? '')
+
   const [tab, setTab]                     = useState<NewTabType>('minhas')
   const [promotions, setPromotions]       = useState<MLPromotion[]>([])
   const [loading, setLoading]             = useState(true)
@@ -1129,6 +1135,23 @@ export default function PromocoesPage() {
     { id: 'em-promocao',   label: 'Em Promoção',        icon: <BadgePercent className="w-3.5 h-3.5" /> },
     { id: 'sem-promocao',  label: 'Sem Promoção',       icon: <CircleDollarSign className="w-3.5 h-3.5" /> },
   ]
+
+  if (!isAdmin) {
+    return (
+      <div>
+        <Header title="Promoções" subtitle="Módulo Beta" />
+        <div className="p-6">
+          <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
+              <Lock className="w-7 h-7 text-red-400" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-300 mb-1">Acesso restrito</h3>
+            <p className="text-sm text-slate-500 max-w-sm">Módulo em desenvolvimento — disponível apenas para administradores.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-[#03050f]">

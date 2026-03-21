@@ -1,13 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth }   from '@/lib/auth-context'
 import {
   Megaphone, RefreshCw, ExternalLink, Loader2,
   Play, Pause, TrendingUp, MousePointerClick,
   Eye, DollarSign, Target, BarChart2, Star,
-  AlertCircle, CheckCircle2, XCircle,
+  AlertCircle, CheckCircle2, XCircle, Lock,
 } from 'lucide-react'
 import type { MlAdsCampaign } from '@/app/api/mercadolivre/ads/campaigns/route'
 import type { MlAdsItem }     from '@/app/api/mercadolivre/ads/items/route'
@@ -163,18 +162,11 @@ function NoAdsAccount() {
    MAIN PAGE
 ══════════════════════════════════════════════════════════════════════════ */
 
-export default function PublicidadePage() {
-  const router  = useRouter()
-  const { profile } = useAuth()
+const ADMIN_ROLES = ['admin', 'super_admin', 'owner', 'foguetim_support']
 
-  // Client-side guard (middleware is the primary gate)
-  useEffect(() => {
-    if (profile === null) return // still loading
-    const role = profile?.role ?? ''
-    if (role !== 'admin' && role !== 'foguetim_support') {
-      router.replace('/dashboard')
-    }
-  }, [profile, router])
+export default function PublicidadePage() {
+  const { profile } = useAuth()
+  const isAdmin = profile !== undefined && profile !== null && ADMIN_ROLES.includes(profile.role ?? '')
 
   const [advertiser,       setAdvertiser]       = useState<Advertiser | null>(null)
   const [hasAdsAccount,    setHasAdsAccount]    = useState<boolean | null>(null) // null = loading
@@ -359,6 +351,21 @@ export default function PublicidadePage() {
             </pre>
           </details>
         )}
+      </div>
+    )
+  }
+
+  /* ── Admin guard ────────────────────────────────────────────────────── */
+  if (!isAdmin) {
+    return (
+      <div className="p-6">
+        <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
+            <Lock className="w-7 h-7 text-red-400" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-300 mb-1">Acesso restrito</h3>
+          <p className="text-sm text-slate-500 max-w-sm">Módulo em desenvolvimento — disponível apenas para administradores.</p>
+        </div>
       </div>
     )
   }

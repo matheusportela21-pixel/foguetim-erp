@@ -4,12 +4,11 @@ import { useState, useEffect } from 'react'
 import {
   FileText, Plus, Search, Download, Eye, XCircle,
   CheckCircle2, Clock, AlertTriangle, Loader2, ShieldCheck,
-  AlertCircle, RefreshCw, X, Calculator,
+  AlertCircle, RefreshCw, X, Calculator, Lock,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { useRouter } from 'next/navigation'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type NfeStatus = 'rascunho' | 'pendente' | 'autorizada' | 'cancelada' | 'denegada' | 'erro'
@@ -118,14 +117,8 @@ const ADMIN_ROLES = ['admin', 'super_admin', 'owner', 'foguetim_support']
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 export default function NfePage() {
   const { profile } = useAuth()
-  const router = useRouter()
   const userId = profile?.id ?? ''
-
-  useEffect(() => {
-    if (profile !== null && !ADMIN_ROLES.includes(profile.role)) {
-      router.replace('/dashboard')
-    }
-  }, [profile, router])
+  const isAdmin = profile !== undefined && profile !== null && ADMIN_ROLES.includes(profile.role)
 
   const [nfes,         setNfes]         = useState<Nfe[]>([])
   const [fiscalCfg,    setFiscalCfg]    = useState<FiscalCfg | null>(null)
@@ -180,6 +173,23 @@ export default function NfePage() {
     const matchStatus = filterStatus === 'todas' || n.status === filterStatus
     return matchSearch && matchStatus
   })
+
+  if (!isAdmin) {
+    return (
+      <div>
+        <Header title="NF-e" subtitle="Notas Fiscais Eletrônicas — Beta" />
+        <div className="p-6">
+          <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
+              <Lock className="w-7 h-7 text-red-400" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-300 mb-1">Acesso restrito</h3>
+            <p className="text-sm text-slate-500 max-w-sm">Módulo em desenvolvimento — disponível apenas para administradores.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
