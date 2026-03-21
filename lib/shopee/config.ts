@@ -25,23 +25,43 @@ export const SHOPEE_PATH_ITEM_LIST   = '/api/v2/product/get_item_list'
 export const SHOPEE_PATH_ORDER_LIST  = '/api/v2/order/get_order_list'
 export const SHOPEE_PATH_PERFORMANCE = '/api/v2/shop/get_shop_performance'
 
-/** Retorna as variáveis de ambiente Shopee, lançando erro se ausentes */
+/** Retorna as variáveis de ambiente Shopee, lançando erro se ausentes.
+ *  .trim() é aplicado em TODAS as strings para remover whitespace/newlines
+ *  que podem existir em arquivos .env e corromper o HMAC-SHA256.
+ */
 export function getShopeeEnv(): {
   partnerId:   number
   partnerKey:  string
   redirectUri: string
 } {
-  const partnerId  = process.env.SHOPEE_PARTNER_ID
-  const partnerKey = process.env.SHOPEE_PARTNER_KEY
-  const redirectUri =
-    process.env.SHOPEE_REDIRECT_URI ??
+  const rawPartnerId  = process.env.SHOPEE_PARTNER_ID?.trim()
+  const rawPartnerKey = process.env.SHOPEE_PARTNER_KEY?.trim()
+  const redirectUri   = (
+    process.env.SHOPEE_REDIRECT_URI?.trim() ??
     'https://app.foguetim.com.br/api/shopee/callback'
+  )
 
-  if (!partnerId || !partnerKey) {
+  if (!rawPartnerId || !rawPartnerKey) {
     throw new Error(
       '[Shopee] SHOPEE_PARTNER_ID e SHOPEE_PARTNER_KEY não configurados no servidor'
     )
   }
 
-  return { partnerId: Number(partnerId), partnerKey, redirectUri }
+  const partnerId = Number(rawPartnerId)
+  if (isNaN(partnerId)) {
+    throw new Error(`[Shopee] SHOPEE_PARTNER_ID inválido (não é número): "${rawPartnerId}"`)
+  }
+
+  // Log de diagnóstico (apenas em dev — nunca logar a key completa em prod)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Shopee] env carregado —', {
+      partnerId,
+      keyLength:   rawPartnerKey.length,
+      keyPreview:  `${rawPartnerKey.slice(0, 6)}…${rawPartnerKey.slice(-4)}`,
+      redirectUri,
+      env:         process.env.SHOPEE_ENV ?? 'test (padrão)',
+    })
+  }
+
+  return { partnerId, partnerKey: rawPartnerKey, redirectUri }
 }

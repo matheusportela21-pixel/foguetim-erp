@@ -29,13 +29,25 @@ export function shopeeSign(
   accessToken?: string,
   shopId?:      number,
 ): string {
+  // Base string: concatenação pura, sem separadores
+  // Pública:    "{partnerId}{apiPath}{timestamp}"
+  // Shop-level: "{partnerId}{apiPath}{timestamp}{accessToken}{shopId}"
   let base = `${partnerId}${apiPath}${timestamp}`
   if (accessToken !== undefined) base += accessToken
   if (shopId      !== undefined) base += shopId
 
-  return createHmac('sha256', partnerKey)
+  const sign = createHmac('sha256', partnerKey)
     .update(base)
     .digest('hex')
+
+  // Log de diagnóstico em dev — confirma que base string e sign estão corretos
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Shopee sign] base string:', base)
+    console.log('[Shopee sign] sign:', sign)
+    console.log('[Shopee sign] key length:', partnerKey.length)
+  }
+
+  return sign
 }
 
 /** Retorna o Unix timestamp atual em segundos */
