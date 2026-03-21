@@ -5,12 +5,12 @@ export const metadata: Metadata = {
   title: 'Contato',
   description: 'Fale com a equipe do Foguetim ERP. Tire dúvidas, solicite suporte ou envie sugestões para melhorar sua gestão no Mercado Livre.',
   alternates: {
-    canonical: 'https://foguetim.com.br/contato',
+    canonical: 'https://www.foguetim.com.br/contato',
   },
   openGraph: {
     title: 'Contato | Foguetim ERP',
     description: 'Fale com a equipe do Foguetim ERP. Tire dúvidas ou solicite suporte.',
-    url: 'https://foguetim.com.br/contato',
+    url: 'https://www.foguetim.com.br/contato',
   },
 }
 

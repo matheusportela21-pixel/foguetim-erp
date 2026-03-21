@@ -162,7 +162,8 @@
       "Bash(grep -r \"interface.*Agent\\\\|type.*Agent\" /c/Users/mathe/foguetim/lib --include=*.ts)",
       "Bash(cat -n \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/achados/page.tsx\")",
       "Bash(wc -l \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")",
-      "Bash(head -100 \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")"
+      "Bash(head -100 \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")",
+      "Bash(grep -rn foguetim.com.br C:/Users/mathe/foguetim/app/ C:/Users/mathe/foguetim/components/ C:/Users/mathe/foguetim/lib/ --include=*.ts --include=*.tsx)"
     ]
   }
 }

@@ -1,8 +1,58 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// ── Domain routing ────────────────────────────────────────────────────────────
+
+const PUBLIC_DOMAIN = 'foguetim.com.br'
+const APP_DOMAIN    = 'app.foguetim.com.br'
+
+const PUBLIC_ONLY_ROUTES = new Set([
+  '/', '/blog', '/ajuda', '/planos', '/sobre', '/privacidade',
+  '/termos', '/changelog', '/contato', '/integracoes',
+])
+const PUBLIC_ONLY_PREFIXES = ['/blog/', '/ajuda/', '/api/blog/', '/api/help/', '/api/changelog']
+const APP_PREFIXES = [
+  '/dashboard', '/admin',
+  '/api/mercadolivre', '/api/armazem', '/api/admin', '/api/security',
+  '/api/feedback', '/api/empresa', '/api/precificacao', '/api/user',
+  '/api/cron', '/api/ai', '/api/webhooks',
+]
+const BOTH_DOMAINS = new Set(['/login', '/cadastro', '/registro', '/recuperar-senha'])
+
+function isPublicOnly(p: string) {
+  return PUBLIC_ONLY_ROUTES.has(p) || PUBLIC_ONLY_PREFIXES.some(x => p.startsWith(x))
+}
+function isAppRoute(p: string) { return APP_PREFIXES.some(x => p.startsWith(x)) }
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const hostname = request.headers.get('host') ?? ''
+
+  // ── Domain-based routing (only in production, not localhost / Vercel preview) ─
+  const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.endsWith('.vercel.app')
+  if (!isLocal) {
+    const isOnPublicDomain = (hostname === PUBLIC_DOMAIN || hostname === `www.${PUBLIC_DOMAIN}`)
+    const isOnAppDomain    = hostname === APP_DOMAIN
+
+    // Public domain → app route → redirect
+    if (isOnPublicDomain && isAppRoute(pathname)) {
+      return NextResponse.redirect(
+        new URL(`https://${APP_DOMAIN}${pathname}${request.nextUrl.search}`, request.url), 301,
+      )
+    }
+    // App domain → public-only route → redirect (login/cadastro allowed on both)
+    if (isOnAppDomain && isPublicOnly(pathname) && !BOTH_DOMAINS.has(pathname)) {
+      return NextResponse.redirect(
+        new URL(`https://www.${PUBLIC_DOMAIN}${pathname}${request.nextUrl.search}`, request.url), 301,
+      )
+    }
+    // App domain root → dashboard
+    if (isOnAppDomain && pathname === '/') {
+      return NextResponse.redirect(new URL(`https://${APP_DOMAIN}/dashboard`, request.url), 302)
+    }
+  }
+
+  // ── Auth guard ────────────────────────────────────────────────────────────
 
   // If Supabase is not configured, let everything through (dev mode with mock data)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''

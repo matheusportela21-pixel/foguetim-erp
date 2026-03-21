@@ -129,7 +129,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
           <div className="pt-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-400">
             <span>© {year} Foguetim ERP. Todos os direitos reservados.</span>
             <a
-              href="https://foguetim.com.br"
+              href="https://www.foguetim.com.br"
               className="hover:text-violet-600 transition-colors"
               target="_blank"
               rel="noopener noreferrer"

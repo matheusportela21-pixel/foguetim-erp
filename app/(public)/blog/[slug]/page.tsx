@@ -202,7 +202,7 @@ export async function generateMetadata({
         type: 'article',
         publishedTime: data.published_at,
         authors: [data.author],
-        url: `https://foguetim.com.br/blog/${data.slug}`,
+        url: `https://www.foguetim.com.br/blog/${data.slug}`,
         ...(image && { images: [{ url: image, alt: title }] }),
       },
       twitter: {
@@ -212,7 +212,7 @@ export async function generateMetadata({
         ...(image && { images: [image] }),
       },
       alternates: {
-        canonical: `https://foguetim.com.br/blog/${data.slug}`,
+        canonical: `https://www.foguetim.com.br/blog/${data.slug}`,
       },
     }
   } catch {
@@ -306,7 +306,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     publisher: {
       '@type': 'Organization',
       name: 'Foguetim ERP',
-      logo: { '@type': 'ImageObject', url: 'https://foguetim.com.br/icon.png' },
+      logo: { '@type': 'ImageObject', url: 'https://www.foguetim.com.br/icon.png' },
     },
     ...(post.cover_image_url && {
       image: post.cover_image_url,

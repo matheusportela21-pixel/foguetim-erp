@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   keywords: ['ERP mercado livre', 'gestão anúncios', 'painel vendedor', 'mercado livre ERP', 'gestão marketplace', 'foguetim'],
   authors: [{ name: 'Foguetim ERP' }],
   creator: 'Foguetim ERP',
-  metadataBase: new URL('https://foguetim.com.br'),
+  metadataBase: new URL('https://www.foguetim.com.br'),
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    url: 'https://foguetim.com.br',
+    url: 'https://www.foguetim.com.br',
     siteName: 'Foguetim ERP',
     title: 'Foguetim ERP — Gestão completa para vendedores do Mercado Livre',
     description: 'Gerencie seus anúncios, pedidos, SAC e métricas do Mercado Livre em um só painel.',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true },
   },
   alternates: {
-    canonical: 'https://foguetim.com.br',
+    canonical: 'https://www.foguetim.com.br',
   },
 }
 
@@ -56,7 +56,7 @@ const jsonLd = {
   provider: {
     '@type': 'Organization',
     name: 'Foguetim ERP',
-    url: 'https://foguetim.com.br',
+    url: 'https://www.foguetim.com.br',
   },
 }
 

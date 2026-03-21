@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-const BASE = 'https://foguetim.com.br'
+const BASE = 'https://www.foguetim.com.br'
 
 async function getBlogUrls(): Promise<MetadataRoute.Sitemap> {
   try {
