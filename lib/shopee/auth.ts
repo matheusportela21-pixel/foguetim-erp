@@ -52,7 +52,22 @@ export interface ShopeeConnection {
 export function getShopeeAuthUrl(): string {
   const { partnerId, partnerKey, redirectUri } = getShopeeEnv()
   const timestamp = nowTs()
+
+  // Base string exatamente como a Shopee especifica: partnerId + path + timestamp
+  const baseString = `${partnerId}${SHOPEE_PATH_AUTH}${timestamp}`
   const sign = shopeeSign(partnerKey, partnerId, SHOPEE_PATH_AUTH, timestamp)
+
+  // ── DIAGNÓSTICO (sem expor a key) ─────────────────────────────────────────
+  console.log('[Shopee auth] DIAGNÓSTICO ─────────────────────')
+  console.log('[Shopee auth] partnerId       :', partnerId, '| tipo:', typeof partnerId)
+  console.log('[Shopee auth] partnerKeyLength:', partnerKey.length)
+  console.log('[Shopee auth] partnerKeyStart :', partnerKey.slice(0, 6) + '…')
+  console.log('[Shopee auth] timestamp       :', timestamp, '| tipo:', typeof timestamp)
+  console.log('[Shopee auth] baseString      :', baseString)
+  console.log('[Shopee auth] sign            :', sign)
+  console.log('[Shopee auth] redirectUri     :', redirectUri)
+  console.log('[Shopee auth] baseUrl         :', getShopeeBaseUrl())
+  console.log('[Shopee auth] ──────────────────────────────────')
 
   const params = new URLSearchParams({
     partner_id: String(partnerId),
@@ -62,7 +77,7 @@ export function getShopeeAuthUrl(): string {
   })
 
   const url = `${getShopeeBaseUrl()}${SHOPEE_PATH_AUTH}?${params.toString()}`
-  console.log('[Shopee] Auth URL gerada — partner_id:', partnerId)
+  console.log('[Shopee auth] URL final:', url.replace(sign, sign.slice(0, 8) + '…'))
   return url
 }
 
