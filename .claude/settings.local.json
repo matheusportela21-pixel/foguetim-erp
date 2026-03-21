@@ -163,7 +163,9 @@
       "Bash(cat -n \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/achados/page.tsx\")",
       "Bash(wc -l \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")",
       "Bash(head -100 \"C:/Users/mathe/foguetim/app/\\(admin\\)/admin/agentes/page.tsx\")",
-      "Bash(grep -rn foguetim.com.br C:/Users/mathe/foguetim/app/ C:/Users/mathe/foguetim/components/ C:/Users/mathe/foguetim/lib/ --include=*.ts --include=*.tsx)"
+      "Bash(grep -rn foguetim.com.br C:/Users/mathe/foguetim/app/ C:/Users/mathe/foguetim/components/ C:/Users/mathe/foguetim/lib/ --include=*.ts --include=*.tsx)",
+      "Bash(grep -n \"listing_price\\\\|ml_user_id\" C:/Users/mathe/foguetim/app/ C:/Users/mathe/foguetim/lib/ C:/Users/mathe/foguetim/components/ -r --include=*.ts --include=*.tsx)",
+      "Bash(\"C:/Users/mathe/foguetim/lib/services/agent-context.ts\":*)"
     ]
   }
 }

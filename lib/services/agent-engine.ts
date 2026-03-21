@@ -9,6 +9,7 @@
 import { supabaseAdmin }              from '@/lib/supabase-admin'
 import { callAnthropic, extractText } from '@/lib/services/anthropic'
 import { checkThreadTriggers }        from './agent-communication'
+import { getGlobalContext }           from './agent-context'
 import { execSync }                   from 'child_process'
 import path                           from 'path'
 
@@ -138,17 +139,55 @@ async function mlGet(endpoint: string, token: string): Promise<Record<string, un
 async function collectSentinelaData(db: DB): Promise<string> {
   const [audit, activity, otp, connections] = await Promise.all([
     safeQuery(db.from('security_audit').select('action, details, created_at, user_id').gte('created_at', since(7)).order('created_at', { ascending: false }).limit(100)),
-    safeQuery(db.from('activity_logs').select('action, metadata, created_at, user_id').gte('created_at', since(7)).order('created_at', { ascending: false }).limit(50)),
+    safeQuery(db.from('activity_logs').select('action, metadata, created_at, user_id').gte('created_at', since(7)).order('created_at', { ascending: false }).limit(100)),
     safeQuery(db.from('security_otp').select('status, created_at, user_id').eq('status', 'failed').gte('created_at', since(7)).limit(50)),
-    safeQuery(db.from('marketplace_connections').select('marketplace, user_id, expires_at').lte('expires_at', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()).gt('expires_at', new Date().toISOString())),
+    safeQuery(db.from('marketplace_connections').select('marketplace, user_id, expires_at').lt('expires_at', new Date().toISOString())), // only truly expired, not expiring
   ])
+
+  // Detectar logins simultâneos de IPs DIFERENTES (janela 5 min) — comportamento realmente suspeito
+  // Logins sequenciais do mesmo IP são múltiplas abas — ignorar
+  const loginEvents = activity.filter(e => {
+    const action = String((e as Record<string, unknown>).action ?? '')
+    return action.includes('login') || action.includes('sign_in')
+  })
+  const suspeitasPorUsuario: Array<{ user_id: string; ips_distintos: number; janela_min: number }> = []
+  const byUser: Record<string, Array<{ ts: number; ip: string }>> = {}
+  for (const ev of loginEvents) {
+    const e  = ev as Record<string, unknown>
+    const uid = String(e.user_id ?? '')
+    const meta = e.metadata as Record<string, unknown> | null
+    const ip  = String(meta?.ip ?? meta?.x_forwarded_for ?? 'unknown')
+    const ts  = new Date(String(e.created_at ?? '')).getTime()
+    if (!byUser[uid]) byUser[uid] = []
+    byUser[uid]!.push({ ts, ip })
+  }
+  for (const [uid, events] of Object.entries(byUser)) {
+    events.sort((a, b) => a.ts - b.ts)
+    // Janela de 5 min
+    for (let i = 0; i < events.length; i++) {
+      const window5m = events.filter(e => Math.abs(e.ts - events[i]!.ts) <= 5 * 60_000)
+      const distinctIps = new Set(window5m.map(e => e.ip)).size
+      if (distinctIps >= 3) {  // 3+ IPs distintos em 5 min = suspeito
+        suspeitasPorUsuario.push({ user_id: uid, ips_distintos: distinctIps, janela_min: 5 })
+        break
+      }
+    }
+  }
+
   return JSON.stringify({
     periodo_analise: '7 dias',
+    nota_importante: 'Logins sequenciais do mesmo IP = múltiplas abas do navegador (NORMAL). Apenas logins de IPs DIFERENTES em <5min são suspeitos.',
     security_audit_eventos: audit,
-    activity_logs: activity,
+    activity_logs_recentes: activity.slice(0, 30),
     otp_falhos: otp,
-    tokens_expirando_24h: connections,
-    totais: { audit_eventos: audit.length, otp_falhos: otp.length, tokens_expirando: connections.length },
+    tokens_expirados_sem_limpeza: connections,  // renamed: only truly expired tokens
+    sessoes_suspeitas_ips_diferentes: suspeitasPorUsuario,
+    totais: {
+      audit_eventos: audit.length,
+      otp_falhos: otp.length,
+      tokens_expirados: connections.length,
+      sessoes_ips_distintos_suspeitas: suspeitasPorUsuario.length,
+    },
   }, null, 2)
 }
 
@@ -174,34 +213,65 @@ async function collectDetetivelData(db: DB): Promise<string> {
 
 async function collectMedicoData(db: DB): Promise<string> {
   const [
-    products, listings, orders, mappings,
+    products, listings, orders, mappings, mlConnections,
     productsVazios, mappingsConflict, connectionsExpired, orphans,
     pgStats,
   ] = await Promise.all([
-    safeQuery(db.from('warehouse_products').select('id').limit(1)),
-    safeQuery(db.from('ml_listings').select('id').limit(1)),
-    safeQuery(db.from('orders').select('id').limit(1)),
-    safeQuery(db.from('warehouse_product_mappings').select('id').limit(1)),
+    safeQuery(db.from('warehouse_products').select('id').limit(5)),
+    safeQuery(db.from('ml_listings').select('id, sold_quantity').limit(5)),
+    safeQuery(db.from('orders').select('id').limit(5)),
+    safeQuery(db.from('warehouse_product_mappings').select('id').limit(5)),
+    safeQuery(db.from('marketplace_connections').select('marketplace, connected').eq('connected', true).limit(10)),
     safeQuery(db.from('warehouse_products').select('id, sku, name').or('sku.is.null,name.is.null').limit(50)),
     safeQuery(db.from('warehouse_product_mappings').select('id, product_id, marketplace_item_id').eq('mapping_status', 'conflict').limit(50)),
     safeQuery(db.from('marketplace_connections').select('marketplace, user_id, expires_at').lt('expires_at', new Date().toISOString()).limit(50)),
     safeQuery(db.from('warehouse_product_mappings').select('id, product_id').is('product_id', null).limit(50)),
     safeQuery(db.rpc('pg_stat_user_tables_summary' as never).limit(10) as never),
   ])
+
+  const hasWarehouse = products.length > 0
+  const hasMlListings = listings.length > 0
+  const hasOrders = orders.length > 0
+  const hasMlConn = mlConnections.length > 0
+
+  // Contexto para o agente entender o que está vazio por design vs por problema
+  const interpretacao = {
+    warehouse_products_vazia: !hasWarehouse
+      ? (hasMlListings
+          ? 'NORMAL — produtos existem no ML (ml_listings), armazém é módulo OPCIONAL não utilizado. NÃO é bug.'
+          : 'ESPERADO — sistema em configuração inicial. Severidade: BAIXA (sugestão apenas).')
+      : 'OK',
+    orders_vazia: !hasOrders
+      ? (hasMlConn
+          ? 'ATENÇÃO — há conexão ML ativa mas sem pedidos. Verificar se sync está funcionando.'
+          : 'NORMAL — sem conexão ML, sem pedidos. Severidade: INFORMATIVO apenas.')
+      : 'OK',
+    ml_listings: hasMlListings ? `${listings.length}+ anúncios ML encontrados` : 'Nenhum anúncio ML ainda',
+  }
+
   return JSON.stringify({
     periodo_analise: '30 dias',
+    nota_importante: 'Tabelas vazias em sistema NOVO são NORMAIS. Use o campo interpretacao para entender o contexto antes de marcar como crítico.',
+    interpretacao,
     contagens_tabelas: {
-      warehouse_products:         products.length > 0 ? '≥1 (sample)' : 0,
-      ml_listings:                listings.length > 0 ? '≥1 (sample)' : 0,
-      orders:                     orders.length > 0   ? '≥1 (sample)' : 0,
-      warehouse_product_mappings: mappings.length > 0 ? '≥1 (sample)' : 0,
+      warehouse_products:         hasWarehouse ? `≥${products.length} (amostra)` : 0,
+      ml_listings:                hasMlListings ? `≥${listings.length} (amostra)` : 0,
+      orders:                     hasOrders ? `≥${orders.length} (amostra)` : 0,
+      warehouse_product_mappings: mappings.length > 0 ? `≥${mappings.length} (amostra)` : 0,
+      ml_connections_ativas:      mlConnections.length,
     },
+    // Problemas REAIS de integridade (estes SIM merecem atenção)
     produtos_com_campos_vazios:  productsVazios,
     mapeamentos_em_conflito:     mappingsConflict,
     tokens_expirados_nao_limpos: connectionsExpired,
     mapeamentos_orfaos:          orphans,
     pg_stats:                    pgStats,
-    totais: { produtos_vazios: productsVazios.length, conflitos: mappingsConflict.length, tokens_expirados: connectionsExpired.length, orfaos: orphans.length },
+    totais: {
+      produtos_campos_vazios: productsVazios.length,
+      conflitos_mapeamento:   mappingsConflict.length,
+      tokens_expirados:       connectionsExpired.length,
+      orfaos:                 orphans.length,
+    },
   }, null, 2)
 }
 
@@ -615,12 +685,23 @@ async function collectMlTesterData(db: DB): Promise<string> {
   }
   const { token } = tokens[0]!
 
-  const listings = await safeQuery(
+  // Usar ml_listings como fonte primária (dados reais do ML sincronizados)
+  // warehouse_products é OPCIONAL — não usar como fallback obrigatório
+  const mlListings = await safeQuery(
     db.from('ml_listings').select('item_id, price, stock_quantity, status').limit(5),
   )
 
+  if (mlListings.length === 0) {
+    return JSON.stringify({
+      nota: 'Nenhum anúncio ML sincronizado ainda. Sistema em configuração inicial.',
+      confiabilidade_score: 100,  // não há dados para testar, não é um problema
+      comparacoes_listings: [],
+      totais: { testados: 0, com_divergencia: 0 },
+    })
+  }
+
   const comparacoes: Array<Record<string, unknown>> = []
-  for (const l of listings) {
+  for (const l of mlListings) {
     const local  = l as Record<string, unknown>
     const itemId = String(local.item_id ?? '')
     if (!itemId) continue
@@ -628,6 +709,11 @@ async function collectMlTesterData(db: DB): Promise<string> {
     const mlStock = mlData
       ? Number(mlData.initial_quantity ?? 0) - Number(mlData.sold_quantity ?? 0)
       : null
+    // Comparar apenas campos disponíveis localmente
+    const divergencias: string[] = []
+    if (mlData && local.price != null && mlData.price != null && local.price !== mlData.price) divergencias.push('preco')
+    if (mlData && mlStock !== null && local.stock_quantity != null && local.stock_quantity !== mlStock) divergencias.push('estoque')
+    if (mlData && local.status != null && local.status !== mlData.status) divergencias.push('status')
     comparacoes.push({
       item_id:       itemId,
       local_price:   local.price,
@@ -636,21 +722,18 @@ async function collectMlTesterData(db: DB): Promise<string> {
       ml_stock:      mlStock,
       local_status:  local.status,
       ml_status:     mlData?.status ?? null,
-      divergencias:  [
-        local.price !== mlData?.price ? 'preco' : null,
-        mlStock !== null && local.stock_quantity !== mlStock ? 'estoque' : null,
-        mlData && local.status !== mlData.status ? 'status' : null,
-      ].filter(Boolean),
+      divergencias,
     })
     await sleep(1000)
   }
 
   return JSON.stringify({
-    periodo_analise: 'tempo real (5 amostras)',
+    periodo_analise: 'tempo real (5 amostras de ml_listings)',
+    nota: 'Fonte: ml_listings (dados sincronizados do ML). Warehouse é opcional e ignorado.',
     comparacoes_listings: comparacoes,
     totais: {
       testados: comparacoes.length,
-      com_divergencia: comparacoes.filter(c => (c.divergencias as unknown[]).length > 0).length,
+      com_divergencia: comparacoes.filter(c => (c.divergencias as string[]).length > 0).length,
     },
   }, null, 2)
 }
@@ -658,7 +741,7 @@ async function collectMlTesterData(db: DB): Promise<string> {
 async function collectMlAuthGuardianData(db: DB): Promise<string> {
   const allConns = await safeQuery(
     db.from('marketplace_connections')
-      .select('user_id, expires_at, connected, data, marketplace')
+      .select('user_id, expires_at, connected, data, marketplace, error_message, last_error_at')
       .eq('marketplace', 'mercadolivre')
       .limit(50),
   )
@@ -670,32 +753,50 @@ async function collectMlAuthGuardianData(db: DB): Promise<string> {
     const c        = conn as Record<string, unknown>
     const expiresAt = new Date(String(c.expires_at ?? 0))
     const isExpired = expiresAt <= now
+    const expiresInHours = isExpired ? -1 : Math.round((expiresAt.getTime() - now.getTime()) / 3_600_000)
     const data      = c.data as Record<string, unknown> | null
     const token     = String(data?.access_token ?? '')
 
-    let tokenTest = 'nao_testado'
-    if (!isExpired && token) {
+    // Token próximo de expirar NÃO é problema — o sistema faz refresh automático
+    // Só testar token se ele já expirou OU se há registro de erro recente
+    const hasRecentError = !!c.error_message || !!c.last_error_at
+    const shouldTest = isExpired || hasRecentError
+
+    let tokenTest: string
+    if (!shouldTest) {
+      // Token válido e sem erros registrados — assume OK sem chamar a API
+      tokenTest = expiresInHours < 2 ? 'expirando_logo_refresh_automatico_esperado' : 'ok_sem_testar'
+    } else if (token) {
       const res = await mlGet('/users/me', token)
-      tokenTest = res && !res._error ? 'ok' : 'falhou'
-      await sleep(1000)
+      tokenTest = res && !res._error ? 'ok' : 'falhou_401'
+      await sleep(500)
+    } else {
+      tokenTest = 'sem_token'
     }
+
     results.push({
       user_id:          c.user_id,
       expires_at:       c.expires_at,
+      expires_in_hours: expiresInHours,
       is_expired:       isExpired,
-      expires_in_hours: isExpired ? -1 : Math.round((expiresAt.getTime() - now.getTime()) / 3_600_000),
+      connected:        c.connected,
+      error_registrado: c.error_message ?? null,
       token_test:       tokenTest,
+      // CRÍTICO só se token expirou E está falhando (não apenas expirando)
+      requer_atencao:   isExpired && tokenTest === 'falhou_401',
     })
   }
 
   return JSON.stringify({
     periodo_analise: 'tempo real',
+    nota_importante: 'Tokens ML têm vida curta (~6h) e são renovados AUTOMATICAMENTE. "expirando" NÃO é problema. Só marque CRÍTICO se token expirou E está retornando 401.',
     conexoes: results,
     totais: {
-      total:           results.length,
-      expiradas:       results.filter(r => r.is_expired).length,
-      expirando_24h:   results.filter(r => !r.is_expired && (r.expires_in_hours as number) < 24).length,
-      falhou_teste:    results.filter(r => r.token_test === 'falhou').length,
+      total:             results.length,
+      ok:                results.filter(r => String(r.token_test).startsWith('ok')).length,
+      expiradas_real:    results.filter(r => r.is_expired && r.token_test === 'falhou_401').length,
+      expirando_normal:  results.filter(r => !r.is_expired && (r.expires_in_hours as number) < 6).length,
+      requer_atencao:    results.filter(r => r.requer_atencao).length,
     },
   }, null, 2)
 }
@@ -1333,14 +1434,18 @@ export async function executeAgent(agentSlug: string): Promise<AgentExecutionRes
   const runId = run?.id as string | undefined
 
   try {
-    const contextData  = await collectData(agentSlug, db)
+    const [contextData, globalContext] = await Promise.all([
+      collectData(agentSlug, db),
+      getGlobalContext(),
+    ])
     const userMessage  = `Dados para análise:\n\n${contextData}\n\nRetorne APENAS o JSON solicitado, sem texto adicional.`
     const webSearch    = WEB_SEARCH_AGENTS.has(agentSlug)
+    const fullPrompt   = `${typedAgent.prompt_sistema}\n\n${globalContext}`
 
     const aiRes = await callAnthropic({
       model:        typedAgent.modelo ?? 'claude-sonnet-4-20250514',
       maxTokens:    4096,
-      systemPrompt: typedAgent.prompt_sistema,
+      systemPrompt: fullPrompt,
       messages:     [{ role: 'user', content: userMessage }],
       temperature:  0.3,
       webSearch,
