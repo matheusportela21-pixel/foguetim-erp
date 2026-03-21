@@ -18,6 +18,7 @@ import { useSidebar } from '@/context/SidebarContext'
 import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
 import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
 import { DevBanner } from '@/components/DevBanner'
+import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
 
 /* ── ML Metrics type ────────────────────────────────────────────────── */
 interface MLMetrics {
@@ -149,6 +150,8 @@ export default function DashboardPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [finData, setFinData] = useState<{ receita_bruta: number; taxas_ml: number; receita_liquida: number } | null>(null)
   const { user, profile } = useAuth()
+  const { hasML, hasShopee } = useConnectedMarketplaces()
+  const anyMarketplace = hasML || hasShopee
 
   const { toggle } = useSidebar()
   const firstName = (
@@ -293,7 +296,9 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500 mt-1">
                 {ml?.connected
                   ? `Conta ML: ${ml.nickname} · dados dos últimos 30 dias`
-                  : 'Conecte seus canais de venda para ver seus dados em tempo real.'}
+                  : anyMarketplace
+                    ? 'Marketplace conectado — dados disponíveis.'
+                    : 'Conecte seus canais de venda para ver seus dados em tempo real.'}
               </p>
             </div>
             {todayStr && (
@@ -398,19 +403,36 @@ export default function DashboardPage() {
             {[0,1,2,3].map(i => <KpiSkeleton key={i} />)}
           </div>
         ) : !ml?.connected ? (
-          <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
-              <Link2 className="w-5 h-5 text-yellow-400" />
+          hasShopee ? (
+            /* Shopee conectada mas ML não — mostrar aviso mais suave */
+            <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Link2 className="w-5 h-5 text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">Shopee conectada · adicione o Mercado Livre para mais métricas</p>
+                <p className="text-xs text-slate-500 mt-0.5">Os KPIs abaixo mostrarão dados do ML quando conectado.</p>
+              </div>
+              <Link href="/dashboard/integracoes"
+                className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+                Conectar ML
+              </Link>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white">Conecte seu Mercado Livre para ver métricas reais</p>
-              <p className="text-xs text-slate-500 mt-0.5">Pedidos, faturamento e anúncios aparecerão aqui automaticamente.</p>
+          ) : (
+            <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
+                <Link2 className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">Conecte seu Mercado Livre para ver métricas reais</p>
+                <p className="text-xs text-slate-500 mt-0.5">Pedidos, faturamento e anúncios aparecerão aqui automaticamente.</p>
+              </div>
+              <Link href="/dashboard/integracoes"
+                className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+                Conectar ML
+              </Link>
             </div>
-            <Link href="/dashboard/integracoes"
-              className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
-              Conectar ML
-            </Link>
-          </div>
+          )
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
             {[
@@ -594,14 +616,24 @@ export default function DashboardPage() {
         {/* ── Quick Actions ── */}
         <div className="animate-slide-up">
           <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3">Ações Rápidas</p>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { icon: Plus,        label: 'Cadastrar Produto', href: '/dashboard/produtos-ml'    },
-              { icon: Tag,         label: 'Nova Listagem',     href: '/dashboard/listagens'   },
-              { icon: Calculator,  label: 'Calcular Preço',    href: '/dashboard/precificacao'},
-              { icon: FileCheck,   label: 'Emitir NF-e',       href: '/dashboard/nfe'         },
-              { icon: Truck,       label: 'Gerar Etiqueta',    href: '/dashboard/expedicao'   },
-              { icon: DollarSign,  label: 'Financeiro',        href: '/dashboard/financeiro'  },
+              { icon: Plus,        label: 'Cadastrar Produto', href: '/dashboard/armazem/produtos' },
+              { icon: Calculator,  label: 'Calcular Preço',    href: '/dashboard/precificacao'     },
+              { icon: FileCheck,   label: 'Emitir NF-e',       href: '/dashboard/nfe'              },
+              { icon: DollarSign,  label: 'Financeiro',        href: '/dashboard/financeiro'       },
+            ].map(a => (
+              <Link key={a.label} href={a.href}
+                className="dash-card flex flex-col items-center gap-2 py-3 px-2 rounded-xl hover:border-purple-600/25 hover:bg-purple-600/5 transition-all group text-center">
+                <div className="w-8 h-8 rounded-xl bg-dark-700 flex items-center justify-center group-hover:bg-purple-600/15 transition-colors">
+                  <a.icon className="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition-colors" />
+                </div>
+                <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-300 transition-colors leading-tight">{a.label}</span>
+              </Link>
+            ))}
+            {anyMarketplace && [
+              { icon: Tag,   label: 'Nova Listagem',  href: '/dashboard/listagens'  },
+              { icon: Truck, label: 'Gerar Etiqueta', href: '/dashboard/expedicao'  },
             ].map(a => (
               <Link key={a.label} href={a.href}
                 className="dash-card flex flex-col items-center gap-2 py-3 px-2 rounded-xl hover:border-purple-600/25 hover:bg-purple-600/5 transition-all group text-center">
@@ -717,30 +749,48 @@ export default function DashboardPage() {
               <p className="font-bold text-white text-sm mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>Plataformas</p>
               <p className="text-xs text-slate-600 mb-4">Canais conectados</p>
               <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
-                  <div className="w-7 h-7 rounded-lg bg-yellow-500/15 flex items-center justify-center shrink-0">
-                    <ShoppingCart className="w-3.5 h-3.5 text-yellow-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-white">Mercado Livre</p>
-                    <p className="text-[10px] text-slate-500">{ml?.connected ? `@${ml.nickname}` : 'Não conectado'}</p>
-                  </div>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${ml?.connected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                    {ml?.connected ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                {['Shopee', 'Amazon'].map(p => (
-                  <div key={p} className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/[0.05] rounded-xl opacity-50">
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
-                      <Clock className="w-3.5 h-3.5 text-slate-600" />
+                {hasML && (
+                  <Link href="/dashboard/pedidos">
+                    <div className="flex items-center gap-3 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl hover:bg-yellow-500/10 transition-colors">
+                      <div className="w-7 h-7 rounded-lg bg-yellow-500/15 flex items-center justify-center shrink-0">
+                        <ShoppingCart className="w-3.5 h-3.5 text-yellow-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-white">Mercado Livre</p>
+                        <p className="text-[10px] text-slate-500">{ml?.connected ? `@${ml.nickname}` : 'Conectado'}</p>
+                      </div>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Ativo</span>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-slate-500">{p}</p>
-                      <p className="text-[10px] text-slate-600">Em breve</p>
+                  </Link>
+                )}
+                {hasShopee && (
+                  <Link href="/dashboard/shopee/overview">
+                    <div className="flex items-center gap-3 p-3 bg-orange-500/5 border border-orange-500/20 rounded-xl hover:bg-orange-500/10 transition-colors">
+                      <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                        <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-white">Shopee</p>
+                        <p className="text-[10px] text-slate-500">Loja conectada</p>
+                      </div>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Ativo</span>
                     </div>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">Breve</span>
-                  </div>
-                ))}
+                  </Link>
+                )}
+                {!anyMarketplace && (
+                  <Link href="/dashboard/integracoes">
+                    <div className="flex items-center gap-3 p-3 bg-white/[0.02] border border-dashed border-white/[0.08] rounded-xl hover:bg-white/[0.04] transition-colors">
+                      <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
+                        <Link2 className="w-3.5 h-3.5 text-slate-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-slate-400">Nenhum canal conectado</p>
+                        <p className="text-[10px] text-slate-600">Clique para integrar</p>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                    </div>
+                  </Link>
+                )}
               </div>
             </div>
 

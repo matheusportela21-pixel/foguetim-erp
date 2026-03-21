@@ -8,11 +8,12 @@ import {
   Rocket, ShoppingCart, FileCheck, Link2, Users, Settings, LogOut,
   Send, UserCheck, BarChart3, HelpCircle, MessagesSquare, ShieldCheck, Star,
   AlertTriangle, BarChart2, Bell, Megaphone, Shield, ExternalLink, MessageSquare, Tag, Scale, Archive, Activity, Calendar,
-  DollarSign, ChevronDown, ChevronRight, Zap, Warehouse, Layers, ArrowLeftRight, Building2, MapPin, Receipt,
+  DollarSign, ChevronDown, ChevronRight, Warehouse, Layers, ArrowLeftRight, Building2, MapPin, Receipt,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useSidebar } from '@/context/SidebarContext'
+import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
 
 type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean; exact?: boolean }
 type NavGroup = {
@@ -21,6 +22,8 @@ type NavGroup = {
   items: NavItem[]
   collapsible?: boolean
   defaultCollapsed?: boolean
+  /** Se definido, o grupo só aparece se o marketplace correspondente estiver conectado */
+  requiresMarketplace?: 'ml' | 'shopee'
 }
 
 const navGroups: NavGroup[] = [
@@ -55,6 +58,7 @@ const navGroups: NavGroup[] = [
     marketplaceDot: 'bg-yellow-400',
     collapsible: true,
     defaultCollapsed: false,
+    requiresMarketplace: 'ml',
     items: [
       { href: '/dashboard/pedidos',      icon: ShoppingCart,  label: 'Pedidos'        },
       { href: '/dashboard/produtos-ml',  icon: Package,       label: 'Produtos'       },
@@ -96,19 +100,11 @@ const navGroups: NavGroup[] = [
     marketplaceDot: 'bg-orange-400',
     collapsible: true,
     defaultCollapsed: true,
+    requiresMarketplace: 'shopee',
     items: [
       { href: '/dashboard/shopee/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
       { href: '/dashboard/shopee/produtos',  icon: Package,         label: 'Produtos'    },
       { href: '/dashboard/shopee/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
-    ],
-  },
-  {
-    label: 'Amazon',
-    marketplaceDot: 'bg-blue-400',
-    collapsible: true,
-    defaultCollapsed: true,
-    items: [
-      { href: '/dashboard/amazon', icon: Zap, label: 'Em breve', badge: 'Breve', disabled: true },
     ],
   },
 ]
@@ -192,6 +188,7 @@ export default function Sidebar() {
   const router   = useRouter()
   const { profile, signOut } = useAuth()
   const { isOpen, close }    = useSidebar()
+  const { hasML, hasShopee } = useConnectedMarketplaces()
 
   const [productCount, setProductCount] = useState<number | null>(null)
   const [claimCount,   setClaimCount]   = useState<number>(0)
@@ -201,6 +198,13 @@ export default function Sidebar() {
       if (g.collapsible && g.defaultCollapsed) initial[g.label] = true
     })
     return initial
+  })
+
+  /** Filtra grupos baseado nos marketplaces conectados */
+  const visibleGroups = navGroups.filter(g => {
+    if (g.requiresMarketplace === 'ml')     return hasML
+    if (g.requiresMarketplace === 'shopee') return hasShopee
+    return true
   })
 
   useEffect(() => {
@@ -288,7 +292,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
-          {navGroups.map(group => {
+          {visibleGroups.map(group => {
             const isCollapsed = collapsedGroups[group.label] ?? false
             const visibleItems = group.items.filter(item =>
               !item.roles || item.roles.includes(profile?.role ?? '')

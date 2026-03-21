@@ -45,7 +45,6 @@ const API_STATUS_META: Record<ApiStatus, { label: string; cls: string; dot: stri
 const INIT_MKT: MktEntry[] = [
   { id: 'ml',      name: 'Mercado Livre',    logo: '🟡', color: 'border-amber-500/30 bg-amber-500/5',    connected: false, products: 0, lastSync: null, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
   { id: 'shopee',  name: 'Shopee',           logo: '🟠', color: 'border-orange-500/30 bg-orange-500/5',  connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'amazon',  name: 'Amazon',           logo: '🔵', color: 'border-cyan-500/30 bg-cyan-500/5',      connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
   { id: 'magalu',  name: 'Magalu',           logo: '🔷', color: 'border-blue-500/30 bg-blue-500/5',      connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
   { id: 'tiktok',  name: 'TikTok Shop',      logo: '⬛', color: 'border-slate-500/30 bg-slate-500/5',    connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
   { id: 'ame',     name: 'Americanas',       logo: '🔴', color: 'border-red-500/30 bg-red-500/5',        connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
@@ -792,13 +791,12 @@ function IntegracoesContent() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {[
-                { id: 'amazon', name: 'Amazon', color: 'border-cyan-500/20 bg-cyan-500/5', dot: 'bg-cyan-400', desc: 'Fulfillment e anúncios Amazon' },
-                { id: 'magalu', name: 'Magalu', color: 'border-blue-500/20 bg-blue-500/5', dot: 'bg-blue-400', desc: 'Pedidos e catálogo Magazine Luiza' },
-                { id: 'tiktok', name: 'TikTok Shop', color: 'border-slate-500/20 bg-slate-500/5', dot: 'bg-slate-400', desc: 'Social commerce TikTok' },
-                { id: 'ame', name: 'Americanas', color: 'border-red-500/20 bg-red-500/5', dot: 'bg-red-400', desc: 'Marketplace Americanas/B2W' },
-                { id: 'cb', name: 'Casas Bahia', color: 'border-green-500/20 bg-green-500/5', dot: 'bg-green-400', desc: 'Via Varejo e Casas Bahia' },
-                { id: 'ns', name: 'Nuvemshop', color: 'border-indigo-500/20 bg-indigo-500/5', dot: 'bg-indigo-400', desc: 'Loja virtual e multicanal' },
-                { id: 'ali', name: 'AliExpress', color: 'border-rose-500/20 bg-rose-500/5', dot: 'bg-rose-400', desc: 'Cross-border AliExpress' },
+                { id: 'magalu', name: 'Magalu',      color: 'border-blue-500/20 bg-blue-500/5',    dot: 'bg-blue-400',   desc: 'Pedidos e catálogo Magazine Luiza'  },
+                { id: 'tiktok', name: 'TikTok Shop', color: 'border-slate-500/20 bg-slate-500/5',  dot: 'bg-slate-400',  desc: 'Social commerce TikTok'             },
+                { id: 'ame',    name: 'Americanas',  color: 'border-red-500/20 bg-red-500/5',      dot: 'bg-red-400',    desc: 'Marketplace Americanas/B2W'         },
+                { id: 'cb',     name: 'Casas Bahia', color: 'border-green-500/20 bg-green-500/5',  dot: 'bg-green-400',  desc: 'Via Varejo e Casas Bahia'           },
+                { id: 'ns',     name: 'Nuvemshop',   color: 'border-indigo-500/20 bg-indigo-500/5',dot: 'bg-indigo-400', desc: 'Loja virtual e multicanal'          },
+                { id: 'ali',    name: 'AliExpress',  color: 'border-rose-500/20 bg-rose-500/5',    dot: 'bg-rose-400',   desc: 'Cross-border AliExpress'            },
               ].map(m => (
                 <div key={m.id} className={`rounded-xl border ${m.color} p-3.5 opacity-70 flex items-center justify-between group`}>
                   <div className="flex items-center gap-3">
