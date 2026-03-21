@@ -130,6 +130,7 @@ export async function GET(req: NextRequest) {
   const before   = sp.get('before')   ?? new Date().toISOString()
   const agentes  = sp.get('agentes')?.split(',').filter(Boolean) ?? []
   const severidade = sp.get('severidade') ?? ''
+  const reportIds = sp.get('report_ids')?.split(',').filter(Boolean) ?? []
 
   const db = supabaseAdmin()
 
@@ -149,6 +150,9 @@ export async function GET(req: NextRequest) {
   let reports = (data ?? []) as Record<string, unknown>[]
   if (agentes.length > 0) {
     reports = reports.filter(r => agentes.includes((r.ai_agents as { slug: string } | null)?.slug ?? ''))
+  }
+  if (reportIds.length > 0) {
+    reports = reports.filter(r => reportIds.includes(String(r.id ?? '')))
   }
 
   if (reports.length === 0) {
