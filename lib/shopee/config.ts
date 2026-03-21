@@ -11,18 +11,21 @@
 
 /** Base URL de acordo com o ambiente.
  *
- *  SHOPEE_ENV=prod  → https://partner.shopeemobile.com          (padrão)
- *  SHOPEE_ENV=test  → https://partner.test-stable.shopeemobile.com
+ *  SHOPEE_ENV=prod  → https://partner.shopeemobile.com                    (produção)
+ *  SHOPEE_ENV=test  → https://openplatform.sandbox.test-stable.shopee.sg  (sandbox — padrão)
  *
- *  O "Test Redirect URL" cadastrado no portal de produção da Shopee
- *  ainda usa as credenciais e a URL de PRODUÇÃO — não do test-stable.
- *  test-stable é um ambiente completamente separado com credenciais próprias.
+ *  ATENÇÃO: o domínio sandbox mudou em 2024/2025.
+ *  partner.test-stable.shopeemobile.com está DEPRECIADO para o sandbox.
+ *  O domínio correto confirmado via API Test Tool da Shopee é:
+ *  https://openplatform.sandbox.test-stable.shopee.sg
+ *
+ *  Produção continua em partner.shopeemobile.com (confirmado, sem mudança).
  */
 export function getShopeeBaseUrl(): string {
   const env = process.env.SHOPEE_ENV ?? 'test'
   return env === 'prod'
     ? 'https://partner.shopeemobile.com'
-    : 'https://partner.test-stable.shopeemobile.com'
+    : 'https://openplatform.sandbox.test-stable.shopee.sg'
 }
 
 export const SHOPEE_PATH_AUTH        = '/api/v2/shop/auth_partner'
