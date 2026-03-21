@@ -370,6 +370,16 @@ function MktCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+interface ShopeeConnectionInfo {
+  id:            string
+  shop_id:       number
+  shop_name:     string
+  account_label: string | null
+  is_primary:    boolean
+  expires_at:    string
+  connected:     boolean
+}
+
 interface MLStatus {
   connected:   boolean
   nickname?:   string
@@ -398,17 +408,31 @@ function IntegracoesContent() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [otpDisconnectId, setOtpDisconnectId] = useState<string | null>(null)
 
+  // Shopee state
+  const [shopeeConnections, setShopeeConnections] = useState<ShopeeConnectionInfo[]>([])
+  const [shopeeLoading, setShopeeLoading]         = useState(true)
+  const [shopeeDisconnecting, setShopeeDisconnecting] = useState<string | null>(null)
+
   // Handle ?connected=true or ?ml_error=... from OAuth redirect
   useEffect(() => {
-    const connected = searchParams.get('connected')
-    const mlError   = searchParams.get('ml_error')
+    const connected        = searchParams.get('connected')
+    const mlError          = searchParams.get('ml_error')
+    const shopeeConnected  = searchParams.get('shopee_connected')
+    const shopeeError      = searchParams.get('shopee_error')
+
     if (connected === 'true') {
       const nickname = searchParams.get('nickname') ?? ''
       setToast({ type: 'success', msg: `Mercado Livre conectado${nickname ? ` como ${nickname}` : ''}!` })
-      // Remove query params from URL without reload
       window.history.replaceState({}, '', '/dashboard/integracoes')
     } else if (mlError) {
-      setToast({ type: 'error', msg: `Erro ao conectar: ${decodeURIComponent(mlError)}` })
+      setToast({ type: 'error', msg: `Erro ao conectar ML: ${decodeURIComponent(mlError)}` })
+      window.history.replaceState({}, '', '/dashboard/integracoes')
+    } else if (shopeeConnected === 'true') {
+      const shop = searchParams.get('shop') ?? ''
+      setToast({ type: 'success', msg: `Shopee conectada${shop ? ` — ${shop}` : ''}!` })
+      window.history.replaceState({}, '', '/dashboard/integracoes')
+    } else if (shopeeError) {
+      setToast({ type: 'error', msg: `Erro ao conectar Shopee: ${decodeURIComponent(shopeeError)}` })
       window.history.replaceState({}, '', '/dashboard/integracoes')
     }
   }, [searchParams])
@@ -440,6 +464,31 @@ function IntegracoesContent() {
       .catch(() => setMlStatus({ connected: false }))
       .finally(() => setMlLoading(false))
   }, [])
+
+  // Load Shopee connection status
+  useEffect(() => {
+    fetch('/api/shopee/status')
+      .then(r => r.json())
+      .then((data: { connected: boolean; connections?: ShopeeConnectionInfo[] }) => {
+        setShopeeConnections(data.connections ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setShopeeLoading(false))
+  }, [])
+
+  async function disconnectShopeeAccount(connectionId: string) {
+    setShopeeDisconnecting(connectionId)
+    try {
+      await fetch(`/api/shopee/connections?id=${connectionId}`, { method: 'DELETE' })
+      const remaining = shopeeConnections.filter(c => c.id !== connectionId)
+      setShopeeConnections(remaining)
+      setToast({ type: 'success', msg: 'Loja Shopee desconectada com sucesso.' })
+    } catch {
+      setToast({ type: 'error', msg: 'Erro ao desconectar loja Shopee.' })
+    } finally {
+      setShopeeDisconnecting(null)
+    }
+  }
 
   async function disconnectMLAccount(connectionId: string) {
     setMlDisconnecting(connectionId)
@@ -490,7 +539,7 @@ function IntegracoesContent() {
     setFts(prev => prev.map(f => f.name === name ? { ...f, connected: !f.connected } : f))
   }
 
-  const connectedCount = mks.filter(m => m.connected).length
+  const connectedCount = mks.filter(m => m.connected).length + (shopeeConnections.length > 0 ? 1 : 0)
 
   return (
     <div>
@@ -640,6 +689,101 @@ function IntegracoesContent() {
             })}
           </div>
 
+          {/* Shopee — active integration */}
+          <div className="mb-4">
+            <div className="dash-card rounded-2xl border border-orange-500/30 bg-orange-500/5 overflow-hidden">
+              <div className="p-4">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center text-xl shrink-0">🟠</div>
+                    <div>
+                      <p className="font-bold text-white text-sm">Shopee</p>
+                      {shopeeLoading ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Loader2 className="w-3 h-3 text-slate-600 animate-spin" />
+                          <span className="text-[10px] text-slate-600">Verificando...</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">
+                          {shopeeConnections.length === 0
+                            ? 'Não conectada'
+                            : `${shopeeConnections.length} loja${shopeeConnections.length > 1 ? 's' : ''} conectada${shopeeConnections.length > 1 ? 's' : ''}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {shopeeConnections.length > 0 && (
+                      <button
+                        onClick={() => { setSyncing('shopee'); fetch('/api/shopee/refresh', { method: 'POST' }).finally(() => setSyncing(null)) }}
+                        title="Sincronizar agora"
+                        className={`p-1.5 rounded-lg border border-white/[0.06] text-slate-500 hover:text-slate-200 transition-all ${syncing === 'shopee' ? 'animate-spin text-orange-400' : ''}`}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <a
+                      href="/api/shopee/auth"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-orange-500 hover:bg-orange-400 text-white transition-all"
+                    >
+                      <Plus className="w-3 h-3" />
+                      {shopeeConnections.length === 0 ? 'Conectar' : 'Adicionar loja'}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Connected shops list */}
+                {!shopeeLoading && shopeeConnections.length > 0 && (
+                  <div className="space-y-2">
+                    {shopeeConnections.map(conn => (
+                      <div key={conn.id}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
+                          conn.is_primary
+                            ? 'border-orange-500/30 bg-orange-500/5'
+                            : 'border-white/[0.04] bg-white/[0.02]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                            <span className="text-sm">🟠</span>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-xs font-bold text-white truncate">
+                                {conn.account_label ?? conn.shop_name}
+                              </p>
+                              {conn.is_primary && (
+                                <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-900/40 text-orange-400">
+                                  <Star className="w-2.5 h-2.5" /> Principal
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-600 font-mono">Shop ID: {conn.shop_id}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => disconnectShopeeAccount(conn.id)}
+                            disabled={shopeeDisconnecting === conn.id}
+                            title="Desconectar esta loja"
+                            className="p-1.5 text-slate-600 hover:text-red-400 disabled:opacity-50 transition-colors rounded-lg hover:bg-red-500/10"
+                          >
+                            {shopeeDisconnecting === conn.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Coming soon marketplaces */}
           <div>
             <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -648,7 +792,6 @@ function IntegracoesContent() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {[
-                { id: 'shopee', name: 'Shopee', color: 'border-orange-500/20 bg-orange-500/5', dot: 'bg-orange-400', desc: 'Integração de pedidos e anúncios' },
                 { id: 'amazon', name: 'Amazon', color: 'border-cyan-500/20 bg-cyan-500/5', dot: 'bg-cyan-400', desc: 'Fulfillment e anúncios Amazon' },
                 { id: 'magalu', name: 'Magalu', color: 'border-blue-500/20 bg-blue-500/5', dot: 'bg-blue-400', desc: 'Pedidos e catálogo Magazine Luiza' },
                 { id: 'tiktok', name: 'TikTok Shop', color: 'border-slate-500/20 bg-slate-500/5', dot: 'bg-slate-400', desc: 'Social commerce TikTok' },

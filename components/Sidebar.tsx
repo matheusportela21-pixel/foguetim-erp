@@ -97,7 +97,9 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     defaultCollapsed: true,
     items: [
-      { href: '/dashboard/shopee', icon: Zap, label: 'Em breve', badge: 'Breve', disabled: true },
+      { href: '/dashboard/shopee/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
+      { href: '/dashboard/shopee/produtos',  icon: Package,         label: 'Produtos'    },
+      { href: '/dashboard/shopee/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
     ],
   },
   {
