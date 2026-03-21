@@ -31,6 +31,14 @@ interface MLMetrics {
   pendingQuestions?: number
 }
 
+/* ── Shopee Metrics type ─────────────────────────────────────────────── */
+interface ShopeeMetrics {
+  connected: boolean
+  shop_name?: string
+  shop_id?: number
+  total_products?: number
+}
+
 /* ── Reputation mini type ───────────────────────────────────────────────── */
 interface ReputaMini {
   connected: boolean
@@ -149,6 +157,7 @@ export default function DashboardPage() {
   const [changelogLoading, setChangelogLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [finData, setFinData] = useState<{ receita_bruta: number; taxas_ml: number; receita_liquida: number } | null>(null)
+  const [shopeeMetrics, setShopeeMetrics] = useState<ShopeeMetrics | null>(null)
   const { user, profile } = useAuth()
   const { hasML, hasShopee } = useConnectedMarketplaces()
   const anyMarketplace = hasML || hasShopee
@@ -250,6 +259,14 @@ export default function DashboardPage() {
       .catch(() => { /* silent */ })
   }, [metrics?.connected])
 
+  useEffect(() => {
+    if (!hasShopee) return
+    fetch('/api/shopee/status')
+      .then(r => r.json())
+      .then((d: ShopeeMetrics) => setShopeeMetrics(d))
+      .catch(() => setShopeeMetrics({ connected: false }))
+  }, [hasShopee])
+
   const dismissAnnouncement = useCallback(async (id: string) => {
     setAnnouncements(prev => prev.filter(a => a.id !== id))
     await fetch('/api/announcements/dismiss', {
@@ -268,6 +285,13 @@ export default function DashboardPage() {
 
   const dotLevel = (n: number): 'ok' | 'warn' | 'danger' | 'muted' =>
     !ml?.connected ? 'muted' : n > 5 ? 'danger' : n > 0 ? 'warn' : 'ok'
+
+  /* Count of connected marketplaces */
+  const connectedCount = (hasML ? 1 : 0) + (hasShopee ? 1 : 0)
+
+  /* Reputation level for ML channel card */
+  const reputaLvlKey = reputa?.seller_reputation?.level_id ?? 'green'
+  const reputaLvl = LEVEL_CFG[reputaLvlKey] ?? LEVEL_CFG.green
 
   return (
     <div>
@@ -402,21 +426,91 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[0,1,2,3].map(i => <KpiSkeleton key={i} />)}
           </div>
+        ) : hasML && hasShopee ? (
+          /* Both ML and Shopee connected — unified KPIs */
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+            {[
+              {
+                label: 'Faturamento 30d',
+                value: revenue,
+                sub: ml?.connected ? `ML: ${revenue}` : 'Mercado Livre',
+                icon: DollarSign,
+                color: 'text-purple-400 bg-purple-400/10',
+                href: '/dashboard/financeiro',
+                tooltip: 'Receita bruta dos últimos 30 dias (Mercado Livre)',
+              },
+              {
+                label: 'Pedidos 30d',
+                value: orders,
+                sub: ml?.connected ? `ML: ${orders} pedidos` : 'Mercado Livre',
+                icon: ShoppingCart,
+                color: 'text-cyan-400 bg-cyan-400/10',
+                href: '/dashboard/pedidos',
+                tooltip: 'Total de pedidos recebidos nos últimos 30 dias',
+              },
+              {
+                label: 'Anúncios Ativos',
+                value: active,
+                sub: ml?.connected ? `ML: ${active} anúncios` : 'Mercado Livre',
+                icon: Package,
+                color: 'text-orange-400 bg-orange-400/10',
+                href: '/dashboard/produtos-ml',
+                tooltip: 'Total de anúncios ativos sincronizados no Mercado Livre',
+              },
+              {
+                label: 'Canais Ativos',
+                value: String(connectedCount),
+                sub: [hasML ? 'Mercado Livre' : null, hasShopee ? 'Shopee' : null].filter(Boolean).join(' · '),
+                icon: Link2,
+                color: 'text-green-400 bg-green-400/10',
+                href: '/dashboard/integracoes',
+                tooltip: 'Número de marketplaces conectados à sua conta',
+              },
+            ].map(k => (
+              <Link key={k.label} href={k.href}
+                className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="relative">
+                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
+                    <KpiTooltip text={k.tooltip} />
+                  </div>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
+                    <k.icon className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
+                <p className="text-[10px] text-slate-600 mt-1.5">{k.sub}</p>
+              </Link>
+            ))}
+          </div>
         ) : !ml?.connected ? (
           hasShopee ? (
             /* Shopee conectada mas ML não — mostrar aviso mais suave */
-            <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
-                <Link2 className="w-5 h-5 text-orange-400" />
+            <div className="space-y-3">
+              <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <Link2 className="w-5 h-5 text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-white">Shopee conectada · adicione o Mercado Livre para mais métricas</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Os KPIs abaixo mostrarão dados do ML quando conectado.</p>
+                </div>
+                <Link href="/dashboard/integracoes"
+                  className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+                  Conectar ML
+                </Link>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-white">Shopee conectada · adicione o Mercado Livre para mais métricas</p>
-                <p className="text-xs text-slate-500 mt-0.5">Os KPIs abaixo mostrarão dados do ML quando conectado.</p>
+              <div className="dash-card p-5 rounded-2xl flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0 text-xl">🟠</div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-white">KPIs Shopee em breve</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Métricas detalhadas de pedidos e faturamento Shopee em desenvolvimento.</p>
+                </div>
+                <Link href="/dashboard/shopee/overview"
+                  className="shrink-0 px-4 py-2 rounded-xl bg-orange-500/10 text-orange-400 text-xs font-bold hover:bg-orange-500/20 transition-colors">
+                  Ver Shopee →
+                </Link>
               </div>
-              <Link href="/dashboard/integracoes"
-                className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
-                Conectar ML
-              </Link>
             </div>
           ) : (
             <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
@@ -434,6 +528,7 @@ export default function DashboardPage() {
             </div>
           )
         ) : (
+          /* Only ML connected */
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
             {[
               { label: 'Faturamento 30d',   value: revenue,   sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro', tooltip: 'Receita bruta dos últimos 30 dias no Mercado Livre' },
@@ -646,6 +741,62 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ── Seus Canais ── */}
+        {anyMarketplace && (
+          <div className="animate-slide-up">
+            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3">Seus Canais</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {hasML && (
+                <div className="dash-card p-4 rounded-2xl border border-yellow-500/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base">🟡</span>
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Mercado Livre</p>
+                    <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">● Conectado</span>
+                  </div>
+                  <div className="space-y-1.5 text-xs text-slate-400">
+                    {ml?.nickname && (
+                      <p><span className="text-slate-600">Conta:</span> @{ml.nickname}</p>
+                    )}
+                    <p><span className="text-slate-600">Faturamento:</span> <span className="text-white font-semibold">{revenue}</span> / 30d</p>
+                    <p><span className="text-slate-600">Pedidos:</span> <span className="text-white font-semibold">{orders}</span> / 30d</p>
+                    {reputa?.connected && (
+                      <p><span className="text-slate-600">Reputação:</span> <span className={`font-semibold ${reputaLvl.color}`}>{reputaLvl.emoji} {reputaLvl.label}</span></p>
+                    )}
+                  </div>
+                  <Link href="/dashboard/pedidos"
+                    className="mt-3 flex items-center gap-1 text-xs text-yellow-400 hover:text-yellow-300 transition-colors font-semibold">
+                    Ver dashboard ML <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              )}
+              {hasShopee && (
+                <div className="dash-card p-4 rounded-2xl border border-orange-500/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base">🟠</span>
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Shopee</p>
+                    <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">● Conectado</span>
+                  </div>
+                  <div className="space-y-1.5 text-xs text-slate-400">
+                    {shopeeMetrics?.shop_name && (
+                      <p><span className="text-slate-600">Loja:</span> <span className="text-white font-semibold">{shopeeMetrics.shop_name}</span></p>
+                    )}
+                    {shopeeMetrics?.shop_id && (
+                      <p><span className="text-slate-600">Shop ID:</span> <span className="text-white font-semibold">{shopeeMetrics.shop_id}</span></p>
+                    )}
+                    {shopeeMetrics?.total_products !== undefined && (
+                      <p><span className="text-slate-600">Produtos:</span> <span className="text-white font-semibold">{shopeeMetrics.total_products}</span></p>
+                    )}
+                  </div>
+                  <Link href="/dashboard/shopee/overview"
+                    className="mt-3 flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors font-semibold">
+                    Ver dashboard Shopee <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── Admin quick-access ── */}
         {(profile?.role === 'admin' || profile?.role === 'foguetim_support') && (
           <div className="animate-slide-up">
@@ -759,7 +910,12 @@ export default function DashboardPage() {
                         <p className="text-xs font-semibold text-white">Mercado Livre</p>
                         <p className="text-[10px] text-slate-500">{ml?.connected ? `@${ml.nickname}` : 'Conectado'}</p>
                       </div>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Ativo</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Ativo</span>
+                        {hasML && hasShopee && (
+                          <span className="text-[9px] text-yellow-400 hover:text-yellow-300 font-semibold">Ver detalhes</span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 )}
@@ -771,9 +927,14 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-1">
                         <p className="text-xs font-semibold text-white">Shopee</p>
-                        <p className="text-[10px] text-slate-500">Loja conectada</p>
+                        <p className="text-[10px] text-slate-500">{shopeeMetrics?.shop_name ? shopeeMetrics.shop_name : 'Loja conectada'}</p>
                       </div>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Ativo</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Ativo</span>
+                        {hasML && hasShopee && (
+                          <span className="text-[9px] text-orange-400 hover:text-orange-300 font-semibold">Ver detalhes</span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 )}

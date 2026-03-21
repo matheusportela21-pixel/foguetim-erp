@@ -41,6 +41,40 @@ export async function shopeeGet<T = unknown>(
   return res.json() as Promise<T>
 }
 
+/** Faz uma requisição POST autenticada a uma API de loja Shopee (shop-level writes) */
+export async function shopeePost<T = unknown>(
+  apiPath:     string,
+  accessToken: string,
+  shopId:      number,
+  body:        Record<string, unknown>,
+): Promise<T> {
+  const { partnerId, partnerKey } = getShopeeEnv()
+  const timestamp = nowTs()
+  const sign = shopeeSign(partnerKey, partnerId, apiPath, timestamp, accessToken, shopId)
+
+  const params = new URLSearchParams({
+    partner_id:   String(partnerId),
+    timestamp:    String(timestamp),
+    sign,
+    access_token: accessToken,
+    shop_id:      String(shopId),
+  })
+
+  const url = `${getShopeeBaseUrl()}${apiPath}?${params.toString()}`
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`[Shopee] POST ${apiPath} falhou (${res.status}): ${text}`)
+  }
+
+  return res.json() as Promise<T>
+}
+
 /** Faz uma requisição POST autenticada a uma API pública Shopee (ex: token) */
 export async function shopeePostPublic<T = unknown>(
   apiPath: string,
