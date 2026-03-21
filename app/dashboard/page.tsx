@@ -33,10 +33,16 @@ interface MLMetrics {
 
 /* ── Shopee Metrics type ─────────────────────────────────────────────── */
 interface ShopeeMetrics {
-  connected: boolean
-  shop_name?: string
-  shop_id?: number
+  connected:       boolean
+  shop_name?:      string
+  shop_id?:        number
   total_products?: number
+}
+
+interface ShopeeKpiData {
+  ordersCount:   number | null
+  productsCount: number | null
+  loading:       boolean
 }
 
 /* ── Reputation mini type ───────────────────────────────────────────────── */
@@ -158,8 +164,9 @@ export default function DashboardPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [finData, setFinData] = useState<{ receita_bruta: number; taxas_ml: number; receita_liquida: number } | null>(null)
   const [shopeeMetrics, setShopeeMetrics] = useState<ShopeeMetrics | null>(null)
+  const [shopeeKpi, setShopeeKpi] = useState<ShopeeKpiData>({ ordersCount: null, productsCount: null, loading: true })
   const { user, profile } = useAuth()
-  const { hasML, hasShopee } = useConnectedMarketplaces()
+  const { hasML, hasShopee, loading: mktLoading } = useConnectedMarketplaces()
   const anyMarketplace = hasML || hasShopee
 
   const { toggle } = useSidebar()
@@ -267,6 +274,31 @@ export default function DashboardPage() {
       .catch(() => setShopeeMetrics({ connected: false }))
   }, [hasShopee])
 
+  // Fetch Shopee KPIs (orders count + products count) — only when Shopee connected
+  useEffect(() => {
+    if (!hasShopee) { setShopeeKpi({ ordersCount: null, productsCount: null, loading: false }); return }
+    setShopeeKpi(prev => ({ ...prev, loading: true }))
+    Promise.all([
+      fetch('/api/shopee/orders?days=30&page_size=100')
+        .then(r => r.json())
+        .then((d: { response?: { order_list?: unknown[] } }) => d.response?.order_list?.length ?? 0)
+        .catch(() => null),
+      fetch('/api/shopee/products?item_status=NORMAL&page_size=100')
+        .then(r => r.json())
+        .then((d: { response?: { total_count?: number } }) => d.response?.total_count ?? null)
+        .catch(() => null),
+    ]).then(([ordersCount, productsCount]) => {
+      setShopeeKpi({ ordersCount, productsCount, loading: false })
+    })
+  }, [hasShopee])
+
+  // When ML is known to be disconnected, stop mlLoading so KPI section doesn't wait forever
+  useEffect(() => {
+    if (!mktLoading && !hasML) {
+      setMlLoading(false)
+    }
+  }, [mktLoading, hasML])
+
   const dismissAnnouncement = useCallback(async (id: string) => {
     setAnnouncements(prev => prev.filter(a => a.id !== id))
     await fetch('/api/announcements/dismiss', {
@@ -332,7 +364,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Urgent claims alert ── */}
-        {urgentClaims > 0 && (
+        {hasML && urgentClaims > 0 && (
           <div className="bg-red-950/40 border border-red-800 rounded-xl p-4 animate-slide-up">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
@@ -368,7 +400,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Ruptura de estoque alert ── */}
-        {rupturasCount > 0 && (
+        {hasML && rupturasCount > 0 && (
           <Link href="/dashboard/estoque?filter=ruptura">
             <div className="flex items-center gap-3 p-4 bg-red-950/30 border border-red-800/40 rounded-xl hover:bg-red-900/30 transition-colors">
               <Archive className="w-5 h-5 text-red-400 shrink-0" />
@@ -384,7 +416,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Health score alert ── */}
-        {healthScore !== null && healthScore < 70 && (
+        {hasML && healthScore !== null && healthScore < 70 && (
           <Link href="/dashboard/saude">
             <div className={`flex items-center gap-3 p-4 rounded-xl border hover:opacity-90 transition-opacity ${
               healthScore < 50
@@ -485,33 +517,68 @@ export default function DashboardPage() {
           </div>
         ) : !ml?.connected ? (
           hasShopee ? (
-            /* Shopee conectada mas ML não — mostrar aviso mais suave */
-            <div className="space-y-3">
-              <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
-                  <Link2 className="w-5 h-5 text-orange-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-white">Shopee conectada · adicione o Mercado Livre para mais métricas</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Os KPIs abaixo mostrarão dados do ML quando conectado.</p>
-                </div>
-                <Link href="/dashboard/integracoes"
-                  className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
-                  Conectar ML
-                </Link>
+            /* Shopee-only — 4 KPI cards com dados reais */
+            shopeeKpi.loading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[0,1,2,3].map(i => <KpiSkeleton key={i} />)}
               </div>
-              <div className="dash-card p-5 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0 text-xl">🟠</div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-white">KPIs Shopee em breve</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Métricas detalhadas de pedidos e faturamento Shopee em desenvolvimento.</p>
-                </div>
-                <Link href="/dashboard/shopee/overview"
-                  className="shrink-0 px-4 py-2 rounded-xl bg-orange-500/10 text-orange-400 text-xs font-bold hover:bg-orange-500/20 transition-colors">
-                  Ver Shopee →
-                </Link>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+                {[
+                  {
+                    label: 'Pedidos 30d',
+                    value: shopeeKpi.ordersCount !== null ? String(shopeeKpi.ordersCount) : '—',
+                    sub: 'Shopee',
+                    icon: ShoppingCart,
+                    color: 'text-orange-400 bg-orange-400/10',
+                    href: '/dashboard/shopee/pedidos',
+                    tooltip: 'Total de pedidos Shopee nos últimos 30 dias',
+                  },
+                  {
+                    label: 'Produtos Ativos',
+                    value: shopeeKpi.productsCount !== null ? String(shopeeKpi.productsCount) : '—',
+                    sub: 'Shopee · NORMAL',
+                    icon: Package,
+                    color: 'text-cyan-400 bg-cyan-400/10',
+                    href: '/dashboard/shopee/produtos',
+                    tooltip: 'Produtos com status NORMAL na loja Shopee',
+                  },
+                  {
+                    label: 'Avaliação',
+                    value: '—',
+                    sub: 'Em breve',
+                    icon: ShieldCheck,
+                    color: 'text-green-400 bg-green-400/10',
+                    href: '/dashboard/shopee/overview',
+                    tooltip: 'Avaliação e reputação da loja Shopee',
+                  },
+                  {
+                    label: 'Canais Ativos',
+                    value: '1',
+                    sub: 'Shopee conectada',
+                    icon: Link2,
+                    color: 'text-purple-400 bg-purple-400/10',
+                    href: '/dashboard/integracoes',
+                    tooltip: 'Marketplaces conectados à sua conta',
+                  },
+                ].map(k => (
+                  <Link key={k.label} href={k.href}
+                    className="dash-card p-4 rounded-2xl hover:border-orange-600/20 hover:shadow-lg hover:shadow-orange-900/10 transition-all group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="relative">
+                        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
+                        <KpiTooltip text={k.tooltip} />
+                      </div>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
+                        <k.icon className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
+                    <p className="text-[10px] text-slate-600 mt-1.5">{k.sub}</p>
+                  </Link>
+                ))}
               </div>
-            </div>
+            )
           ) : (
             <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
               <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
@@ -555,6 +622,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Task Boxes ── */}
+        {hasML ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 animate-slide-up">
 
           {/* Pedidos */}
@@ -707,6 +775,142 @@ export default function DashboardPage() {
             })()}
           </div>
         </div>
+        ) : hasShopee ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 animate-slide-up">
+
+          {/* Pedidos Shopee */}
+          <div className="dash-card rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+              <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                <ShoppingBag className="w-3.5 h-3.5 text-orange-400" />
+              </div>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Pedidos Shopee</p>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {[
+                { label: 'Total 30 dias',          val: shopeeKpi.ordersCount ?? 0, level: (shopeeKpi.ordersCount ?? 0) > 0 ? 'ok' as const : 'muted' as const, href: '/dashboard/shopee/pedidos' },
+                { label: 'Pagamento Pendente',      val: 0, level: 'muted' as const, href: '/dashboard/shopee/pedidos' },
+                { label: 'Para Enviar',             val: 0, level: 'muted' as const, href: '/dashboard/shopee/pedidos' },
+                { label: 'Concluídos',              val: 0, level: 'muted' as const, href: '/dashboard/shopee/pedidos' },
+              ].map(item => (
+                <Link key={item.label} href={item.href}
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                  <div className="flex items-center gap-2.5">
+                    <Dot level={item.level} />
+                    <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm font-bold ${item.val > 0 ? 'text-white' : 'text-slate-600'}`}>{item.val}</span>
+                    <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Produtos Shopee */}
+          <div className="dash-card rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+              <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                <Package className="w-3.5 h-3.5 text-cyan-400" />
+              </div>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Produtos Shopee</p>
+            </div>
+            {shopeeKpi.loading ? (
+              <div className="p-4 flex items-center gap-2 text-xs text-slate-600">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
+              </div>
+            ) : (
+              <div className="divide-y divide-white/[0.04]">
+                {[
+                  { label: 'Produtos Ativos',  val: shopeeKpi.productsCount ?? 0, level: (shopeeKpi.productsCount ?? 0) > 0 ? 'ok' as const : 'muted' as const, href: '/dashboard/shopee/produtos' },
+                  { label: 'Deslistados',       val: 0, level: 'muted' as const, href: '/dashboard/shopee/produtos' },
+                  { label: 'Sem Estoque',       val: 0, level: 'muted' as const, href: '/dashboard/shopee/produtos' },
+                ].map(item => (
+                  <Link key={item.label} href={item.href}
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                    <div className="flex items-center gap-2.5">
+                      <Dot level={item.level} />
+                      <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-sm font-bold ${item.val > 0 ? 'text-white' : 'text-slate-600'}`}>{item.val}</span>
+                      <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Atendimento Shopee */}
+          <div className="dash-card rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                <MessageCircle className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Atendimento</p>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {[
+                { label: 'Chats Pendentes',  val: 0, level: 'muted' as const, href: '/dashboard/shopee/overview' },
+                { label: 'Avaliações Novas', val: 0, level: 'muted' as const, href: '/dashboard/shopee/overview' },
+                { label: 'Reclamações',      val: 0, level: 'muted' as const, href: '/dashboard/shopee/overview' },
+                { label: 'Devoluções',       val: 0, level: 'muted' as const, href: '/dashboard/shopee/overview' },
+              ].map(item => (
+                <Link key={item.label} href={item.href}
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                  <div className="flex items-center gap-2.5">
+                    <Dot level={item.level} />
+                    <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm font-bold ${item.val > 0 ? 'text-red-400' : 'text-slate-600'}`}>{item.val}</span>
+                    <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Minha Loja Shopee */}
+          <div className="dash-card rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+              <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
+              </div>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Minha Loja Shopee</p>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🟠</span>
+                  <div>
+                    <p className="text-xs text-slate-400">Loja</p>
+                    <p className="text-sm font-bold text-white truncate max-w-[120px]">{shopeeMetrics?.shop_name ?? '—'}</p>
+                  </div>
+                </div>
+                <Link href="/dashboard/shopee/overview"
+                  className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors">
+                  Detalhes <ArrowUpRight className="w-3 h-3" />
+                </Link>
+              </div>
+              {shopeeMetrics?.shop_id && (
+                <div className="px-4 py-2.5">
+                  <p className="text-[10px] text-slate-600 uppercase tracking-wider">Shop ID</p>
+                  <p className="text-xs font-semibold text-slate-300 mt-0.5">{shopeeMetrics.shop_id}</p>
+                </div>
+              )}
+              <Link href="/dashboard/shopee/overview"
+                className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                <span className="text-xs text-slate-500 group-hover:text-slate-300 transition-colors">Ver overview completo</span>
+                <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors" />
+              </Link>
+            </div>
+          </div>
+
+        </div>
+        ) : null}
 
         {/* ── Quick Actions ── */}
         <div className="animate-slide-up">
@@ -830,14 +1034,24 @@ export default function DashboardPage() {
                   Ver financeiro <ArrowUpRight className="w-3 h-3" />
                 </Link>
               </div>
-              {!ml?.connected ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 border border-dashed border-white/[0.06] rounded-xl">
-                  <BarChart3 className="w-7 h-7 text-slate-700" />
-                  <p className="text-xs text-slate-500 text-center">Conecte o Mercado Livre<br/>para ver dados financeiros reais</p>
-                  <Link href="/dashboard/integracoes" className="text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors">
-                    Configurar integração →
-                  </Link>
-                </div>
+              {!hasML ? (
+                hasShopee ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3 border border-dashed border-white/[0.06] rounded-xl">
+                    <BarChart3 className="w-7 h-7 text-slate-700" />
+                    <p className="text-xs text-slate-500 text-center">Dados financeiros Shopee em breve<br/>Conecte o ML para ver receita e taxas</p>
+                    <Link href="/dashboard/shopee/overview" className="text-[10px] font-bold text-orange-400 hover:text-orange-300 transition-colors">
+                      Ver Overview Shopee →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3 border border-dashed border-white/[0.06] rounded-xl">
+                    <BarChart3 className="w-7 h-7 text-slate-700" />
+                    <p className="text-xs text-slate-500 text-center">Conecte o Mercado Livre<br/>para ver dados financeiros reais</p>
+                    <Link href="/dashboard/integracoes" className="text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors">
+                      Configurar integração →
+                    </Link>
+                  </div>
+                )
               ) : finData ? (
                 <>
                   <div className="grid grid-cols-3 gap-2 mb-4">
@@ -883,13 +1097,13 @@ export default function DashboardPage() {
             <div className="dash-card rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
                 <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Últimos Pedidos</p>
-                <Link href="/dashboard/pedidos" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                <Link href={hasShopee && !hasML ? '/dashboard/shopee/pedidos' : '/dashboard/pedidos'} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
                   Ver todos <ArrowUpRight className="w-3 h-3" />
                 </Link>
               </div>
               <EmptyCard
-                message="Acesse Pedidos para ver os pedidos do ML"
-                hint="Os pedidos são carregados diretamente da API do Mercado Livre"
+                message={hasShopee && !hasML ? 'Acesse Pedidos Shopee para ver seus pedidos' : 'Acesse Pedidos para ver os pedidos do ML'}
+                hint={hasShopee && !hasML ? 'Os pedidos são carregados diretamente da API da Shopee' : 'Os pedidos são carregados diretamente da API do Mercado Livre'}
               />
             </div>
           </div>
@@ -1102,11 +1316,11 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Performance de Anúncios</p>
             </div>
             <div className="p-4 space-y-3">
-              {mlLoading ? (
+              {(mlLoading && hasML) || (shopeeKpi.loading && hasShopee && !hasML) ? (
                 <div className="flex items-center gap-2 text-xs text-slate-600">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando...
                 </div>
-              ) : (
+              ) : hasML ? (
                 <>
                   {[
                     { label: 'Visitas hoje',      val: '—',                                                     icon: Eye         },
@@ -1122,7 +1336,6 @@ export default function DashboardPage() {
                       <span className="text-sm font-bold text-white">{s.val}</span>
                     </div>
                   ))}
-
                   <div className="mt-3 pt-3 border-t border-white/[0.06]">
                     <p className="text-[10px] text-slate-600 mb-1.5 flex items-center gap-1">
                       <BarChart3 className="w-3 h-3" /> Melhor anúncio do mês
@@ -1132,6 +1345,33 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </>
+              ) : hasShopee ? (
+                <>
+                  {[
+                    { label: 'Pedidos 30d',     val: shopeeKpi.ordersCount !== null ? String(shopeeKpi.ordersCount) : '—', icon: ShoppingCart },
+                    { label: 'Produtos ativos', val: shopeeKpi.productsCount !== null ? String(shopeeKpi.productsCount) : '—', icon: Package   },
+                    { label: 'Avaliação loja',  val: '—',                                                                    icon: ShieldCheck  },
+                    { label: 'Loja',            val: shopeeMetrics?.shop_name ?? '—',                                        icon: Zap          },
+                  ].map(s => (
+                    <div key={s.label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <s.icon className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="text-xs text-slate-500">{s.label}</span>
+                      </div>
+                      <span className="text-sm font-bold text-white">{s.val}</span>
+                    </div>
+                  ))}
+                  <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                    <p className="text-[10px] text-slate-600 mb-1.5 flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" /> Visão geral Shopee
+                    </p>
+                    <Link href="/dashboard/shopee/overview" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">
+                      Ver overview Shopee →
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <EmptyCard message="Conecte um marketplace para ver performance" />
               )}
             </div>
           </div>
