@@ -37,8 +37,16 @@ export const SHOPEE_PATH_ITEM_INFO     = '/api/v2/product/get_item_base_info'
 export const SHOPEE_PATH_UPDATE_PRICE  = '/api/v2/product/update_price'
 export const SHOPEE_PATH_UPDATE_STOCK  = '/api/v2/product/update_stock'
 export const SHOPEE_PATH_UNLIST_ITEM   = '/api/v2/product/unlist_item'
-export const SHOPEE_PATH_ORDER_LIST    = '/api/v2/order/get_order_list'
-export const SHOPEE_PATH_PERFORMANCE   = '/api/v2/shop/get_shop_performance'
+export const SHOPEE_PATH_ORDER_LIST      = '/api/v2/order/get_order_list'
+export const SHOPEE_PATH_PERFORMANCE     = '/api/v2/shop/get_shop_performance'
+export const SHOPEE_PATH_ITEM_EXTRA_INFO = '/api/v2/product/get_item_extra_info'
+export const SHOPEE_PATH_UPDATE_ITEM     = '/api/v2/product/update_item'
+export const SHOPEE_PATH_GET_MODELS      = '/api/v2/product/get_model_list'
+
+/** Retorna 'sandbox' ou 'prod' para uso em componentes de UI */
+export function getShopeeEnvLabel(): 'sandbox' | 'prod' {
+  return (process.env.SHOPEE_ENV ?? 'test') === 'prod' ? 'prod' : 'sandbox'
+}
 
 /** Retorna as variáveis de ambiente Shopee, lançando erro se ausentes.
  *  .trim() é aplicado em TODAS as strings para remover whitespace/newlines
