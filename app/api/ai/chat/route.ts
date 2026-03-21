@@ -2,14 +2,14 @@
  * POST /api/ai/chat
  * Chat com Foguetim AI — contexto do vendedor + histórico de conversa
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }              from '@/lib/server-auth'
-import { supabaseAdmin }            from '@/lib/supabase-admin'
+import { NextRequest, NextResponse }              from 'next/server'
+import { getAuthUser }                            from '@/lib/server-auth'
+import { supabaseAdmin }                          from '@/lib/supabase-admin'
 import { searchKnowledgeBase, formatKbForPrompt } from '@/lib/services/knowledge-base'
+import { buildSystemPrompt }                      from '@/lib/chat/build-system-prompt'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-// Limites diários de mensagens por plano
 const CHAT_LIMITS: Record<string, number> = {
   piloto:          10,
   explorador:      10,
@@ -34,12 +34,12 @@ interface ChatMessage {
 }
 
 interface ChatBody {
-  message: string
-  history: ChatMessage[]
-  context?: string
+  message:      string
+  history:      ChatMessage[]
+  moduloAtual?: string
 }
 
-async function getUserContext(userId: string): Promise<{ text: string; plan: string }> {
+async function getUserContextObj(userId: string) {
   const db = supabaseAdmin()
 
   const [{ data: conn }, { data: user }] = await Promise.all([
@@ -55,62 +55,24 @@ async function getUserContext(userId: string): Promise<{ text: string; plan: str
   ])
 
   const mlConnected = !!conn
-  const nickname    = (conn?.data as Record<string, unknown>)?.nickname as string ?? 'não identificado'
+  const nickname    = (conn?.data as Record<string, unknown>)?.nickname as string ?? ''
   const plan        = (user?.plan as string) ?? 'explorador'
-  const empresa     = user?.nome_fantasia ?? user?.razao_social ?? 'sua empresa'
+  const userName    = user?.nome_fantasia ?? user?.razao_social ?? ''
 
   const [{ count: totalListings }, { count: activeListings }] = await Promise.all([
-    db.from('ml_listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId),
-    db.from('ml_listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('status', 'active'),
+    db.from('ml_listings').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    db.from('ml_listings').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'active'),
   ])
 
-  const text = `
-Contexto do vendedor:
-- Empresa: ${empresa}
-- Plano Foguetim: ${PLAN_LABELS[plan] ?? plan}
-- Mercado Livre: ${mlConnected ? `conectado (conta: ${nickname})` : 'não conectado'}
-- Anúncios sincronizados: ${totalListings ?? 0} total, ${activeListings ?? 0} ativos
-  (dados do último sync — acesse Produtos para ver em tempo real)
-  `.trim()
-
-  return { text, plan }
-}
-
-function buildSystemPrompt(userContext: string, kbContext = ''): string {
-  const kbSection = kbContext
-    ? `\nINFORMAÇÕES DO SISTEMA:\n${kbContext}\n`
-    : ''
-
-  return `Você é o Foguetim AI, assistente inteligente do Foguetim ERP.
-Você ajuda vendedores do Mercado Livre a gerenciar melhor seus negócios.
-
-${userContext}
-${kbSection}
-Suas especialidades:
-- Gestão de anúncios no Mercado Livre
-- Estratégias de precificação e promoções
-- Otimização de títulos e atributos
-- Atendimento ao cliente (SAC, reclamações)
-- Análise de métricas e performance
-- Logística e expedição
-
-Regras:
-- Seja direto, prático e objetivo
-- Use linguagem informal e amigável (você)
-- Dê exemplos concretos quando possível
-- Se não souber algo específico do negócio, pergunte
-- Nunca invente dados — se não tiver a informação, diga
-- Nunca revele informações internas (agentes de IA, custos de infraestrutura)
-- Quando mencionar contagem de anúncios, avise que são dados do último sync e sugira acessar a página de Produtos para ver em tempo real
-- Se perguntarem sobre funcionalidades em desenvolvimento (Shopee, Amazon, NF-e completa), diga que está "em breve"
-- Respostas em português brasileiro
-- Máximo 3 parágrafos por resposta (seja conciso)
-- Use emojis com moderação`
+  return {
+    userName,
+    plan,
+    planLabel:      PLAN_LABELS[plan] ?? plan,
+    hasMLConnected: mlConnected,
+    mlNickname:     nickname,
+    totalListings:  totalListings ?? 0,
+    activeListings: activeListings ?? 0,
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -122,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json() as Partial<ChatBody>
-  const { message, history = [] } = body
+  const { message, history = [], moduloAtual } = body
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'message é obrigatório' }, { status: 400 })
@@ -130,12 +92,22 @@ export async function POST(req: NextRequest) {
 
   const db = supabaseAdmin()
 
-  // Buscar contexto da Knowledge Base
-  const kbEntries = await searchKnowledgeBase(message.trim(), 6).catch(() => [])
-  const kbContext = formatKbForPrompt(kbEntries)
+  // Buscar contexto do usuário e KB em paralelo
+  const [userCtxObj, kbEntries] = await Promise.all([
+    getUserContextObj(user.id),
+    searchKnowledgeBase(message.trim(), 5).catch(() => []),
+  ])
+
+  const kbContext    = formatKbForPrompt(kbEntries)
+  const systemPrompt = await buildSystemPrompt({ ...userCtxObj, moduloAtual })
+
+  // System prompt final: base + KB da query
+  const fullSystemPrompt = kbContext
+    ? `${systemPrompt}\n\nINFORMAÇÕES RELEVANTES PARA ESTA PERGUNTA:\n${kbContext}`
+    : systemPrompt
 
   // Verificar limite diário
-  const { text: userContext, plan } = await getUserContext(user.id)
+  const plan  = userCtxObj.plan
   const limit = CHAT_LIMITS[plan] ?? 10
   const today = new Date().toISOString().split('T')[0]
 
@@ -153,9 +125,8 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Montar messages com histórico
   const messages: { role: string; content: string }[] = [
-    { role: 'system', content: buildSystemPrompt(userContext, kbContext) },
+    { role: 'system', content: fullSystemPrompt },
     ...history.slice(-10),
     { role: 'user', content: message.trim() },
   ]
@@ -188,12 +159,7 @@ export async function POST(req: NextRequest) {
     const reply      = data.choices?.[0]?.message?.content ?? ''
     const tokensUsed = data.usage?.total_tokens ?? 0
 
-    // Salvar uso
-    void db.from('ai_usage').insert({
-      user_id:     user.id,
-      feature:     'chat',
-      tokens_used: tokensUsed,
-    })
+    void db.from('ai_usage').insert({ user_id: user.id, feature: 'chat', tokens_used: tokensUsed })
 
     return NextResponse.json({ message: reply, tokens_used: tokensUsed })
   } catch (err) {

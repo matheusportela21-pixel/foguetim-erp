@@ -1,6 +1,5 @@
 /**
  * Serviço de busca na Knowledge Base do Foguetim.
- * Usado pelo chat de IA para injetar contexto relevante.
  */
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -14,13 +13,12 @@ export interface KbEntry {
   created_at: string
 }
 
-// Stop words em português para extração de keywords
 const STOP_WORDS = new Set([
   'como', 'que', 'o', 'a', 'de', 'do', 'da', 'para', 'por', 'no', 'na',
   'meu', 'minha', 'é', 'está', 'e', 'em', 'um', 'uma', 'os', 'as',
   'ou', 'se', 'me', 'eu', 'ele', 'ela', 'seu', 'sua', 'quando', 'onde',
   'qual', 'quais', 'não', 'sim', 'mas', 'mais', 'menos', 'com', 'sem',
-  'foi', 'ser', 'ter', 'tem', 'ao', 'aos', 'das', 'dos', 'que', 'this',
+  'foi', 'ser', 'ter', 'tem', 'ao', 'aos', 'das', 'dos', 'this',
 ])
 
 export function extractKeywords(query: string): string[] {
@@ -39,7 +37,6 @@ export async function searchKnowledgeBase(
   const db = supabaseAdmin()
 
   if (!query?.trim()) {
-    // Sem query — retornar entradas mais importantes (faq + feature)
     const { data } = await db
       .from('ai_knowledge_base')
       .select('id, tipo, titulo, conteudo, tags, modulo, created_at')
@@ -50,14 +47,22 @@ export async function searchKnowledgeBase(
     return (data ?? []) as KbEntry[]
   }
 
-  const keywords = extractKeywords(query)
+  // Try full-text search first
+  const { data: ftRaw } = await db
+    .rpc('search_knowledge_base', { query_text: query.trim(), result_limit: limit })
 
-  // Busca por título + conteúdo
+  const ftData = ftRaw as unknown as KbEntry[] | null
+
+  if (ftData && ftData.length > 0) {
+    return ftData
+  }
+
+  // Fallback to ilike
+  const keywords = extractKeywords(query)
   const orFilter = [
     `titulo.ilike.%${query}%`,
     `conteudo.ilike.%${query}%`,
-    ...keywords.map(k => `titulo.ilike.%${k}%`),
-    ...keywords.map(k => `conteudo.ilike.%${k}%`),
+    ...keywords.flatMap(k => [`titulo.ilike.%${k}%`, `conteudo.ilike.%${k}%`]),
   ].join(',')
 
   const { data } = await db

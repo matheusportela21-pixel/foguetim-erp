@@ -12,6 +12,39 @@ import { checkThreadTriggers }        from './agent-communication'
 import { execSync }                   from 'child_process'
 import path                           from 'path'
 
+// ── KB feeding ────────────────────────────────────────────────────────────────
+
+async function feedKnowledgeBase(agentSlug: string, resumo: string, achados: string[]): Promise<void> {
+  const db = supabaseAdmin()
+
+  if (agentSlug === 'changelog_agent' && resumo) {
+    // changelog_agent alimenta a KB com novas entradas
+    await db.from('ai_knowledge_base').insert({
+      tipo:     'changelog',
+      titulo:   `Atualização do sistema — ${new Date().toLocaleDateString('pt-BR')}`,
+      conteudo: resumo.substring(0, 1000),
+      tags:     ['changelog', 'atualização', 'sistema'],
+      modulo:   'geral',
+      ativo:    true,
+    })
+  }
+
+  if (agentSlug === 'documentador' && achados.length > 0) {
+    // documentador cria rascunhos na KB (ativo=false até revisão manual)
+    const conteudo = achados.slice(0, 3).join('\n\n')
+    if (conteudo.length > 50) {
+      await db.from('ai_knowledge_base').insert({
+        tipo:     'tutorial',
+        titulo:   `[Rascunho] Documentação gerada — ${new Date().toLocaleDateString('pt-BR')}`,
+        conteudo: conteudo.substring(0, 1000),
+        tags:     ['rascunho', 'documentador', 'tutorial'],
+        modulo:   'geral',
+        ativo:    false, // rascunho — admin precisa revisar e ativar
+      })
+    }
+  }
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AgentAchado {
@@ -1335,6 +1368,13 @@ export async function executeAgent(agentSlug: string): Promise<AgentExecutionRes
     if (!['coordenador', 'auditor', 'sugestor'].includes(agentSlug)) {
       checkThreadTriggers({ agentSlug, severidadeMax, achados, resumo }).catch(
         (err: unknown) => console.error('[agent-engine] checkThreadTriggers falhou:', err)
+      )
+    }
+
+    // Feed KB para agentes documentador e changelog
+    if (['documentador', 'changelog_agent'].includes(agentSlug)) {
+      feedKnowledgeBase(agentSlug, resumo, achados.map(a => a.descricao)).catch(
+        (err: unknown) => console.error('[agent-engine] feedKnowledgeBase falhou:', err)
       )
     }
 
