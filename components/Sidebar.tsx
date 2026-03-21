@@ -24,6 +24,8 @@ type NavGroup = {
   defaultCollapsed?: boolean
   /** Se definido, o grupo só aparece se o marketplace correspondente estiver conectado */
   requiresMarketplace?: 'ml' | 'shopee'
+  /** Se true, o grupo só aparece se ao menos 1 marketplace estiver conectado */
+  requiresAnyMarketplace?: boolean
 }
 
 const navGroups: NavGroup[] = [
@@ -74,7 +76,20 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: 'Shopee',
+    marketplaceDot: 'bg-orange-400',
+    collapsible: true,
+    defaultCollapsed: false,
+    requiresMarketplace: 'shopee',
+    items: [
+      { href: '/dashboard/shopee/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
+      { href: '/dashboard/shopee/produtos',  icon: Package,         label: 'Produtos'    },
+      { href: '/dashboard/shopee/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
+    ],
+  },
+  {
     label: 'Análise',
+    requiresAnyMarketplace: true,
     items: [
       { href: '/dashboard/vendas-por-anuncio', icon: TrendingUp, label: 'Vendas por Anúncio' },
       { href: '/dashboard/concorrentes',       icon: Users,      label: 'Concorrentes'        },
@@ -93,18 +108,6 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/configuracoes', icon: Settings,   label: 'Configurações'    },
       { href: '/dashboard/nfe',           icon: FileCheck,  label: 'NF-e',            badge: 'BETA', roles: ['admin', 'super_admin', 'owner', 'foguetim_support'] },
       { href: '/dashboard/ajuda',         icon: HelpCircle, label: 'Central de Ajuda' },
-    ],
-  },
-  {
-    label: 'Shopee',
-    marketplaceDot: 'bg-orange-400',
-    collapsible: true,
-    defaultCollapsed: true,
-    requiresMarketplace: 'shopee',
-    items: [
-      { href: '/dashboard/shopee/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
-      { href: '/dashboard/shopee/produtos',  icon: Package,         label: 'Produtos'    },
-      { href: '/dashboard/shopee/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
     ],
   },
 ]
@@ -204,6 +207,7 @@ export default function Sidebar() {
   const visibleGroups = navGroups.filter(g => {
     if (g.requiresMarketplace === 'ml')     return hasML
     if (g.requiresMarketplace === 'shopee') return hasShopee
+    if (g.requiresAnyMarketplace)           return hasML || hasShopee
     return true
   })
 

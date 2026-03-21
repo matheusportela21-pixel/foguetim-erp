@@ -419,9 +419,12 @@ function IntegracoesContent() {
     const shopeeConnected  = searchParams.get('shopee_connected')
     const shopeeError      = searchParams.get('shopee_error')
 
+    const clearCache = () => { try { sessionStorage.removeItem('connected_marketplaces_cache') } catch { /* ignore */ } }
+
     if (connected === 'true') {
       const nickname = searchParams.get('nickname') ?? ''
       setToast({ type: 'success', msg: `Mercado Livre conectado${nickname ? ` como ${nickname}` : ''}!` })
+      clearCache()
       window.history.replaceState({}, '', '/dashboard/integracoes')
     } else if (mlError) {
       setToast({ type: 'error', msg: `Erro ao conectar ML: ${decodeURIComponent(mlError)}` })
@@ -429,6 +432,7 @@ function IntegracoesContent() {
     } else if (shopeeConnected === 'true') {
       const shop = searchParams.get('shop') ?? ''
       setToast({ type: 'success', msg: `Shopee conectada${shop ? ` — ${shop}` : ''}!` })
+      clearCache()
       window.history.replaceState({}, '', '/dashboard/integracoes')
     } else if (shopeeError) {
       setToast({ type: 'error', msg: `Erro ao conectar Shopee: ${decodeURIComponent(shopeeError)}` })
@@ -475,12 +479,17 @@ function IntegracoesContent() {
       .finally(() => setShopeeLoading(false))
   }, [])
 
+  function clearMarketplaceCache() {
+    try { sessionStorage.removeItem('connected_marketplaces_cache') } catch { /* ignore */ }
+  }
+
   async function disconnectShopeeAccount(connectionId: string) {
     setShopeeDisconnecting(connectionId)
     try {
       await fetch(`/api/shopee/connections?id=${connectionId}`, { method: 'DELETE' })
       const remaining = shopeeConnections.filter(c => c.id !== connectionId)
       setShopeeConnections(remaining)
+      clearMarketplaceCache()
       setToast({ type: 'success', msg: 'Loja Shopee desconectada com sucesso.' })
     } catch {
       setToast({ type: 'error', msg: 'Erro ao desconectar loja Shopee.' })
@@ -501,6 +510,7 @@ function IntegracoesContent() {
           m.id === 'ml' ? { ...m, connected: false, apiStatus: 'nao_configurado' } : m
         ))
       }
+      clearMarketplaceCache()
       setToast({ type: 'success', msg: 'Conta desconectada com sucesso.' })
     } catch {
       setToast({ type: 'error', msg: 'Erro ao desconectar conta.' })
