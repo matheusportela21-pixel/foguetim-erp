@@ -1171,6 +1171,52 @@ async function collectConcorrenciaData(_db: DB): Promise<string> {
   }, null, 2)
 }
 
+async function collectUxPredictorData(db: DB): Promise<string> {
+  const [pages, recentErrors, forms] = await Promise.all([
+    safeQuery(db.from('activity_logs').select('action, metadata, created_at').order('created_at', { ascending: false }).limit(200)),
+    safeQuery(db.from('activity_logs').select('action, metadata, created_at, user_id').or('action.ilike.%error%,action.ilike.%fail%,action.ilike.%404%,action.ilike.%500%').gte('created_at', since(7)).order('created_at', { ascending: false }).limit(100)),
+    safeQuery(db.from('ai_agent_reports').select('resumo, achados, ai_agents(nome, categoria)').gte('created_at', since(30)).limit(50)),
+  ])
+
+  // Extract unique actions (proxies for "flows/pages")
+  const uniqueActions = Array.from(new Set(
+    pages.map(p => String((p as Record<string, unknown>).action ?? '')).filter(Boolean)
+  )).slice(0, 40)
+
+  // Extract recent errors
+  const errorSamples = recentErrors.slice(0, 30).map(e => ({
+    action: (e as Record<string, unknown>).action,
+    created_at: (e as Record<string, unknown>).created_at,
+  }))
+
+  // Summary from recent reports about UX issues
+  const uxReports = forms.filter(r => {
+    const cat = ((r as Record<string, unknown>).ai_agents as { categoria?: string } | null)?.categoria ?? ''
+    return ['ux_docs', 'onboarding', 'acessibilidade'].includes(cat)
+  }).slice(0, 10).map(r => ({
+    resumo: (r as Record<string, unknown>).resumo,
+    achados_count: ((r as Record<string, unknown>).achados as unknown[] | null)?.length ?? 0,
+  }))
+
+  return JSON.stringify({
+    periodo_analise: '7 dias (erros) / 30 dias (relatórios UX)',
+    fluxos_sistema: [
+      'Login e cadastro', 'Dashboard principal', 'Gestão de produtos (CRUD)',
+      'Precificação por plataforma', 'Gerador de listagens', 'Painel financeiro',
+      'Integrações (Mercado Livre OAuth)', 'Armazém e estoque', 'Notas fiscais',
+      'Painel admin de agentes', 'Central de ajuda', 'Planos e assinatura',
+    ],
+    acoes_recentes_usuario: uniqueActions,
+    erros_recentes_7d: errorSamples,
+    relatorios_ux_recentes: uxReports,
+    totais: {
+      acoes_unicas: uniqueActions.length,
+      erros_7d: recentErrors.length,
+      relatorios_ux: uxReports.length,
+    },
+  }, null, 2)
+}
+
 // ── Seletor de Collector ──────────────────────────────────────────────────────
 
 async function collectData(slug: string, db: DB): Promise<string> {
@@ -1223,6 +1269,7 @@ async function collectData(slug: string, db: DB): Promise<string> {
     case 'layout':               return collectLayoutData(db)
     case 'marca':                return collectMarcaData(db)
     case 'concorrencia':         return collectConcorrenciaData(db)
+    case 'ux_predictor':         return collectUxPredictorData(db)
     default:
       return JSON.stringify({ mensagem: `Agente ${slug} sem collector específico. Análise geral do sistema.` })
   }

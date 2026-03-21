@@ -155,6 +155,36 @@ const DEFAULT_PLAN: PlanCfg = {
   label: 'Explorador', limit: 10, badge: 'text-slate-400 bg-slate-900/30',
 }
 
+function AdminButtonWithBadge({ onClose }: { onClose: () => void }) {
+  const [critCount, setCritCount] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/admin/agentes/badge')
+      .then(r => r.json())
+      .then((d: { criticos?: number; altos?: number }) => setCritCount(d.criticos ?? 0))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div className="px-2.5 pb-2">
+      <Link
+        href="/admin"
+        onClick={onClose}
+        className="flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-950/50 text-indigo-400 border border-indigo-800/40 hover:bg-indigo-900/50 transition-colors"
+      >
+        <Shield className="w-3.5 h-3.5 shrink-0" />
+        <span className="flex-1">Painel Admin</span>
+        {critCount > 0 && (
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold animate-pulse shrink-0">
+            {critCount > 9 ? '9+' : critCount}
+          </span>
+        )}
+        {critCount === 0 && <ExternalLink className="w-3 h-3 opacity-60 shrink-0" />}
+      </Link>
+    </div>
+  )
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
@@ -375,17 +405,7 @@ export default function Sidebar() {
 
         {/* Admin button */}
         {(profile?.role === 'admin' || profile?.role === 'foguetim_support') && (
-          <div className="px-2.5 pb-2">
-            <Link
-              href="/admin"
-              onClick={close}
-              className="flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-950/50 text-indigo-400 border border-indigo-800/40 hover:bg-indigo-900/50 transition-colors"
-            >
-              <Shield className="w-3.5 h-3.5 shrink-0" />
-              <span className="flex-1">Painel Admin</span>
-              <ExternalLink className="w-3 h-3 opacity-60 shrink-0" />
-            </Link>
-          </div>
+          <AdminButtonWithBadge onClose={close} />
         )}
 
         {/* User */}
