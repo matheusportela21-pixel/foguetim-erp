@@ -19,10 +19,10 @@
  *  test-stable é um ambiente completamente separado com credenciais próprias.
  */
 export function getShopeeBaseUrl(): string {
-  const env = process.env.SHOPEE_ENV ?? 'prod'
-  return env === 'test'
-    ? 'https://partner.test-stable.shopeemobile.com'
-    : 'https://partner.shopeemobile.com'
+  const env = process.env.SHOPEE_ENV ?? 'test'
+  return env === 'prod'
+    ? 'https://partner.shopeemobile.com'
+    : 'https://partner.test-stable.shopeemobile.com'
 }
 
 export const SHOPEE_PATH_AUTH        = '/api/v2/shop/auth_partner'
