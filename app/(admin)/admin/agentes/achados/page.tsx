@@ -61,6 +61,61 @@ function fmtDate(iso: string) {
   })
 }
 
+// ── Export Dropdown ───────────────────────────────────────────────────────────
+
+function ExportAchadosDropdown({ filters }: {
+  filters: {
+    search: string; period: string
+    sevFilter: string[]; stsFilter: string[]; agtFilter: string[]; catFilter: string[]
+  }
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  function buildQS(format: string) {
+    const qs = new URLSearchParams({ format })
+    if (filters.period !== 'all') {
+      qs.set('period', filters.period)
+    }
+    filters.sevFilter.forEach(s => qs.append('severidade', s))
+    filters.stsFilter.forEach(s => qs.append('status', s))
+    filters.agtFilter.forEach(s => qs.append('agente', s))
+    if (filters.search) qs.set('search', filters.search)
+    return qs.toString()
+  }
+
+  const dl = (format: string) => {
+    window.open(`/api/admin/agentes/export?${buildQS(format)}`, '_blank')
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(o => !o)} className="h-9 px-3 text-sm rounded-lg flex items-center gap-1.5 border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-all">
+        <Download size={13} /> Exportar <ChevronDown size={12} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-20 py-1 min-w-[160px]">
+          {(['JSON', 'CSV', 'Markdown'] as const).map(f => (
+            <button key={f} onClick={() => dl(f.toLowerCase())}
+              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors">
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AchadosPage() {
@@ -159,6 +214,7 @@ export default function AchadosPage() {
           <p className="text-sm text-slate-400 mt-1">Todos os achados de todos os agentes em um só lugar</p>
         </div>
         <div className="flex gap-2">
+          <ExportAchadosDropdown filters={{ search, period, sevFilter, stsFilter, agtFilter, catFilter }} />
           <button onClick={() => load()} className="btn-neon h-9 px-4 text-sm rounded-lg flex items-center gap-2">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Atualizar
           </button>

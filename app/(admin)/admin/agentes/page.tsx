@@ -6,7 +6,7 @@ import {
   AlertTriangle, XCircle, Clock, DollarSign, ChevronDown,
   ChevronRight, FileText, BarChart3, Activity, ToggleLeft, ToggleRight,
   AlertCircle, Info, Rocket, Scale, Globe, Loader2, X, ListChecks,
-  Download, TrendingUp, TrendingDown, Wifi,
+  Download, TrendingUp, TrendingDown, Wifi, Terminal,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -713,6 +713,14 @@ export default function AdminAgentesPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [executingAll,     setExecutingAll]     = useState(false)
   const [queueProgress,    setQueueProgress]    = useState<QueueProgress | null>(null)
+  const [showResumoCodeModal,  setShowResumoCodeModal]  = useState(false)
+  const [resumoCodeTexto,      setResumoCodeTexto]      = useState('')
+  const [generatingResumoCode, setGeneratingResumoCode] = useState(false)
+  const [showEmergenciaModal,  setShowEmergenciaModal]  = useState(false)
+  const [emergenciaTexto,      setEmergenciaTexto]      = useState('')
+  const [generatingEmergencia, setGeneratingEmergencia] = useState(false)
+  const [emergenciaStats,      setEmergenciaStats]      = useState<{ criticos: number; altos: number; total_relatorios: number } | null>(null)
+  const [resumoCopied,         setResumoCopied]         = useState(false)
   const [completedSlugs,   setCompletedSlugs]   = useState<Set<string>>(new Set())
   const [failedSlugs,      setFailedSlugs]      = useState<Set<string>>(new Set())
   const abortRef = useRef<boolean>(false)
@@ -847,6 +855,35 @@ export default function AdminAgentesPage() {
     setToastMsg('Status atualizado'); setTimeout(() => setToastMsg(''), 2000)
   }
 
+  async function handleGerarResumoCode() {
+    setGeneratingResumoCode(true)
+    setShowResumoCodeModal(true)
+    setResumoCodeTexto('')
+    try {
+      const res = await fetch('/api/admin/agentes/resumo-code', { method: 'POST' })
+      const d = await res.json() as { texto?: string; error?: string }
+      if (d.texto) setResumoCodeTexto(d.texto)
+      else setResumoCodeTexto(`Erro: ${d.error ?? 'desconhecido'}`)
+    } catch (e) {
+      setResumoCodeTexto(`Erro de rede: ${e instanceof Error ? e.message : String(e)}`)
+    } finally { setGeneratingResumoCode(false) }
+  }
+
+  async function handleEmergencia() {
+    setGeneratingEmergencia(true)
+    setShowEmergenciaModal(true)
+    setEmergenciaTexto('')
+    setEmergenciaStats(null)
+    try {
+      const res = await fetch('/api/admin/agentes/emergencia', { method: 'POST' })
+      const d = await res.json() as { texto?: string; stats?: { criticos: number; altos: number; total_relatorios: number }; error?: string }
+      if (d.texto) { setEmergenciaTexto(d.texto); setEmergenciaStats(d.stats ?? null) }
+      else setEmergenciaTexto(`Erro: ${d.error ?? 'desconhecido'}`)
+    } catch (e) {
+      setEmergenciaTexto(`Erro de rede: ${e instanceof Error ? e.message : String(e)}`)
+    } finally { setGeneratingEmergencia(false) }
+  }
+
   async function handleExecutarTodos() {
     setShowConfirmModal(false); setExecutingAll(true)
     setCompletedSlugs(new Set()); setFailedSlugs(new Set())
@@ -927,6 +964,122 @@ export default function AdminAgentesPage() {
         <ConfirmModal totalAgents={totalAtivos} onConfirm={() => void handleExecutarTodos()} onCancel={() => setShowConfirmModal(false)} />
       )}
 
+      {/* Resumo Code modal */}
+      {showResumoCodeModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowResumoCodeModal(false) }}>
+          <div className="glass-card w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl border border-cyan-500/20">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-cyan-900/10 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <Terminal className="w-5 h-5 text-cyan-400" />
+                <div>
+                  <h2 className="font-bold text-white">Resumo para Claude Code</h2>
+                  <p className="text-xs text-slate-400">Pronto para copiar e colar</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {resumoCodeTexto && (
+                  <>
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard.writeText(resumoCodeTexto)
+                        setResumoCopied(true); setTimeout(() => setResumoCopied(false), 2000)
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600/25 hover:bg-cyan-600/40 border border-cyan-500/30 text-cyan-300 text-sm transition-all"
+                    >
+                      {resumoCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+                      {resumoCopied ? 'Copiado!' : 'Copiar'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([resumoCodeTexto], { type: 'text/markdown' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a'); a.href = url
+                        a.download = `resumo-code-${new Date().toISOString().slice(0, 10)}.md`
+                        a.click(); URL.revokeObjectURL(url)
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white text-sm transition-all"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> .md
+                    </button>
+                  </>
+                )}
+                <button onClick={() => setShowResumoCodeModal(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {generatingResumoCode && !resumoCodeTexto ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-500">
+                  <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mb-3" />
+                  <p className="text-sm">Analisando achados pendentes e gerando resumo…</p>
+                </div>
+              ) : (
+                <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{resumoCodeTexto}</pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emergência modal */}
+      {showEmergenciaModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowEmergenciaModal(false) }}>
+          <div className="glass-card w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl border border-red-500/20">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-red-900/15 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <div>
+                  <h2 className="font-bold text-white">Reunião de Emergência</h2>
+                  {emergenciaStats && (
+                    <p className="text-xs text-slate-400">
+                      {emergenciaStats.total_relatorios} relatórios analisados · {emergenciaStats.criticos} críticos · {emergenciaStats.altos} altos
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {emergenciaTexto && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const match = emergenciaTexto.match(/#+\s*(?:5\.|COMANDO PARA CLAUDE CODE)[^\n]*\n([\s\S]*?)(?=\n#+\s*\d+\.|$)/i)
+                        const toCopy = match ? match[1]?.trim() ?? emergenciaTexto : emergenciaTexto
+                        void navigator.clipboard.writeText(toCopy)
+                        setToastMsg('Comando copiado!'); setTimeout(() => setToastMsg(''), 2000)
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/25 hover:bg-red-600/40 border border-red-500/30 text-red-300 text-sm transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Copiar Comando pro Code
+                    </button>
+                    <button
+                      onClick={() => void navigator.clipboard.writeText(emergenciaTexto)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white text-sm transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Copiar Tudo
+                    </button>
+                  </>
+                )}
+                <button onClick={() => setShowEmergenciaModal(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {generatingEmergencia && !emergenciaTexto ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-500">
+                  <AlertTriangle className="w-8 h-8 text-red-400 animate-pulse mb-3" />
+                  <p className="text-sm">Analisando todos os relatórios dos agentes…</p>
+                  <p className="text-xs mt-1 text-slate-600">Isso pode levar alguns segundos</p>
+                </div>
+              ) : (
+                <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{emergenciaTexto}</pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
 
         {/* ── Critical alerts banner ─────────────────────────────────────────── */}
@@ -961,6 +1114,21 @@ export default function AdminAgentesPage() {
             <button onClick={() => { void loadAgents(); void loadStats() }}
               className="p-2 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors" title="Atualizar">
               <RefreshCw className={`w-4 h-4 ${loadingAgents || loadingStats ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={() => void handleGerarResumoCode()} disabled={generatingResumoCode}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/30 text-cyan-300 text-sm font-semibold transition-all disabled:opacity-40">
+              {generatingResumoCode ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando...</> : <><Terminal className="w-4 h-4" /> Resumo pro Code</>}
+            </button>
+            <button onClick={() => void handleEmergencia()} disabled={generatingEmergencia}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition-all disabled:opacity-40 ${
+                achCriticos > 0
+                  ? 'bg-red-600/25 hover:bg-red-600/40 border-red-500/30 text-red-300'
+                  : 'bg-red-900/15 hover:bg-red-900/25 border-red-900/30 text-red-400/70'
+              }`}>
+              {generatingEmergencia ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando...</> : <><AlertTriangle className="w-4 h-4" /> Emergência</>}
+              {achCriticos > 0 && !generatingEmergencia && (
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center animate-pulse">{achCriticos}</span>
+              )}
             </button>
             <button onClick={() => setShowConfirmModal(true)} disabled={executingAll || totalAtivos === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600/25 hover:bg-violet-600/40 border border-violet-500/30 text-violet-300 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed">
