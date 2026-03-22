@@ -160,7 +160,12 @@ function LoginForm() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Senha</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Senha</label>
+                  <Link href="/recuperar-senha" className="text-[11px] text-purple-400 hover:text-purple-300 transition-colors">
+                    Esqueceu a senha?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     type={showPwd ? 'text' : 'password'}
@@ -200,7 +205,7 @@ function LoginForm() {
 
           <p className="text-center text-sm text-slate-600 mt-5">
             Não tem conta?{' '}
-            <Link href="/registro" className="text-purple-400 hover:text-purple-300 transition-colors font-semibold">
+            <Link href="/cadastro" className="text-purple-400 hover:text-purple-300 transition-colors font-semibold">
               Criar conta grátis
             </Link>
           </p>

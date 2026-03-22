@@ -39,7 +39,7 @@ const PLANS: PlanCard[] = [
     desc: 'Para quem está começando no marketplace',
     popular: false,
     cta: 'Começar grátis',
-    ctaHref: '/registro',
+    ctaHref: '/cadastro',
     color: 'border-gray-200',
     badge: null,
     features: [
@@ -63,7 +63,7 @@ const PLANS: PlanCard[] = [
     desc: 'O mais completo para sellers sérios',
     popular: true,
     cta: 'Começar com 7 dias grátis',
-    ctaHref: '/registro?plan=comandante',
+    ctaHref: '/cadastro?plan=comandante',
     color: 'border-indigo-500',
     badge: 'MAIS POPULAR',
     features: [
@@ -87,7 +87,7 @@ const PLANS: PlanCard[] = [
     desc: 'Para grandes operações de e-commerce',
     popular: false,
     cta: 'Começar com 7 dias grátis',
-    ctaHref: '/registro?plan=almirante',
+    ctaHref: '/cadastro?plan=almirante',
     color: 'border-gray-200',
     badge: null,
     features: [
@@ -111,7 +111,7 @@ const PLANS: PlanCard[] = [
     desc: 'Para empresas com operações avançadas',
     popular: false,
     cta: 'Começar com 7 dias grátis',
-    ctaHref: '/registro?plan=missao_espacial',
+    ctaHref: '/cadastro?plan=missao_espacial',
     color: 'border-gray-200',
     badge: null,
     features: [
@@ -259,7 +259,7 @@ export default function PlanosPage() {
             <Link href="/login" className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors px-4 py-2">
               Entrar
             </Link>
-            <Link href="/registro" className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+            <Link href="/cadastro" className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
               Começar grátis
             </Link>
           </div>
@@ -277,7 +277,7 @@ export default function PlanosPage() {
             <Link href="/contato"     onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">Contato</Link>
             <div className="flex gap-3 pt-3 border-t border-gray-100">
               <Link href="/login"    className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg text-center">Entrar</Link>
-              <Link href="/registro" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg text-center transition-colors">Cadastrar</Link>
+              <Link href="/cadastro" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg text-center transition-colors">Cadastrar</Link>
             </div>
           </div>
         )}
@@ -346,7 +346,7 @@ export default function PlanosPage() {
                 </div>
 
                 <Link
-                  href={period === 'annual' && plan.ctaHref !== '/registro'
+                  href={period === 'annual' && plan.ctaHref !== '/cadastro'
                     ? plan.ctaHref + '&billing=annual'
                     : plan.ctaHref}
                   className={`block text-center py-2.5 rounded-lg text-sm font-bold w-full mb-5 transition-all ${
@@ -493,7 +493,7 @@ export default function PlanosPage() {
             Crie sua conta gratuita e conecte seu Mercado Livre em minutos.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/registro" className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-lg text-base transition-colors">
+            <Link href="/cadastro" className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-lg text-base transition-colors">
               Criar conta grátis <ArrowRight className="w-4 h-4" />
             </Link>
             <a href="mailto:contato@foguetim.com.br" className="inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold px-8 py-3.5 rounded-lg text-base transition-colors">
