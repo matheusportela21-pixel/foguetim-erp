@@ -61,13 +61,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(configured ? null : MOCK_PROFILE)
   const [loading, setLoading] = useState(configured) // only loading when real Supabase is used
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, isOAuth = false) => {
     const { data } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
       .single()
-    if (data) setProfile(data as Profile)
+    if (data) {
+      setProfile(data as Profile)
+    } else if (isOAuth) {
+      // First Google login — create profile server-side
+      try {
+        await fetch('/api/auth/ensure-profile', { method: 'POST' })
+        // Re-fetch after creation
+        const { data: newData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single()
+        if (newData) setProfile(newData as Profile)
+      } catch { /* ignore — profile will be created on next load */ }
+    }
   }, [])
 
   useEffect(() => {
@@ -79,10 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else setProfile(null)
+      if (session?.user) {
+        const isOAuth = event === 'SIGNED_IN' && session.user.app_metadata?.provider === 'google'
+        fetchProfile(session.user.id, isOAuth)
+      } else {
+        setProfile(null)
+      }
       setLoading(false)
     })
 
