@@ -17,7 +17,8 @@ const APP_PREFIXES = [
   '/api/feedback', '/api/empresa', '/api/precificacao', '/api/user',
   '/api/cron', '/api/ai', '/api/webhooks',
 ]
-const BOTH_DOMAINS = new Set(['/login', '/cadastro', '/registro', '/recuperar-senha'])
+const BOTH_DOMAINS = new Set(['/login', '/cadastro', '/registro', '/recuperar-senha', '/redefinir-senha', '/auth/callback'])
+const SKIP_AUTH = new Set(['/auth/callback'])
 
 function isPublicOnly(p: string) {
   return PUBLIC_ONLY_ROUTES.has(p) || PUBLIC_ONLY_PREFIXES.some(x => p.startsWith(x))
@@ -53,6 +54,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Auth guard ────────────────────────────────────────────────────────────
+
+  // Skip auth for callback routes (OAuth, password reset)
+  if (SKIP_AUTH.has(pathname)) {
+    return NextResponse.next({ request })
+  }
 
   // If Supabase is not configured, let everything through (dev mode with mock data)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
