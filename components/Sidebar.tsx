@@ -14,8 +14,9 @@ import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useSidebar } from '@/context/SidebarContext'
 import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
+import { usePermissions } from '@/lib/hooks/usePermissions'
 
-type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean; exact?: boolean; divider?: string }
+type NavItem = { href: string; icon: React.ElementType; label: string; badge?: string; roles?: string[]; disabled?: boolean; exact?: boolean; divider?: string; requiredPermission?: string }
 type NavGroup = {
   label: string
   marketplaceDot?: string // color for dot indicator e.g. 'bg-yellow-400'
@@ -199,6 +200,7 @@ export default function Sidebar() {
   const { profile, signOut } = useAuth()
   const { isOpen, close }    = useSidebar()
   const { hasML, hasShopee, hasMagalu } = useConnectedMarketplaces()
+  const { can } = usePermissions()
 
   const [productCount, setProductCount] = useState<number | null>(null)
   const [claimCount,   setClaimCount]   = useState<number>(0)
@@ -307,7 +309,8 @@ export default function Sidebar() {
           {visibleGroups.map(group => {
             const isCollapsed = collapsedGroups[group.label] ?? false
             const visibleItems = group.items.filter(item =>
-              !item.roles || item.roles.includes(profile?.role ?? '')
+              (!item.roles || item.roles.includes(profile?.role ?? '')) &&
+              (!item.requiredPermission || can(item.requiredPermission))
             )
             if (visibleItems.length === 0) return null
 
