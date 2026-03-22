@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import {
   ArrowLeft, ChevronDown, ChevronRight, CheckCircle2, XCircle,
   Package, DollarSign, FileText, Truck, BarChart3, Link2,
-  Layers, Package2, Info, Search, X, Plus, ExternalLink,
+  Layers, Package2, Info, Search, X, Plus, ExternalLink, Zap, Loader2,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
@@ -94,6 +94,20 @@ interface ProductMapping {
   marketplace_item_id: string | null
   listing_title: string | null
   mapping_status: 'unmapped' | 'partial' | 'mapped' | 'conflict'
+}
+
+interface MappingSuggestionInline {
+  externalListing: {
+    itemId: string
+    title: string
+    sku: string | null
+    channel: 'mercado_livre' | 'shopee'
+    price: number
+    stock: number
+    thumbnail: string | null
+  }
+  matchType: 'sku_exact' | 'ean_exact' | 'name_similar'
+  confidence: number
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -381,6 +395,11 @@ export default function ProductDetailPage() {
   const [savingMapping, setSavingMapping] = useState(false)
   const [mappingErr, setMappingErr] = useState<string | null>(null)
 
+  // Suggestions for this product (by SKU/EAN)
+  const [inlineSuggestions, setInlineSuggestions] = useState<MappingSuggestionInline[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [applyingSuggestion, setApplyingSuggestion] = useState<string | null>(null)
+
   // ── Load ───────────────────────────────────────────────────────────────────
 
   const loadProduct = useCallback(async () => {
@@ -449,6 +468,50 @@ export default function ProductDetailPage() {
   }, [id])
 
   useEffect(() => { loadProductMappings() }, [loadProductMappings])
+
+  // Fetch SKU/EAN-based suggestions for this product
+  const loadInlineSuggestions = useCallback(async () => {
+    if (!id) return
+    setLoadingSuggestions(true)
+    try {
+      const r = await fetch(`/api/armazem/mapeamentos/suggestions?product_id=${id}&limit=10`)
+      if (!r.ok) return
+      const d = await r.json()
+      setInlineSuggestions(d.suggestions ?? [])
+    } catch { /* noop */ }
+    finally { setLoadingSuggestions(false) }
+  }, [id])
+
+  useEffect(() => { loadInlineSuggestions() }, [loadInlineSuggestions])
+
+  async function handleApplySuggestion(suggestion: MappingSuggestionInline) {
+    const key = `${suggestion.externalListing.itemId}:${suggestion.externalListing.channel}`
+    setApplyingSuggestion(key)
+    try {
+      const r = await fetch('/api/armazem/mapeamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          warehouse_product_id: Number(id),
+          channel: suggestion.externalListing.channel,
+          marketplace_item_id: suggestion.externalListing.itemId,
+          listing_title: suggestion.externalListing.title,
+          mapping_status: 'mapped',
+        }),
+      })
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Erro ao criar mapeamento')
+      }
+      setToastMsg('Mapeamento criado!', 'success')
+      loadProductMappings()
+      loadInlineSuggestions()
+    } catch (e: unknown) {
+      setToastMsg(e instanceof Error ? e.message : 'Erro ao criar mapeamento', 'error')
+    } finally {
+      setApplyingSuggestion(null)
+    }
+  }
 
   async function handleUnlinkMapping(mappingId: number) {
     try {
@@ -1198,6 +1261,52 @@ export default function ProductDetailPage() {
                 Mapear Anúncio
               </button>
             </div>
+
+            {/* ── Inline suggestions ── */}
+            {loadingSuggestions && (
+              <div className="flex items-center gap-2 text-xs text-slate-500 py-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                Buscando sugestões por SKU/EAN...
+              </div>
+            )}
+            {!loadingSuggestions && inlineSuggestions.length > 0 && (
+              <div className="rounded-xl border border-purple-500/20 bg-purple-500/[0.04] overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-purple-500/15">
+                  <Zap className="w-3 h-3 text-purple-400 shrink-0" />
+                  <p className="text-[11px] font-semibold text-purple-300">
+                    Encontramos anúncios com o mesmo SKU/EAN
+                  </p>
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                  {inlineSuggestions.map(s => {
+                    const key = `${s.externalListing.itemId}:${s.externalListing.channel}`
+                    const isApplying = applyingSuggestion === key
+                    const chBadge = s.externalListing.channel === 'mercado_livre'
+                      ? 'bg-yellow-900/40 text-yellow-400'
+                      : 'bg-orange-900/40 text-orange-400'
+                    const chLabel = s.externalListing.channel === 'mercado_livre' ? 'ML' : 'Shopee'
+                    const mtLabel = s.matchType === 'sku_exact' ? 'SKU exato' : s.matchType === 'ean_exact' ? 'EAN exato' : 'Nome similar'
+                    return (
+                      <div key={key} className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.02] transition-colors">
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${chBadge}`}>{chLabel}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-slate-200 truncate">{s.externalListing.title}</p>
+                          <p className="text-[10px] text-slate-600 font-mono">{s.externalListing.itemId} · {mtLabel} · {s.confidence}%</p>
+                        </div>
+                        <button
+                          onClick={() => handleApplySuggestion(s)}
+                          disabled={isApplying}
+                          className="shrink-0 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-colors disabled:opacity-50"
+                        >
+                          {isApplying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
+                          Mapear
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Inline mapping form */}
             {showMappingModal && (
