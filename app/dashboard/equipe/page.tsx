@@ -19,7 +19,7 @@ interface TeamMember {
 
 interface TeamInvite {
   id: string; email: string; name: string | null; role: string
-  expires_at: string; status: string; created_at: string
+  token: string; expires_at: string; status: string; created_at: string
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -113,8 +113,8 @@ export default function EquipePage() {
     toast('success', m.status === 'disabled' ? 'Membro reabilitado' : 'Membro desabilitado')
   }
 
-  async function revokeInvite(id: string) {
-    await fetch(`/api/team/invite/${id}/revoke`, { method: 'DELETE' })
+  async function revokeInvite(token: string) {
+    await fetch(`/api/team/invite/${token}/revoke`, { method: 'DELETE' })
     loadTeam()
     toast('success', 'Convite revogado')
   }
@@ -260,7 +260,7 @@ export default function EquipePage() {
                 <p className="text-xs text-slate-300">{inv.email}</p>
                 <p className="text-[10px] text-slate-600">{ROLE_LABELS[inv.role] ?? inv.role} · Expira em {timeAgo(inv.expires_at)}</p>
               </div>
-              <button onClick={() => revokeInvite(inv.id)} className="text-xs text-red-400 hover:underline">Revogar</button>
+              <button onClick={() => revokeInvite(inv.token)} className="text-xs text-red-400 hover:underline">Revogar</button>
             </div>
           ))}
         </div>

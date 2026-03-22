@@ -1,0 +1,34 @@
+[     907ms] [ERROR] Access to fetch at 'https://www.foguetim.com.br/' (redirected from 'https://app.foguetim.com.br/?_rsc=1culw') from origin 'https://app.foguetim.com.br' has been blocked by CORS policy: Request header field rsc is not allowed by Access-Control-Allow-Headers in preflight response. @ https://app.foguetim.com.br/dashboard/shopee/produtos:0
+[     907ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://www.foguetim.com.br/:0
+[     907ms] [ERROR] Failed to fetch RSC payload for https://app.foguetim.com.br/. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at c.enqueue (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32247)
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59242)
+    at i (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:58782)
+    at a (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:65602)
+    at f (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:75482)
+    at Object.action (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:2:7102) @ https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
+[    2751ms] [ERROR] Access to fetch at 'https://www.foguetim.com.br/planos' (redirected from 'https://app.foguetim.com.br/planos?_rsc=1culw') from origin 'https://app.foguetim.com.br' has been blocked by CORS policy: Request header field rsc is not allowed by Access-Control-Allow-Headers in preflight response. @ https://app.foguetim.com.br/dashboard/shopee/produtos:0
+[    2751ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://www.foguetim.com.br/planos:0
+[    2751ms] [ERROR] Failed to fetch RSC payload for https://app.foguetim.com.br/planos. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32179) @ https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
+[    3343ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://app.foguetim.com.br/api/shopee/products?item_status=UNLIST&page_size=1&offset=0:0
+[    4590ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://app.foguetim.com.br/api/shopee/products?item_status=NORMAL&page_size=1&offset=0:0
+[    5122ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://app.foguetim.com.br/api/shopee/products?item_status=NORMAL%2CUNLIST%2CBANNED&page_size=20&offset=0:0
+[    5135ms] [ERROR] [Shopee produtos] API error na listagem: Shopee não conectada undefined @ https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
+[    5415ms] [ERROR] Access to fetch at 'https://www.foguetim.com.br/ajuda' (redirected from 'https://app.foguetim.com.br/ajuda?_rsc=1culw') from origin 'https://app.foguetim.com.br' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://app.foguetim.com.br/dashboard/shopee/produtos:0
+[    5416ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://www.foguetim.com.br/ajuda:0
+[    5416ms] [ERROR] Failed to fetch RSC payload for https://app.foguetim.com.br/ajuda. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32179) @ https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
+[    5564ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://app.foguetim.com.br/api/shopee/products?item_status=BANNED&page_size=1&offset=0:0

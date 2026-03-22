@@ -1,0 +1,26 @@
+[    2123ms] [ERROR] Access to fetch at 'https://app.foguetim.com.br/dashboard' (redirected from 'https://www.foguetim.com.br/registro?_rsc=1wtp7') from origin 'https://www.foguetim.com.br' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: Redirect is not allowed for a preflight request. @ https://www.foguetim.com.br/:0
+[    2123ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://app.foguetim.com.br/dashboard:0
+[    2124ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/registro. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32247)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59242)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:58782)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:65602)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:75482)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
+[    2146ms] [ERROR] Access to fetch at 'https://app.foguetim.com.br/dashboard' (redirected from 'https://www.foguetim.com.br/login?_rsc=1wtp7') from origin 'https://www.foguetim.com.br' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: Redirect is not allowed for a preflight request. @ https://www.foguetim.com.br/:0
+[    2146ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://app.foguetim.com.br/dashboard:0
+[    2146ms] [ERROR] Failed to fetch RSC payload for https://www.foguetim.com.br/login. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at c.enqueue (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32247)
+    at s (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59242)
+    at i (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:58782)
+    at a (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:65602)
+    at f (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:75482)
+    at Object.action (https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:2:7102) @ https://www.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0

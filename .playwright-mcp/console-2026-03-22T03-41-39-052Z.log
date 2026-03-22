@@ -1,0 +1,24 @@
+[   15501ms] [ERROR] Access to fetch at 'https://www.foguetim.com.br/' (redirected from 'https://app.foguetim.com.br/?_rsc=1538b') from origin 'https://app.foguetim.com.br' has been blocked by CORS policy: Request header field rsc is not allowed by Access-Control-Allow-Headers in preflight response. @ https://app.foguetim.com.br/dashboard:0
+[   15501ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://www.foguetim.com.br/:0
+[   15501ms] [ERROR] Failed to fetch RSC payload for https://app.foguetim.com.br/. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at c.enqueue (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32247)
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59242)
+    at i (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:58782)
+    at a (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:65602)
+    at f (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:75482)
+    at Object.action (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:2:7102) @ https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
+[   17307ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://app.foguetim.com.br/api/onboarding:0
+[   17479ms] [ERROR] Access to fetch at 'https://www.foguetim.com.br/api/changelog?limit=5' (redirected from 'https://app.foguetim.com.br/api/changelog?limit=5') from origin 'https://app.foguetim.com.br' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://app.foguetim.com.br/dashboard:0
+[   17479ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://www.foguetim.com.br/api/changelog?limit=5:0
+[   18603ms] [ERROR] Access to fetch at 'https://www.foguetim.com.br/planos' (redirected from 'https://app.foguetim.com.br/planos?_rsc=1538b') from origin 'https://app.foguetim.com.br' has been blocked by CORS policy: Request header field rsc is not allowed by Access-Control-Allow-Headers in preflight response. @ https://app.foguetim.com.br/dashboard:0
+[   18604ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://www.foguetim.com.br/planos:0
+[   18604ms] [ERROR] Failed to fetch RSC payload for https://app.foguetim.com.br/planos. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:45730)
+    at https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:59279
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32117)
+    at c.s (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32822)
+    at Object.u [as task] (https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:1:32179) @ https://app.foguetim.com.br/_next/static/chunks/7023-d811982e0c7f3cbf.js?dpl=dpl_915iN2DWxcAd3aizvXCHratvxCqT:0
