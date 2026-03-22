@@ -5,29 +5,30 @@
  */
 
 export interface PlanLimits {
-  maxWarehouses: number   // máximo de armazéns
-  maxProducts:   number   // máximo de produtos no armazém
-  label:         string   // nome do plano para exibição
+  maxWarehouses:   number
+  maxProducts:     number
+  maxTeamMembers:  number
+  label:           string
 }
 
 const PLAN_LIMITS: Record<string, PlanLimits> = {
-  // planos ativos
-  explorador:      { maxWarehouses: 1,         maxProducts: 10,       label: 'Explorador'     },
-  explorer:        { maxWarehouses: 1,         maxProducts: 10,       label: 'Explorador'     },
-  piloto:          { maxWarehouses: 1,         maxProducts: 200,      label: 'Piloto'         },
-  crescimento:     { maxWarehouses: 2,         maxProducts: 200,      label: 'Crescimento'    },
-  comandante:      { maxWarehouses: 2,         maxProducts: 500,      label: 'Comandante'     },
-  commander:       { maxWarehouses: 2,         maxProducts: 500,      label: 'Comandante'     },
-  almirante:       { maxWarehouses: 3,         maxProducts: Infinity, label: 'Almirante'      },
-  admiral:         { maxWarehouses: 3,         maxProducts: Infinity, label: 'Almirante'      },
-  missao_espacial: { maxWarehouses: 5,         maxProducts: Infinity, label: 'Missão Espacial' },
-  enterprise:      { maxWarehouses: Infinity,  maxProducts: Infinity, label: 'Enterprise'     },
+  explorador:      { maxWarehouses: 1,         maxProducts: 10,       maxTeamMembers: 1,  label: 'Explorador'     },
+  explorer:        { maxWarehouses: 1,         maxProducts: 10,       maxTeamMembers: 1,  label: 'Explorador'     },
+  piloto:          { maxWarehouses: 1,         maxProducts: 200,      maxTeamMembers: 2,  label: 'Piloto'         },
+  crescimento:     { maxWarehouses: 2,         maxProducts: 200,      maxTeamMembers: 3,  label: 'Crescimento'    },
+  comandante:      { maxWarehouses: 2,         maxProducts: 500,      maxTeamMembers: 3,  label: 'Comandante'     },
+  commander:       { maxWarehouses: 2,         maxProducts: 500,      maxTeamMembers: 3,  label: 'Comandante'     },
+  almirante:       { maxWarehouses: 3,         maxProducts: Infinity, maxTeamMembers: 5,  label: 'Almirante'      },
+  admiral:         { maxWarehouses: 3,         maxProducts: Infinity, maxTeamMembers: 5,  label: 'Almirante'      },
+  missao_espacial: { maxWarehouses: 5,         maxProducts: Infinity, maxTeamMembers: 10, label: 'Missão Espacial' },
+  enterprise:      { maxWarehouses: Infinity,  maxProducts: Infinity, maxTeamMembers: Infinity, label: 'Enterprise' },
 }
 
 const DEFAULT_LIMITS: PlanLimits = {
-  maxWarehouses: 1,
-  maxProducts:   10,
-  label:         'Explorador',
+  maxWarehouses:  1,
+  maxProducts:    10,
+  maxTeamMembers: 1,
+  label:          'Explorador',
 }
 
 export function getPlanLimits(plan?: string | null): PlanLimits {
