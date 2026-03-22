@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Users, XCircle,
   FileText, Bell, LogOut, Shield, ChevronRight,
   Ticket, UserCog, Wrench, Webhook, Megaphone, Bot, BookOpen, Newspaper,
+  BarChart3, CreditCard, Activity, Settings, HeadphonesIcon,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
@@ -21,19 +22,24 @@ const ADMIN_ROLE_LABELS: Record<string, string> = {
 }
 
 const NAV = [
-  { href: '/admin',               icon: LayoutDashboard, label: 'Visão Geral'     },
+  { href: '/admin',               icon: LayoutDashboard, label: 'Visão Geral'      },
+  { href: '/admin/metricas',      icon: BarChart3,       label: 'Métricas'         },
   { href: '/admin/usuarios',      icon: Users,           label: 'Usuários'         },
+  { href: '/admin/planos',        icon: CreditCard,      label: 'Planos & Billing' },
+  { href: '/admin/logs',          icon: FileText,        label: 'Logs de Atividade'},
+  { href: '/admin/monitor',       icon: Activity,        label: 'Monitor de APIs'  },
+  { href: '/admin/agentes',       icon: Bot,             label: 'Agentes de IA'    },
+  { href: '/admin/blog',          icon: Newspaper,       label: 'Blog'             },
+  { href: '/admin/ajuda',         icon: BookOpen,        label: 'Central de Ajuda' },
   { href: '/admin/equipe',        icon: UserCog,         label: 'Equipe'           },
   { href: '/admin/tickets',       icon: Ticket,          label: 'Tickets'          },
   { href: '/admin/cancelamentos', icon: XCircle,         label: 'Cancelamentos'    },
   { href: '/admin/notificacoes',  icon: Bell,            label: 'Notificações'     },
   { href: '/admin/avisos',        icon: Megaphone,       label: 'Avisos & Changelog'},
-  { href: '/admin/logs',          icon: FileText,        label: 'Logs do Sistema'  },
   { href: '/admin/ferramentas',   icon: Wrench,          label: 'Ferramentas'      },
   { href: '/admin/webhooks',      icon: Webhook,         label: 'Webhooks ML'      },
-  { href: '/admin/agentes',       icon: Bot,             label: 'Agentes de IA'    },
-  { href: '/admin/ajuda',         icon: BookOpen,        label: 'Central de Ajuda' },
-  { href: '/admin/blog',          icon: Newspaper,       label: 'Blog'             },
+  { href: '/admin/configuracoes', icon: Settings,        label: 'Configurações'    },
+  { href: '/admin/suporte',       icon: HeadphonesIcon,  label: 'Suporte'          },
 ]
 
 function AdminSidebar() {
