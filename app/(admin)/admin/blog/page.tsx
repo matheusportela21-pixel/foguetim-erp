@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  Newspaper, Plus, Edit2, Trash2, Eye, EyeOff, Search,
+  Newspaper, Plus, Edit2, Trash2, Eye, EyeOff, Search, Copy,
   BarChart3, FileText, BookOpen, Star, StarOff, X, Save,
   ChevronDown, Tag, Loader2, AlertCircle, CheckCircle2,
   Clock, Archive, Layout, Palette,
@@ -145,7 +145,7 @@ function PostModal({ post, categories, onClose, onSaved }: PostModalProps) {
   const [error, setError] = useState('')
   const [tagsInput, setTagsInput] = useState((post?.tags ?? []).join(', '))
   const [kwInput, setKwInput] = useState((post?.seo_keywords ?? []).join(', '))
-  const [preview, setPreview] = useState(false)
+  // Preview is now always visible (side-by-side)
   const [titleDirty, setTitleDirty] = useState(!isNew)
 
   function set<K extends keyof BlogPost>(key: K, value: BlogPost[K]) {
@@ -258,7 +258,7 @@ function PostModal({ post, categories, onClose, onSaved }: PostModalProps) {
             />
           </div>
 
-          {/* Content + Preview toggle */}
+          {/* Content + Live Preview (side-by-side) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-medium text-slate-400">
@@ -269,29 +269,24 @@ function PostModal({ post, categories, onClose, onSaved }: PostModalProps) {
                   </span>
                 )}
               </label>
-              <button
-                onClick={() => setPreview(p => !p)}
-                className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
-              >
-                {preview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                {preview ? 'Editar' : 'Preview'}
-              </button>
+              <span className="text-[10px] text-slate-600 uppercase tracking-wider">Editor + Preview</span>
             </div>
-            {preview ? (
-              <div className="bg-slate-900 border border-white/[0.06] rounded-lg px-4 py-3 min-h-[300px] prose prose-invert prose-sm max-w-none overflow-y-auto">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {form.content ?? ''}
-                </ReactMarkdown>
-              </div>
-            ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <textarea
                 value={form.content ?? ''}
                 onChange={e => handleContent(e.target.value)}
-                style={{ height: 300, fontFamily: 'monospace', fontSize: 13 }}
+                style={{ height: 360, fontFamily: 'monospace', fontSize: 13 }}
                 className="w-full bg-slate-900 border border-white/[0.06] rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-violet-500/60 resize-none leading-relaxed"
                 placeholder="# Título&#10;&#10;Escreva seu conteúdo em markdown..."
               />
-            )}
+              <div className="bg-slate-900 border border-white/[0.06] rounded-lg px-4 py-3 prose prose-invert prose-sm max-w-none overflow-y-auto" style={{ height: 360 }}>
+                {form.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.content}</ReactMarkdown>
+                ) : (
+                  <p className="text-slate-600 italic text-xs">Preview aparecerá aqui...</p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Category + Author + Status */}
@@ -988,6 +983,24 @@ export default function AdminBlogPage() {
                               title="Editar"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditPost({
+                                  ...p,
+                                  id: undefined as unknown as string,
+                                  title: `[CÓPIA] ${p.title}`,
+                                  slug: `${p.slug}-copia`,
+                                  status: 'draft',
+                                  views_count: 0,
+                                  published_at: null,
+                                })
+                                setShowPostModal(true)
+                              }}
+                              className="p-1.5 text-slate-500 hover:text-cyan-400 transition-colors rounded"
+                              title="Duplicar"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => setDelPostId(p.id)}
