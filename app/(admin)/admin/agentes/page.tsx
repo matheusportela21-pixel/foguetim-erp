@@ -1642,6 +1642,22 @@ export default function AdminAgentesPage() {
                     </div>
                   )}
                 </div>
+                {/* Cost per agent bar chart */}
+                {costs.por_agente.length > 0 && (
+                  <div className="glass-card p-4">
+                    <p className="text-xs font-semibold text-slate-400 mb-3">Custo por agente (USD)</p>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={costs.por_agente} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 100 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                        <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(v: number) => `$${v.toFixed(4)}`} />
+                        <YAxis type="category" dataKey="nome" tick={{ fontSize: 11, fill: '#94a3b8' }} width={95} />
+                        <Tooltip contentStyle={{ background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+                          formatter={(v: number) => [`$${v.toFixed(6)}`, 'Custo']} />
+                        <Bar dataKey="custo_usd" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
                 <p className="text-[11px] text-slate-600">claude-sonnet-4-20250514 — $3/MTok entrada · $15/MTok saída · Câmbio estimado: R$5,85/USD</p>
               </>
             ) : <div className="text-center py-12 text-slate-500"><DollarSign className="w-10 h-10 mx-auto mb-3 opacity-30" /><p>Falha ao carregar custos.</p></div>}
