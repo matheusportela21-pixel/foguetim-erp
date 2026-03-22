@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   BookOpen, Plus, Search, RefreshCw, Edit2, Trash2,
   Eye, Star, CheckCircle2, Clock, ChevronDown, AlertCircle,
-  Filter,
+  Filter, X, Save, ArrowUpDown,
 } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
@@ -28,6 +28,7 @@ interface HelpArticle {
   helpful_no: number
   updated_at: string
   created_at: string
+  order_index: number
   category_id: string
   help_categories: HelpCategory | null
 }
@@ -311,6 +312,21 @@ export default function AdminHelpPage() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <input
+                              type="number"
+                              title="Ordem"
+                              defaultValue={article.order_index ?? 0}
+                              min={0}
+                              className="w-10 px-1 py-0.5 text-[10px] text-center bg-white/[0.04] border border-white/[0.08] rounded text-slate-400 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+                              onBlur={async (e) => {
+                                const val = Number(e.target.value)
+                                await fetch(`/api/admin/help/articles/${article.id}`, {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ order_index: val }),
+                                })
+                              }}
+                            />
                             <a
                               href={`/ajuda/${article.help_categories?.slug ?? 'geral'}/${article.slug}`}
                               target="_blank"
@@ -348,47 +364,135 @@ export default function AdminHelpPage() {
       )}
 
       {tab === 'categories' && (
-        <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-500 gap-3">
-              <RefreshCw className="w-5 h-5 animate-spin" />
-              Carregando categorias...
-            </div>
-          ) : categories.length === 0 ? (
-            <div className="text-center py-16 text-slate-500">
-              <p className="font-medium">Nenhuma categoria encontrada</p>
-              <p className="text-sm mt-1">Crie categorias diretamente no Supabase.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/8">
-                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Categoria</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Slug</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cor</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {categories.map(cat => (
-                    <tr key={cat.id} className="hover:bg-white/3 transition-colors">
-                      <td className="px-5 py-4">
-                        <span className="font-medium text-white">{cat.name}</span>
-                      </td>
-                      <td className="px-4 py-4 text-slate-400 font-mono text-xs">{cat.slug}</td>
-                      <td className="px-4 py-4">
-                        <span className={`text-xs px-2 py-1 rounded-full bg-white/8 text-slate-300`}>
-                          {cat.color}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <CategoriesTab categories={categories} onRefresh={fetchData} />
       )}
     </div>
+  )
+}
+
+/* ── Categories CRUD Tab ─────────────────────────────────────────────────── */
+function CategoriesTab({ categories, onRefresh }: { categories: HelpCategory[]; onRefresh: () => void }) {
+  const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState<HelpCategory | null>(null)
+  const [form, setForm] = useState({ name: '', slug: '', color: '' })
+  const [saving, setSaving] = useState(false)
+  const [delCatId, setDelCatId] = useState<string | null>(null)
+
+  function openNew() { setEditing(null); setForm({ name: '', slug: '', color: '' }); setShowModal(true) }
+  function openEdit(c: HelpCategory) { setEditing(c); setForm({ name: c.name, slug: c.slug, color: c.color }); setShowModal(true) }
+
+  function handleName(v: string) {
+    setForm(prev => ({
+      ...prev,
+      name: v,
+      slug: editing ? prev.slug : v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    }))
+  }
+
+  async function save() {
+    setSaving(true)
+    try {
+      const url = editing ? `/api/admin/help/categories/${editing.id}` : '/api/admin/help/categories'
+      const method = editing ? 'PATCH' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      if (res.ok) { setShowModal(false); onRefresh() }
+    } finally { setSaving(false) }
+  }
+
+  async function deleteCat(id: string) {
+    const res = await fetch(`/api/admin/help/categories/${id}`, { method: 'DELETE' })
+    if (res.ok) { setDelCatId(null); onRefresh() }
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-slate-400">{categories.length} categorias</p>
+        <button onClick={openNew} className="flex items-center gap-2 px-3 py-2 bg-violet-600 text-white text-xs font-semibold rounded-lg hover:bg-violet-700 transition-colors">
+          <Plus className="w-3.5 h-3.5" /> Nova categoria
+        </button>
+      </div>
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.08]">
+              <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Categoria</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Slug</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cor</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.05]">
+            {categories.map(cat => (
+              <tr key={cat.id} className="hover:bg-white/[0.03] transition-colors">
+                <td className="px-5 py-4 font-medium text-white">{cat.name}</td>
+                <td className="px-4 py-4 text-slate-400 font-mono text-xs">{cat.slug}</td>
+                <td className="px-4 py-4">
+                  <span className="text-xs px-2 py-1 rounded-full bg-white/[0.08] text-slate-300">{cat.color || '—'}</span>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => openEdit(cat)} className="p-1.5 text-slate-500 hover:text-violet-400 transition-colors" title="Editar">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setDelCatId(cat.id)} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Excluir">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Category modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-5 w-96 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">{editing ? 'Editar Categoria' : 'Nova Categoria'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nome</label>
+              <input value={form.name} onChange={e => handleName(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Slug</label>
+              <input value={form.slug} onChange={e => setForm(p => ({ ...p, slug: e.target.value }))}
+                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 font-mono focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Cor (classe CSS ou hex)</label>
+              <input value={form.color} onChange={e => setForm(p => ({ ...p, color: e.target.value }))}
+                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none" placeholder="violet" />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowModal(false)} className="flex-1 px-3 py-2 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg">Cancelar</button>
+              <button onClick={save} disabled={!form.name || !form.slug || saving}
+                className="flex-1 px-3 py-2 text-xs text-white bg-violet-600 hover:bg-violet-700 rounded-lg disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Save className="w-3 h-3" /> {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {delCatId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setDelCatId(null)}>
+          <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-5 w-80 space-y-4" onClick={e => e.stopPropagation()}>
+            <p className="text-sm text-slate-200 font-semibold">Excluir categoria?</p>
+            <p className="text-xs text-slate-500">Artigos nesta categoria ficarão sem categoria.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDelCatId(null)} className="flex-1 px-3 py-2 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg">Cancelar</button>
+              <button onClick={() => deleteCat(delCatId)} className="flex-1 px-3 py-2 text-xs text-white bg-red-600 hover:bg-red-700 rounded-lg">Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
