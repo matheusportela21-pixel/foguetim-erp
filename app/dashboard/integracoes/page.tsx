@@ -44,8 +44,8 @@ const API_STATUS_META: Record<ApiStatus, { label: string; cls: string; dot: stri
 
 const INIT_MKT: MktEntry[] = [
   { id: 'ml',      name: 'Mercado Livre',    logo: '🟡', color: 'border-amber-500/30 bg-amber-500/5',    connected: false, products: 0, lastSync: null, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'shopee',  name: 'Shopee',           logo: '🟠', color: 'border-orange-500/30 bg-orange-500/5',  connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
-  { id: 'magalu',  name: 'Magalu',           logo: '🔷', color: 'border-blue-500/30 bg-blue-500/5',      connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'shopee',  name: 'Shopee',           logo: '🟠', color: 'border-orange-500/30 bg-orange-500/5',  connected: false, products: 0, lastSync: null, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
+  { id: 'magalu',  name: 'Magalu',           logo: '🔷', color: 'border-blue-500/30 bg-blue-500/5',      connected: false, products: 0, lastSync: null, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: 'https://universo.magalu.com' },
   { id: 'tiktok',  name: 'TikTok Shop',      logo: '⬛', color: 'border-slate-500/30 bg-slate-500/5',    connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
   { id: 'ame',     name: 'Americanas',       logo: '🔴', color: 'border-red-500/30 bg-red-500/5',        connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
   { id: 'cb',      name: 'Casas Bahia',      logo: '🟢', color: 'border-green-500/30 bg-green-500/5',    connected: false, products: 0, lastSync: null, soon: true, apiStatus: 'nao_configurado', clientId: '', clientSecret: '', accessToken: '', webhookUrl: '', guideUrl: '#' },
@@ -412,6 +412,10 @@ function IntegracoesContent() {
   const [shopeeLoading, setShopeeLoading]         = useState(true)
   const [shopeeDisconnecting, setShopeeDisconnecting] = useState<string | null>(null)
 
+  // Magalu state
+  const [magaluConnected, setMagaluConnected] = useState(false)
+  const [magaluLoading, setMagaluLoading]     = useState(true)
+
   // Handle ?connected=true or ?ml_error=... from OAuth redirect
   useEffect(() => {
     const connected        = searchParams.get('connected')
@@ -436,6 +440,13 @@ function IntegracoesContent() {
       window.history.replaceState({}, '', '/dashboard/integracoes')
     } else if (shopeeError) {
       setToast({ type: 'error', msg: `Erro ao conectar Shopee: ${decodeURIComponent(shopeeError)}` })
+      window.history.replaceState({}, '', '/dashboard/integracoes')
+    } else if (searchParams.get('magalu_connected') === 'true') {
+      setToast({ type: 'success', msg: 'Magalu conectado com sucesso!' })
+      clearCache()
+      window.history.replaceState({}, '', '/dashboard/integracoes')
+    } else if (searchParams.get('magalu_error')) {
+      setToast({ type: 'error', msg: `Erro ao conectar Magalu: ${decodeURIComponent(searchParams.get('magalu_error')!)}` })
       window.history.replaceState({}, '', '/dashboard/integracoes')
     }
   }, [searchParams])
@@ -477,6 +488,22 @@ function IntegracoesContent() {
       })
       .catch(() => {})
       .finally(() => setShopeeLoading(false))
+  }, [])
+
+  // Load Magalu connection status
+  useEffect(() => {
+    fetch('/api/magalu/status')
+      .then(r => r.json())
+      .then((data: { connected: boolean }) => {
+        setMagaluConnected(data.connected)
+        if (data.connected) {
+          setMks(prev => prev.map(m =>
+            m.id === 'magalu' ? { ...m, connected: true, apiStatus: 'conectado' } : m
+          ))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setMagaluLoading(false))
   }, [])
 
   function clearMarketplaceCache() {

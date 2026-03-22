@@ -23,7 +23,7 @@ type NavGroup = {
   collapsible?: boolean
   defaultCollapsed?: boolean
   /** Se definido, o grupo só aparece se o marketplace correspondente estiver conectado */
-  requiresMarketplace?: 'ml' | 'shopee'
+  requiresMarketplace?: 'ml' | 'shopee' | 'magalu'
   /** Se true, o grupo só aparece se ao menos 1 marketplace estiver conectado */
   requiresAnyMarketplace?: boolean
 }
@@ -92,6 +92,18 @@ const navGroups: NavGroup[] = [
       { href: '/dashboard/shopee/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
       { href: '/dashboard/shopee/produtos',  icon: Package,         label: 'Produtos'    },
       { href: '/dashboard/shopee/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
+    ],
+  },
+  {
+    label: 'Magalu',
+    marketplaceDot: 'bg-[#0086ff]',
+    collapsible: true,
+    defaultCollapsed: false,
+    requiresMarketplace: 'magalu',
+    items: [
+      { href: '/dashboard/magalu/overview',  icon: LayoutDashboard, label: 'Visão Geral' },
+      { href: '/dashboard/magalu/produtos',  icon: Package,         label: 'Produtos'    },
+      { href: '/dashboard/magalu/pedidos',   icon: ShoppingCart,    label: 'Pedidos'     },
     ],
   },
   {
@@ -186,7 +198,7 @@ export default function Sidebar() {
   const router   = useRouter()
   const { profile, signOut } = useAuth()
   const { isOpen, close }    = useSidebar()
-  const { hasML, hasShopee } = useConnectedMarketplaces()
+  const { hasML, hasShopee, hasMagalu } = useConnectedMarketplaces()
 
   const [productCount, setProductCount] = useState<number | null>(null)
   const [claimCount,   setClaimCount]   = useState<number>(0)
@@ -202,7 +214,8 @@ export default function Sidebar() {
   const visibleGroups = navGroups.filter(g => {
     if (g.requiresMarketplace === 'ml')     return hasML
     if (g.requiresMarketplace === 'shopee') return hasShopee
-    if (g.requiresAnyMarketplace)           return hasML || hasShopee
+    if (g.requiresMarketplace === 'magalu') return hasMagalu
+    if (g.requiresAnyMarketplace)           return hasML || hasShopee || hasMagalu
     return true
   })
 
