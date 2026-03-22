@@ -59,7 +59,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
           </nav>
 
           <Link
-            href="/login"
+            href="https://app.foguetim.com.br/login"
             className="text-sm bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors font-medium shrink-0"
           >
             Entrar

@@ -504,7 +504,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                       Controle estoque, anúncios e vendas num só lugar. Integração completa com Mercado Livre.
                     </p>
                     <a
-                      href="/cadastro"
+                      href="https://app.foguetim.com.br/cadastro"
                       className="inline-block bg-white text-violet-700 font-semibold px-5 py-2 rounded-lg hover:bg-violet-50 transition-colors text-sm"
                     >
                       Começar grátis →
@@ -614,7 +614,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                     Gerencie seu e-commerce com inteligência. Integração com Mercado Livre.
                   </p>
                   <Link
-                    href="/cadastro"
+                    href="https://app.foguetim.com.br/cadastro"
                     className="inline-block w-full text-center bg-white text-violet-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-violet-50 transition-colors text-sm"
                   >
                     Começar grátis →

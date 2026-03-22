@@ -503,30 +503,30 @@ const plansData = {
   monthly: [
     { name: 'Explorador',      price: 'Grátis',    period: '',     note: 'Para sempre, sem cartão', badge: null as string | null,    popular: false,
       features: ['Até 10 produtos', '1 conta Mercado Livre', 'Dashboard básico', 'Pedidos em tempo real', 'Suporte por e-mail'],
-      cta: 'Começar grátis', href: '/cadastro' },
+      cta: 'Começar grátis', href: 'https://app.foguetim.com.br/cadastro' },
     { name: 'Comandante',      price: 'R$49,90',   period: '/mês', note: '7 dias grátis, sem cartão', badge: 'MAIS POPULAR' as string | null, popular: true,
       features: ['Até 500 produtos', 'Até 3 contas Mercado Livre', 'Todos os módulos ML', 'SAC e pós-venda', 'Painel financeiro', 'Até 5 usuários'],
-      cta: 'Começar com 7 dias grátis', href: '/cadastro?plan=comandante' },
+      cta: 'Começar com 7 dias grátis', href: 'https://app.foguetim.com.br/cadastro?plan=comandante' },
     { name: 'Almirante',       price: 'R$89,90',   period: '/mês', note: '7 dias grátis, sem cartão', badge: null as string | null,    popular: false,
       features: ['Produtos ilimitados', 'Até 5 contas Mercado Livre', 'Armazém avançado', 'Relatórios avançados', 'Até 10 usuários', 'Suporte prioritário'],
-      cta: 'Começar com 7 dias grátis', href: '/cadastro?plan=almirante' },
+      cta: 'Começar com 7 dias grátis', href: 'https://app.foguetim.com.br/cadastro?plan=almirante' },
     { name: 'Missão Espacial', price: 'R$119,90',  period: '/mês', note: '7 dias grátis, sem cartão', badge: null as string | null,    popular: false,
       features: ['Tudo ilimitado', 'Contas ML ilimitadas', 'Suporte 24/7 dedicado', 'Onboarding personalizado', 'SLA premium', 'Gerente de conta dedicado'],
-      cta: 'Começar com 7 dias grátis', href: '/cadastro?plan=missao_espacial' },
+      cta: 'Começar com 7 dias grátis', href: 'https://app.foguetim.com.br/cadastro?plan=missao_espacial' },
   ],
   annual: [
     { name: 'Explorador',      price: 'Grátis',    period: '',     note: 'Para sempre, sem cartão',                   badge: null as string | null,    popular: false,
       features: ['Até 10 produtos', '1 conta Mercado Livre', 'Dashboard básico', 'Pedidos em tempo real', 'Suporte por e-mail'],
-      cta: 'Começar grátis', href: '/cadastro' },
+      cta: 'Começar grátis', href: 'https://app.foguetim.com.br/cadastro' },
     { name: 'Comandante',      price: 'R$39,90',   period: '/mês', note: 'cobrado anualmente · economize 20%',        badge: 'MAIS POPULAR' as string | null, popular: true,
       features: ['Até 500 produtos', 'Até 3 contas Mercado Livre', 'Todos os módulos ML', 'SAC e pós-venda', 'Painel financeiro', 'Até 5 usuários'],
-      cta: 'Começar com 7 dias grátis', href: '/cadastro?plan=comandante&billing=annual' },
+      cta: 'Começar com 7 dias grátis', href: 'https://app.foguetim.com.br/cadastro?plan=comandante&billing=annual' },
     { name: 'Almirante',       price: 'R$71,90',   period: '/mês', note: 'cobrado anualmente · economize 20%',        badge: null as string | null,    popular: false,
       features: ['Produtos ilimitados', 'Até 5 contas Mercado Livre', 'Armazém avançado', 'Relatórios avançados', 'Até 10 usuários', 'Suporte prioritário'],
-      cta: 'Começar com 7 dias grátis', href: '/cadastro?plan=almirante&billing=annual' },
+      cta: 'Começar com 7 dias grátis', href: 'https://app.foguetim.com.br/cadastro?plan=almirante&billing=annual' },
     { name: 'Missão Espacial', price: 'R$95,90',   period: '/mês', note: 'cobrado anualmente · economize 20%',        badge: null as string | null,    popular: false,
       features: ['Tudo ilimitado', 'Contas ML ilimitadas', 'Suporte 24/7 dedicado', 'Onboarding personalizado', 'SLA premium', 'Gerente de conta dedicado'],
-      cta: 'Começar com 7 dias grátis', href: '/cadastro?plan=missao_espacial&billing=annual' },
+      cta: 'Começar com 7 dias grátis', href: 'https://app.foguetim.com.br/cadastro?plan=missao_espacial&billing=annual' },
   ],
 }
 
@@ -580,12 +580,12 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors px-4 py-2">
+            <a href="https://app.foguetim.com.br/login" className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors px-4 py-2">
               Entrar
-            </Link>
-            <Link href="/cadastro" className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+            </a>
+            <a href="https://app.foguetim.com.br/cadastro" className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
               Começar grátis <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </a>
           </div>
 
           <button className="md:hidden p-2 text-gray-500" onClick={() => setMenu(v => !v)} aria-label="Menu">
@@ -601,8 +601,8 @@ export default function LandingPage() {
             <a href="#faq"             onClick={() => setMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">FAQ</a>
             <Link href="/blog"         onClick={() => setMenu(false)} className="block text-sm font-medium text-gray-600 py-2.5">Blog</Link>
             <div className="flex gap-3 pt-3 border-t border-gray-100">
-              <Link href="/login"    className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg text-center hover:bg-gray-50 transition-colors">Entrar</Link>
-              <Link href="/cadastro" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg text-center transition-colors">Cadastrar</Link>
+              <a href="https://app.foguetim.com.br/login"    className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2.5 rounded-lg text-center hover:bg-gray-50 transition-colors">Entrar</a>
+              <a href="https://app.foguetim.com.br/cadastro" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-lg text-center transition-colors">Cadastrar</a>
             </div>
           </div>
         )}
@@ -631,9 +631,9 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-7">
-                <Link href="/cadastro" className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-7 py-3.5 rounded-xl transition-colors text-sm shadow-lg shadow-indigo-200">
+                <a href="https://app.foguetim.com.br/cadastro" className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-7 py-3.5 rounded-xl transition-colors text-sm shadow-lg shadow-indigo-200">
                   Começar grátis <ArrowRight className="w-4 h-4" />
-                </Link>
+                </a>
                 <a href="#funcionalidades" className="inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold px-7 py-3.5 rounded-xl transition-colors text-sm">
                   Ver funcionalidades
                 </a>
@@ -954,9 +954,9 @@ export default function LandingPage() {
             })}
           </div>
           <div className="text-center mt-10">
-            <Link href="/cadastro" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors text-sm shadow-lg shadow-indigo-200">
+            <a href="https://app.foguetim.com.br/cadastro" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors text-sm shadow-lg shadow-indigo-200">
               Criar conta grátis agora <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -1145,9 +1145,9 @@ export default function LandingPage() {
             Comece grátis hoje. Sem cartão, sem compromisso.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/cadastro" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-indigo-700 font-bold px-8 py-4 rounded-xl text-base transition-colors shadow-xl">
+            <a href="https://app.foguetim.com.br/cadastro" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-indigo-700 font-bold px-8 py-4 rounded-xl text-base transition-colors shadow-xl">
               Criar conta grátis <ArrowRight className="w-5 h-5" />
-            </Link>
+            </a>
             <a href="mailto:contato@foguetim.com.br" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border-2 border-white/30 hover:border-white/60 text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
               Falar com a equipe
             </a>

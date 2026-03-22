@@ -70,10 +70,10 @@ export default function SobrePage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-sm font-semibold text-slate-600 hover:text-navy-900 transition-colors px-4 py-2">
+            <Link href="https://app.foguetim.com.br/login" className="text-sm font-semibold text-slate-600 hover:text-navy-900 transition-colors px-4 py-2">
               Entrar
             </Link>
-            <Link href="/cadastro" className="btn-primary px-5 py-2.5 rounded-xl text-sm">
+            <Link href="https://app.foguetim.com.br/cadastro" className="btn-primary px-5 py-2.5 rounded-xl text-sm">
               Começar Grátis
             </Link>
           </div>
@@ -292,7 +292,7 @@ export default function SobrePage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/cadastro"
+              href="https://app.foguetim.com.br/cadastro"
               className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg text-sm"
             >
               <Rocket className="w-4 h-4" />

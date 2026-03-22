@@ -198,7 +198,7 @@ function PromoBanner() {
         </p>
       </div>
       <Link
-        href="/cadastro"
+        href="https://app.foguetim.com.br/cadastro"
         className="shrink-0 inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-white/20 transition-colors"
       >
         Começar grátis
@@ -443,7 +443,7 @@ export default async function BlogPage() {
                   Gerencie seu e-commerce com inteligência. Integração completa com Mercado Livre.
                 </p>
                 <Link
-                  href="/cadastro"
+                  href="https://app.foguetim.com.br/cadastro"
                   className="inline-block w-full text-center bg-white text-violet-700 font-semibold px-4 py-2.5 rounded-xl hover:bg-violet-50 transition-colors text-sm"
                 >
                   Começar grátis →

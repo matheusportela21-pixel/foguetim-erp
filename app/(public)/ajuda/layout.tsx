@@ -50,7 +50,7 @@ export default function HelpLayout({ children }: { children: React.ReactNode }) 
               Meu painel
             </Link>
             <Link
-              href="/login"
+              href="https://app.foguetim.com.br/login"
               className="text-sm bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors font-medium"
             >
               Entrar
