@@ -19,6 +19,7 @@ import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone
 import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
 import { DevBanner } from '@/components/DevBanner'
 import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
+import OnboardingWizard from '@/components/OnboardingWizard'
 
 /* ── ML Metrics type ────────────────────────────────────────────────── */
 interface MLMetrics {
@@ -328,6 +329,12 @@ export default function DashboardPage() {
   return (
     <div>
       <DevBanner />
+
+      {/* ── Onboarding wizard (apenas para não-admins, não completados) ── */}
+      <div className="px-6 pt-6">
+        <OnboardingWizard isAdmin={profile?.role === 'super_admin'} />
+      </div>
+
       <div className="p-6 space-y-6">
 
         {/* ── Mobile sticky nav strip ── */}
