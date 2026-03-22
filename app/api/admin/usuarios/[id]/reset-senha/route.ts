@@ -72,7 +72,7 @@ export async function POST(
     })
 
     await logAdminAction({
-      userId: guard.user.id,
+      userId: guard.userId!,
       action: 'password_reset_sent',
       category: 'admin',
       description: `Link de redefinicao de senha enviado para ${user.email}`,

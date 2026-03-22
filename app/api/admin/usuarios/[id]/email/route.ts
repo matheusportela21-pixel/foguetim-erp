@@ -40,7 +40,7 @@ export async function POST(
     })
 
     await logAdminAction({
-      userId: guard.user.id,
+      userId: guard.userId!,
       action: 'admin_email_sent',
       category: 'admin',
       description: `Email enviado para ${user.email}: ${subject}`,

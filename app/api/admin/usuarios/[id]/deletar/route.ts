@@ -52,7 +52,7 @@ export async function POST(
     }
 
     await logAdminAction({
-      userId: guard.user.id,
+      userId: guard.userId!,
       action: 'user_deleted',
       category: 'admin',
       description: `Usuario ${user.email} deletado permanentemente`,

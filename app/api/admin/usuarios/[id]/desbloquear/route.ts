@@ -35,7 +35,7 @@ export async function POST(
     }
 
     await logAdminAction({
-      userId: guard.user.id,
+      userId: guard.userId!,
       action: 'user_unblocked',
       category: 'admin',
       description: `Usuario ${user.email} desbloqueado`,
