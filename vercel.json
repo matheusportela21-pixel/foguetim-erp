@@ -4,6 +4,7 @@
     { "path": "/api/cron/relatorio-mensal", "schedule": "0 9 1 * *"       },
     { "path": "/api/cron/sentinela-check",  "schedule": "0 8 * * *"        },
     { "path": "/api/cron/sentinela-ia",     "schedule": "0 11 * * *"       },
-    { "path": "/api/cron/radar-mercado",    "schedule": "0 12 * * *"      }
+    { "path": "/api/cron/radar-mercado",    "schedule": "0 12 * * *"      },
+    { "path": "/api/crons/alerts",         "schedule": "*/30 * * * *"    }
   ]
 }
