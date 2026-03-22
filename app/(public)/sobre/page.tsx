@@ -37,12 +37,12 @@ const integrations = [
     badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
   },
   {
-    name: 'Novas integrações em breve',
-    color: '#94a3b8',
-    dot: 'bg-slate-400',
-    detail: 'Estamos expandindo para novos marketplaces',
-    badge: 'Em breve',
-    badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    name: 'Shopee',
+    color: '#f97316',
+    dot: 'bg-orange-400',
+    detail: 'Integração ativa via API oficial Shopee, OAuth 2.0',
+    badge: 'Disponível',
+    badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
   },
 ]
 
@@ -195,8 +195,8 @@ export default function SobrePage() {
               {
                 icon: Zap,
                 color: 'bg-green-50 text-green-600',
-                title: 'Em breve: mais marketplaces',
-                desc: 'Shopee, Amazon e mais plataformas estão a caminho. Um ERP que cresce junto com o seu negócio.',
+                title: 'ML + Shopee + mais',
+                desc: 'Mercado Livre e Shopee integrados. Amazon e mais plataformas a caminho. Um ERP que cresce com o seu negócio.',
               },
             ].map(({ icon: Icon, color, title, desc }) => (
               <div key={title} className="landing-card p-7">
