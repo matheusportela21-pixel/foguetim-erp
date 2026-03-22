@@ -250,9 +250,28 @@ h1, h2, h3 { font-family: 'Sora', sans-serif; }
 @keyframes slideUp  { 0% { opacity:0; transform:translateY(16px); } 100% { opacity:1; transform:translateY(0); } }
 @keyframes fadeIn   { 0% { opacity:0; } 100% { opacity:1; } }
 @keyframes shimmer  { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+@keyframes revealUp { 0% { opacity:0; transform:translateY(28px); } 100% { opacity:1; transform:translateY(0); } }
 
 .animate-slide-up { animation: slideUp 0.4s ease-out; }
 .animate-fade-in  { animation: fadeIn 0.3s ease-out; }
+
+/* ── Scroll reveal (landing page) ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s ease-out, transform 0.55s ease-out;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity:1; transform:none; transition:none; }
+}
 
 /* Shimmer loading */
 .shimmer-load {

@@ -5,11 +5,15 @@ import CookieBanner from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Foguetim ERP — Gestão completa para vendedores do Mercado Livre',
+    default: 'Foguetim ERP — Gestão completa para vendedores de marketplace',
     template: '%s | Foguetim ERP',
   },
-  description: 'Gerencie seus anúncios, pedidos, SAC e métricas do Mercado Livre em um só painel. ERP inteligente para sellers brasileiros.',
-  keywords: ['ERP mercado livre', 'gestão anúncios', 'painel vendedor', 'mercado livre ERP', 'gestão marketplace', 'foguetim'],
+  description: 'Controle estoque, anúncios, pedidos e financeiro do Mercado Livre e Shopee em um só lugar. ERP gratuito para vendedores brasileiros.',
+  keywords: [
+    'ERP marketplace', 'gestão mercado livre', 'controle estoque shopee',
+    'ERP vendedor online', 'sistema gestão ecommerce', 'ERP marketplace Brasil',
+    'gestão anúncios mercado livre', 'foguetim erp', 'ERP shopee',
+  ],
   authors: [{ name: 'Foguetim ERP' }],
   creator: 'Foguetim ERP',
   metadataBase: new URL('https://www.foguetim.com.br'),
@@ -18,45 +22,23 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     url: 'https://www.foguetim.com.br',
     siteName: 'Foguetim ERP',
-    title: 'Foguetim ERP — Gestão completa para vendedores do Mercado Livre',
-    description: 'Gerencie seus anúncios, pedidos, SAC e métricas do Mercado Livre em um só painel.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Foguetim ERP — Painel de gestão para sellers' }],
+    title: 'Foguetim ERP — O ERP do vendedor de marketplace',
+    description: 'Controle tudo num só lugar. Mercado Livre + Shopee. Comece grátis.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Foguetim ERP — ERP para vendedores de marketplace' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Foguetim ERP — Gestão completa para vendedores do Mercado Livre',
-    description: 'Gerencie seus anúncios, pedidos, SAC e métricas do Mercado Livre em um só painel.',
+    title: 'Foguetim ERP',
+    description: 'Gestão completa para vendedores de marketplace. Mercado Livre + Shopee.',
     images: ['/og-image.png'],
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true },
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
   alternates: {
     canonical: 'https://www.foguetim.com.br',
-  },
-}
-
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'Foguetim ERP',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  description: 'ERP para gestão de vendas no Mercado Livre — anúncios, pedidos, SAC, métricas e precificação em um único painel.',
-  url: 'https://foguetim.com.br',
-  inLanguage: 'pt-BR',
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'BRL',
-    description: 'Plano gratuito disponível',
-  },
-  provider: {
-    '@type': 'Organization',
-    name: 'Foguetim ERP',
-    url: 'https://www.foguetim.com.br',
   },
 }
 
@@ -64,10 +46,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body className="antialiased">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
         <AuthProvider>
           {children}
         </AuthProvider>
