@@ -427,35 +427,49 @@ const faqItems = [
 
 function FaqSection() {
   const [open, setOpen] = useState<number | null>(null)
+  const half = Math.ceil(faqItems.length / 2)
+  const col1 = faqItems.slice(0, half)
+  const col2 = faqItems.slice(half)
+
+  function FaqItem({ item, idx }: { item: { q: string; a: string }; idx: number }) {
+    return (
+      <div className={`bg-white border rounded-xl overflow-hidden transition-all ${open === idx ? 'border-indigo-200 shadow-sm' : 'border-gray-200'}`}>
+        <button
+          onClick={() => setOpen(open === idx ? null : idx)}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+          aria-expanded={open === idx}
+        >
+          <span className="text-sm font-semibold text-gray-900 leading-snug">{item.q}</span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open === idx ? 'rotate-180' : ''}`} />
+        </button>
+        {open === idx && (
+          <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-3">
+            {item.a}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <section id="faq" className="relative z-10 py-24 px-6 bg-gray-50 border-t border-gray-100">
+    <section id="faq" className="relative z-10 py-14 px-6 bg-gray-50 border-t border-gray-100">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12 reveal">
-          <p className="text-sm font-semibold text-indigo-600 mb-3 uppercase tracking-wider">FAQ</p>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-8 reveal">
+          <p className="text-sm font-semibold text-indigo-600 mb-2 uppercase tracking-wider">FAQ</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>
             Perguntas frequentes
           </h2>
-          <p className="text-gray-500">Tudo que você precisa saber antes de começar.</p>
+          <p className="text-gray-500 text-sm">Tudo que você precisa saber antes de começar.</p>
         </div>
-        <div className="space-y-3">
-          {faqItems.map((item, i) => (
-            <div key={i} className={`reveal reveal-delay-${(i % 4) + 1} bg-white border rounded-2xl overflow-hidden transition-all ${open === i ? 'border-indigo-200 shadow-sm' : 'border-gray-200'}`}>
-              <button
-                onClick={() => setOpen(open === i ? null : i)}
-                className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left"
-                aria-expanded={open === i}
-              >
-                <span className="text-sm font-semibold text-gray-900">{item.q}</span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`} />
-              </button>
-              {open === i && (
-                <div className="px-6 pb-5 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-3">
-                  {item.a}
-                </div>
-              )}
-            </div>
-          ))}
+        {/* 2 colunas no desktop, 1 no mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+          <div className="space-y-2">
+            {col1.map((item, i) => <FaqItem key={i} item={item} idx={i} />)}
+          </div>
+          <div className="space-y-2">
+            {col2.map((item, i) => <FaqItem key={i + half} item={item} idx={i + half} />)}
+          </div>
         </div>
       </div>
     </section>
@@ -641,6 +655,28 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats bar ────────────────────────────────────────────────────── */}
+      <section className="py-8 px-6 bg-white border-b border-gray-100">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { value: '2+',    label: 'Marketplaces integrados', sub: 'ML e Shopee ativos' },
+              { value: '40+',   label: 'Funcionalidades',          sub: 'Do armazém ao SAC'  },
+              { value: '100%',  label: 'Suporte em português',     sub: 'Por vendedores reais' },
+              { value: 'Grátis', label: 'Para começar',            sub: 'Sem cartão de crédito' },
+            ].map((stat, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <span className="text-3xl font-bold text-indigo-600 leading-none mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>
+                  {stat.value}
+                </span>
+                <span className="text-sm font-semibold text-gray-800">{stat.label}</span>
+                <span className="text-xs text-gray-400 mt-0.5">{stat.sub}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
