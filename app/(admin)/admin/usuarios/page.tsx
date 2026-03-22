@@ -7,6 +7,7 @@ import {
   X, Plug, PlugZap, CheckCircle2, XCircle,
   ChevronDown, User, CreditCard, ShieldCheck,
   Bell, KeyRound, Ban, FileText, MoreVertical,
+  ExternalLink, Loader2,
 } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -57,8 +58,9 @@ function UserDrawer({ userId, onClose }: { userId: string; onClose: () => void }
   const [newPlan, setNewPlan]     = useState('')
   const [newRole, setNewRole]     = useState('')
   const [reason, setReason]       = useState('')
-  const [saving, setSaving]       = useState(false)
-  const [msg, setMsg]             = useState('')
+  const [saving, setSaving]           = useState(false)
+  const [impersonating, setImpersonating] = useState(false)
+  const [msg, setMsg]                 = useState('')
 
   useEffect(() => {
     async function load() {
@@ -166,6 +168,34 @@ function UserDrawer({ userId, onClose }: { userId: string; onClose: () => void }
                   }`}>
                   <Ban className="w-3.5 h-3.5" />
                   {u?.cancelled_at ? 'Reativar conta' : 'Suspender conta'}
+                </button>
+                <button
+                  onClick={async () => {
+                    setImpersonating(true)
+                    try {
+                      const res = await fetch(`/api/admin/users/${userId}/impersonate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason: 'Verificação administrativa' }),
+                      })
+                      const data = await res.json() as { url?: string; error?: string }
+                      if (data.url) {
+                        window.open(data.url, '_blank')
+                        setMsg('Link de impersonação aberto em nova aba')
+                      } else {
+                        setMsg(`Erro: ${data.error ?? 'Falha ao gerar link'}`)
+                      }
+                    } catch {
+                      setMsg('Erro ao impersonar usuário')
+                    }
+                    setImpersonating(false)
+                    setTimeout(() => setMsg(''), 4000)
+                  }}
+                  disabled={impersonating}
+                  className="flex items-center gap-2 px-3 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 hover:bg-amber-500/20 transition-all disabled:opacity-50"
+                >
+                  {impersonating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                  Impersonar
                 </button>
               </div>
             </div>

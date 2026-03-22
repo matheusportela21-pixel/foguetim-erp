@@ -51,6 +51,7 @@ export default function AdminLogsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
   const [category, setCategory] = useState('')
+  const [period, setPeriod]   = useState('')
   const [page, setPage]       = useState(1)
   const LIMIT = 50
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -64,6 +65,7 @@ export default function AdminLogsPage() {
       })
       if (s)        params.set('search', s)
       if (category) params.set('category', category)
+      if (period)   params.set('period', period)
 
       const res = await fetch(`/api/admin/logs?${params}`)
       if (res.ok) {
@@ -74,7 +76,7 @@ export default function AdminLogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, search, category])
+  }, [page, search, category, period])
 
   useEffect(() => { load() }, [load])
 
@@ -128,6 +130,14 @@ export default function AdminLogsPage() {
             const cfg = CATEGORY_CFG[c]
             return <option key={c} value={c}>{cfg.label}</option>
           })}
+        </select>
+        <select value={period} onChange={e => { setPeriod(e.target.value); setPage(1) }}
+          className="px-3 py-2 text-sm bg-[#111318] border border-white/[0.08] rounded-lg text-slate-400 focus:outline-none">
+          <option value="">Todos os períodos</option>
+          <option value="1h">Última hora</option>
+          <option value="24h">Últimas 24h</option>
+          <option value="7d">Últimos 7 dias</option>
+          <option value="30d">Últimos 30 dias</option>
         </select>
       </div>
 

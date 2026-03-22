@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const userId   = searchParams.get('user_id')
   const category = searchParams.get('category')
   const search   = searchParams.get('search')
+  const period   = searchParams.get('period') // 1h, 24h, 7d, 30d
 
   try {
     let query = supabaseAdmin()
@@ -29,6 +30,11 @@ export async function GET(req: NextRequest) {
     if (userId)   query = query.eq('user_id', userId)
     if (category) query = query.eq('category', category)
     if (search)   query = query.ilike('description', `%${search}%`)
+    if (period) {
+      const ms: Record<string, number> = { '1h': 3600_000, '24h': 86400_000, '7d': 604800_000, '30d': 2592000_000 }
+      const since = new Date(Date.now() - (ms[period] ?? 86400_000)).toISOString()
+      query = query.gte('created_at', since)
+    }
 
     const { data, count, error } = await query
 
