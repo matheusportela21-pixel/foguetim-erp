@@ -1,205 +1,385 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
-import { Users, Plus, Edit3, Mail, Shield, X, Check } from 'lucide-react'
+import {
+  Users, Plus, Search, RefreshCw, Edit3, Trash2, X,
+  Mail, Shield, Loader2, UserPlus, UserCheck, UserX,
+  Clock, Check, Ban,
+} from 'lucide-react'
+import { ROLE_LABELS, ROLE_COLORS, TEAM_ROLES, ROLE_PERMISSIONS, ALL_PERMISSIONS, hasPermission } from '@/lib/team/permissions'
 
-interface Membro {
-  id: number; nome: string; email: string; cargo: Cargo;
-  status: 'ativo' | 'inativo'; entrada: string; avatar: string;
+/* ── Types ───────────────────────────────────────────────────────────────── */
+interface TeamMember {
+  id: string; owner_id: string; member_user_id: string | null
+  email: string; name: string; role: string
+  permissions: Record<string, boolean> | null
+  status: string; invited_at: string; accepted_at: string | null; last_active_at: string | null
 }
 
-type Cargo = 'Diretor' | 'Supervisor' | 'Analista de Produtos' | 'Analista Financeiro' | 'Suporte ao Cliente' | 'Operador'
-
-const CARGOS: Cargo[] = ['Diretor', 'Supervisor', 'Analista de Produtos', 'Analista Financeiro', 'Suporte ao Cliente', 'Operador']
-
-const PERMISSOES: Record<Cargo, string[]> = {
-  'Diretor':              ['Dashboard', 'Produtos', 'Precificação', 'Listagens', 'Financeiro', 'Pedidos', 'NF-e', 'Integrações', 'Equipe', 'Configurações'],
-  'Supervisor':           ['Dashboard', 'Produtos', 'Precificação', 'Listagens', 'Financeiro', 'Pedidos', 'Integrações'],
-  'Analista de Produtos': ['Dashboard', 'Produtos', 'Listagens'],
-  'Analista Financeiro':  ['Dashboard', 'Financeiro', 'Precificação'],
-  'Suporte ao Cliente':   ['Dashboard', 'Pedidos'],
-  'Operador':             ['Dashboard'],
+interface TeamInvite {
+  id: string; email: string; name: string | null; role: string
+  expires_at: string; status: string; created_at: string
 }
 
-const initial: Membro[] = [
-  { id: 1, nome: 'Matheus Portela', email: 'matheus.portela21@gmail.com', cargo: 'Diretor', status: 'ativo', entrada: '01/01/2025', avatar: 'MP' },
-]
-
-const cargoColor: Record<Cargo, string> = {
-  'Diretor':              'text-purple-400 bg-purple-400/10 ring-1 ring-purple-400/20',
-  'Supervisor':           'text-cyan-400 bg-cyan-400/10 ring-1 ring-cyan-400/20',
-  'Analista de Produtos': 'text-blue-400 bg-blue-400/10 ring-1 ring-blue-400/20',
-  'Analista Financeiro':  'text-green-400 bg-green-400/10 ring-1 ring-green-400/20',
-  'Suporte ao Cliente':   'text-amber-400 bg-amber-400/10 ring-1 ring-amber-400/20',
-  'Operador':             'text-slate-400 bg-slate-400/10 ring-1 ring-slate-400/20',
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const AVATAR_COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length <= 1) return (parts[0]?.[0] ?? '?').toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+function getColor(name: string) {
+  let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
+}
+function timeAgo(iso: string | null) {
+  if (!iso) return 'Nunca'
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'agora'
+  if (mins < 60) return `${mins}min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h`
+  return `${Math.floor(hours / 24)}d`
 }
 
+const STATUS_CFG: Record<string, { label: string; color: string; icon: typeof Check }> = {
+  active:   { label: 'Ativo',       color: 'bg-green-500/10 text-green-400', icon: UserCheck },
+  pending:  { label: 'Pendente',    color: 'bg-amber-500/10 text-amber-400', icon: Clock },
+  disabled: { label: 'Desabilitado', color: 'bg-red-500/10 text-red-400',    icon: Ban },
+}
+
+/* ── Page ────────────────────────────────────────────────────────────────── */
 export default function EquipePage() {
-  const [membros, setMembros] = useState<Membro[]>(initial)
-  const [modal, setModal]     = useState<Membro | null | 'invite'>(null)
-  const [editData, setEditData] = useState<Partial<Membro>>({})
-  const [selectedCargo, setSelectedCargo] = useState<Cargo>('Analista de Produtos')
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [invites, setInvites] = useState<TeamInvite[]>([])
+  const [isOwner, setIsOwner] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch]   = useState('')
 
-  function openEdit(m: Membro) { setModal(m); setEditData({ ...m }) }
-  function close() { setModal(null); setEditData({}) }
+  // Modals
+  const [showInvite, setShowInvite] = useState(false)
+  const [showPerms, setShowPerms]   = useState<TeamMember | null>(null)
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'operador' })
+  const [sending, setSending]       = useState(false)
+  const [msg, setMsg]               = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  function save() {
-    if (modal && modal !== 'invite') {
-      setMembros(prev => prev.map(m => m.id === (modal as Membro).id ? { ...m, ...editData } : m))
-    }
-    close()
+  const loadTeam = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/team')
+      if (res.ok) {
+        const d = await res.json()
+        setMembers(d.members ?? [])
+        setInvites(d.invites ?? [])
+        setIsOwner(d.isOwner ?? false)
+      }
+    } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { loadTeam() }, [loadTeam])
+
+  function toast(type: 'success' | 'error', text: string) {
+    setMsg({ type, text }); setTimeout(() => setMsg(null), 4000)
   }
 
+  async function sendInvite() {
+    if (!inviteForm.email || !inviteForm.role) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/team/invite', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inviteForm),
+      })
+      const d = await res.json()
+      if (res.ok) { toast('success', d.message); setShowInvite(false); setInviteForm({ email: '', name: '', role: 'operador' }); loadTeam() }
+      else toast('error', d.error)
+    } catch { toast('error', 'Erro ao enviar convite') }
+    finally { setSending(false) }
+  }
+
+  async function removeMember(id: string) {
+    if (!confirm('Remover este membro da equipe?')) return
+    await fetch(`/api/team/members/${id}`, { method: 'DELETE' })
+    loadTeam()
+    toast('success', 'Membro removido')
+  }
+
+  async function toggleDisable(m: TeamMember) {
+    const endpoint = m.status === 'disabled' ? 'enable' : 'disable'
+    await fetch(`/api/team/members/${m.id}/${endpoint}`, { method: 'POST' })
+    loadTeam()
+    toast('success', m.status === 'disabled' ? 'Membro reabilitado' : 'Membro desabilitado')
+  }
+
+  async function revokeInvite(id: string) {
+    await fetch(`/api/team/invite/${id}/revoke`, { method: 'DELETE' })
+    loadTeam()
+    toast('success', 'Convite revogado')
+  }
+
+  async function savePermissions(m: TeamMember, perms: Record<string, boolean>) {
+    await fetch(`/api/team/members/${m.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permissions: perms }),
+    })
+    loadTeam(); setShowPerms(null)
+    toast('success', 'Permissões atualizadas')
+  }
+
+  const activeMembers = members.filter(m => m.status === 'active').length
+  const pendingMembers = members.filter(m => m.status === 'pending').length
+  const filtered = search
+    ? members.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()))
+    : members
+
   return (
-    <div>
-      <Header title="Equipe" subtitle="Gestão de membros e permissões" />
-
-      <div className="p-6 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Total membros', val: membros.length,                                    color: 'text-purple-400' },
-            { label: 'Ativos',        val: membros.filter(m => m.status === 'ativo').length,  color: 'text-green-400'  },
-            { label: 'Inativos',      val: membros.filter(m => m.status === 'inativo').length,color: 'text-red-400'    },
-            { label: 'Cargos',        val: CARGOS.length,                                     color: 'text-cyan-400'   },
-          ].map(s => (
-            <div key={s.label} className="dash-card p-4 rounded-2xl">
-              <p className="text-xs text-slate-600 mb-1">{s.label}</p>
-              <p className={`text-2xl font-bold ${s.color}`} style={{ fontFamily: 'Sora, sans-serif' }}>{s.val}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Team table */}
-        <div className="dash-card rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-            <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Membros da Equipe</p>
-            <button onClick={() => setModal('invite')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition-all">
-              <Plus className="w-3.5 h-3.5" /> Convidar membro
-            </button>
-          </div>
-
-          <div className="divide-y divide-white/[0.04]">
-            {membros.map(m => (
-              <div key={m.id} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                  {m.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-white">{m.nome}</p>
-                    {m.id === 1 && <Shield className="w-3.5 h-3.5 text-purple-400" />}
-                  </div>
-                  <p className="text-xs text-slate-600">{m.email}</p>
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full hidden md:block ${cargoColor[m.cargo]}`}>{m.cargo}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.status === 'ativo' ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
-                  {m.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                </span>
-                <p className="text-xs text-slate-600 hidden md:block shrink-0">desde {m.entrada}</p>
-                {m.id !== 1 && (
-                  <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-white/[0.06] text-slate-500 hover:text-slate-200 transition-all">
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Roles reference */}
-        <div className="dash-card rounded-2xl p-5">
-          <p className="font-bold text-white text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>Cargos e Permissões</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {CARGOS.map(c => (
-              <div key={c} className="bg-dark-700 rounded-xl p-4">
-                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-3 ${cargoColor[c]}`}>{c}</span>
-                <div className="flex flex-wrap gap-1">
-                  {PERMISSOES[c].map(p => (
-                    <span key={p} className="text-[9px] font-medium text-slate-500 bg-dark-600 px-1.5 py-0.5 rounded">{p}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Header title="Equipe" subtitle="Gerencie os membros da sua equipe" />
+        {isOwner && (
+          <button onClick={() => setShowInvite(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition-colors">
+            <UserPlus className="w-4 h-4" /> Convidar membro
+          </button>
+        )}
       </div>
 
-      {/* Edit modal */}
-      {modal !== null && modal !== 'invite' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={close}>
-          <div className="bg-dark-800 border border-white/[0.08] rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Editar Membro</h3>
-              <button onClick={close} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-slate-500"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Cargo</label>
-                <select value={editData.cargo || ''} onChange={e => setEditData(d => ({ ...d, cargo: e.target.value as Cargo }))}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm bg-dark-700 border border-white/[0.08] text-slate-300 focus:outline-none focus:ring-1 focus:ring-purple-600/40">
-                  {CARGOS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Status</label>
-                <div className="flex gap-2">
-                  {(['ativo', 'inativo'] as const).map(s => (
-                    <button key={s} type="button" onClick={() => setEditData(d => ({ ...d, status: s }))}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all capitalize ${
-                        editData.status === s
-                          ? s === 'ativo' ? 'text-green-400 bg-green-400/10 border-green-400/20' : 'text-red-400 bg-red-400/10 border-red-400/20'
-                          : 'border-white/[0.08] text-slate-600'
-                      }`}>{s === 'ativo' ? 'Ativo' : 'Inativo'}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={close} className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-sm text-slate-400 hover:bg-white/[0.04]">Cancelar</button>
-              <button onClick={save} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-500 text-white">Salvar</button>
-            </div>
-          </div>
+      {msg && (
+        <div className={`px-4 py-2.5 rounded-xl text-xs ${msg.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+          {msg.text}
         </div>
       )}
 
-      {/* Invite modal */}
-      {modal === 'invite' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={close}>
-          <div className="bg-dark-800 border border-white/[0.08] rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Convidar Membro</h3>
-              <button onClick={close} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-slate-500"><X className="w-4 h-4" /></button>
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Membros', value: members.length, icon: Users, color: 'text-purple-400' },
+          { label: 'Ativos',        value: activeMembers,  icon: UserCheck, color: 'text-green-400' },
+          { label: 'Pendentes',     value: pendingMembers, icon: Clock, color: 'text-amber-400' },
+          { label: 'Convites',      value: invites.length, icon: Mail, color: 'text-blue-400' },
+        ].map(k => (
+          <div key={k.label} className="glass-card px-4 py-3 flex items-center gap-3">
+            <k.icon className={`w-5 h-5 ${k.color}`} />
+            <div>
+              <p className="text-[11px] text-slate-500">{k.label}</p>
+              <p className="text-lg font-bold text-white">{k.value}</p>
             </div>
-            <div className="space-y-4">
+          </div>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou email..."
+            className="w-full pl-9 pr-4 py-2 text-sm bg-[#111318] border border-white/[0.08] rounded-lg text-slate-200 placeholder:text-slate-600 focus:outline-none" />
+        </div>
+        <button onClick={loadTeam} disabled={loading}
+          className="p-2 text-slate-500 hover:text-slate-200 bg-[#111318] border border-white/[0.08] rounded-lg disabled:opacity-50">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Members Table */}
+      <div className="glass-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.06]">
+              {['Membro', 'Cargo', 'Status', 'Último acesso', isOwner ? 'Ações' : ''].filter(Boolean).map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.04]">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <tr key={i}>{Array.from({ length: 5 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-4 shimmer-load rounded" /></td>)}</tr>
+              ))
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-600">Nenhum membro encontrado</td></tr>
+            ) : filtered.map(m => {
+              const st = STATUS_CFG[m.status] ?? STATUS_CFG.pending
+              return (
+                <tr key={m.id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                        style={{ backgroundColor: getColor(m.name || m.email) }}>
+                        {getInitials(m.name || m.email)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-200">{m.name || '—'}</p>
+                        <p className="text-[11px] text-slate-600">{m.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_COLORS[m.role] ?? 'text-slate-400 bg-slate-400/10'}`}>
+                      {ROLE_LABELS[m.role] ?? m.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${st.color}`}>
+                      <st.icon className="w-3 h-3" /> {st.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{timeAgo(m.last_active_at ?? m.accepted_at)}</td>
+                  {isOwner && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setShowPerms(m)} className="p-1.5 text-slate-500 hover:text-purple-400 transition-colors" title="Permissões">
+                          <Shield className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => toggleDisable(m)} className="p-1.5 text-slate-500 hover:text-amber-400 transition-colors"
+                          title={m.status === 'disabled' ? 'Reabilitar' : 'Desabilitar'}>
+                          {m.status === 'disabled' ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+                        </button>
+                        <button onClick={() => removeMember(m.id)} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Remover">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pending Invites */}
+      {invites.length > 0 && isOwner && (
+        <div className="glass-card p-4 space-y-3">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Convites pendentes</p>
+          {invites.map(inv => (
+            <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 bg-white/[0.02] rounded-lg">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />E-mail do convidado</label>
-                <input type="email" placeholder="email@empresa.com.br"
-                  className="w-full px-3 py-2.5 rounded-lg text-sm bg-dark-700 border border-white/[0.08] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/40" />
+                <p className="text-xs text-slate-300">{inv.email}</p>
+                <p className="text-[10px] text-slate-600">{ROLE_LABELS[inv.role] ?? inv.role} · Expira em {timeAgo(inv.expires_at)}</p>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Cargo</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CARGOS.slice(1).map(c => (
-                    <button key={c} type="button" onClick={() => setSelectedCargo(c)}
-                      className={`py-2 px-3 rounded-lg text-xs font-semibold border transition-all text-left ${
-                        selectedCargo === c ? cargoColor[c] + ' border-current/20' : 'border-white/[0.08] text-slate-600'
-                      }`}>{c}</button>
-                  ))}
-                </div>
-              </div>
+              <button onClick={() => revokeInvite(inv.id)} className="text-xs text-red-400 hover:underline">Revogar</button>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={close} className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-sm text-slate-400 hover:bg-white/[0.04]">Cancelar</button>
-              <button onClick={close} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-2">
-                <Mail className="w-3.5 h-3.5" /> Enviar Convite
+          ))}
+        </div>
+      )}
+
+      {/* Invite Modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) setShowInvite(false) }}>
+          <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-6 w-96 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">Convidar novo membro</h3>
+              <button onClick={() => setShowInvite(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Email *</label>
+              <input value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))} placeholder="fulano@email.com"
+                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nome</label>
+              <input value={inviteForm.name} onChange={e => setInviteForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo"
+                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Cargo *</label>
+              <select value={inviteForm.role} onChange={e => setInviteForm(p => ({ ...p, role: e.target.value }))}
+                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none">
+                {TEAM_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              </select>
+            </div>
+            <p className="text-[11px] text-slate-600">O convidado receberá um email com link para criar conta e acessar o sistema.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowInvite(false)} className="flex-1 px-3 py-2 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg">Cancelar</button>
+              <button onClick={sendInvite} disabled={!inviteForm.email || sending}
+                className="flex-1 px-3 py-2 text-xs text-white bg-purple-600 hover:bg-purple-700 rounded-lg disabled:opacity-50 flex items-center justify-center gap-1.5">
+                {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                {sending ? 'Enviando...' : 'Enviar convite'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Permissions Modal */}
+      {showPerms && (
+        <PermissionsModal member={showPerms} onClose={() => setShowPerms(null)} onSave={savePermissions} />
+      )}
+    </div>
+  )
+}
+
+/* ── Permissions Modal ───────────────────────────────────────────────────── */
+function PermissionsModal({ member, onClose, onSave }: {
+  member: TeamMember; onClose: () => void
+  onSave: (m: TeamMember, perms: Record<string, boolean>) => void
+}) {
+  const rolePerms = ROLE_PERMISSIONS[member.role] ?? []
+  const isWildcard = rolePerms.includes('*')
+  const [overrides, setOverrides] = useState<Record<string, boolean>>(member.permissions ?? {})
+
+  function toggle(key: string) {
+    setOverrides(prev => {
+      const next = { ...prev }
+      if (next[key] === true) delete next[key]
+      else if (next[key] === false) delete next[key]
+      else {
+        // If role has it → override to false (remove), else → override to true (add)
+        const roleHas = isWildcard || rolePerms.includes(key) || rolePerms.includes(key.split(':')[0] + ':*')
+        next[key] = !roleHas
+      }
+      return next
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-6 w-[440px] max-h-[80vh] overflow-y-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white">Permissões de {member.name}</h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">Cargo: {ROLE_LABELS[member.role] ?? member.role}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="space-y-1">
+          {ALL_PERMISSIONS.map(p => {
+            const roleHas = hasPermission(member.role, null, p.key)
+            const effective = hasPermission(member.role, overrides, p.key)
+            const isOverridden = overrides[p.key] !== undefined
+
+            return (
+              <label key={p.key} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.02] cursor-pointer group">
+                <input type="checkbox" checked={effective} onChange={() => toggle(p.key)}
+                  className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" />
+                <span className={`text-xs ${effective ? 'text-slate-200' : 'text-slate-600'}`}>
+                  {p.label}
+                </span>
+                {roleHas && !isOverridden && (
+                  <span className="text-[9px] text-slate-700 ml-auto">(cargo)</span>
+                )}
+                {isOverridden && (
+                  <span className={`text-[9px] ml-auto ${overrides[p.key] ? 'text-green-500' : 'text-red-500'}`}>
+                    {overrides[p.key] ? '(adicionado)' : '(removido)'}
+                  </span>
+                )}
+              </label>
+            )
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 px-3 py-2 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg">Cancelar</button>
+          <button onClick={() => onSave(member, overrides)}
+            className="flex-1 px-3 py-2 text-xs text-white bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center justify-center gap-1.5">
+            <Check className="w-3 h-3" /> Salvar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
