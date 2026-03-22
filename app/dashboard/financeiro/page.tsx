@@ -280,6 +280,21 @@ export default function FinanceiroPage() {
 
       <div className="p-6 space-y-6">
 
+        {/* ── DRE Link ────────────────────────────────────────────────────── */}
+        <Link href="/dashboard/financeiro/dre"
+          className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-purple-600/10 via-transparent to-transparent border border-purple-500/20 rounded-xl hover:border-purple-500/40 transition-all group">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600/20 flex items-center justify-center">
+              <Scale className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">DRE Simplificado</p>
+              <p className="text-xs text-slate-500">Receita → Deduções → CMV → Lucro Líquido • Lucratividade por produto</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+        </Link>
+
         {/* ── Toolbar ─────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 flex-wrap">
 
