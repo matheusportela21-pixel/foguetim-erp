@@ -3,20 +3,20 @@
  * Faz upload de arquivo de evidência para a reclamação no ML.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { getValidToken, ML_API_BASE, getMLConnection } from '@/lib/mercadolivre'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { claim_id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const { claim_id } = params

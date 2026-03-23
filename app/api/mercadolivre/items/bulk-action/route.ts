@@ -7,7 +7,7 @@
  * Retorna: { success: string[], failed: string[], total: number }
  */
 import { NextResponse }   from 'next/server'
-import { getAuthUser }    from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { mlFetch }        from '@/lib/mercadolivre'
 import { supabaseAdmin }  from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
@@ -29,11 +29,11 @@ const ACTION_LABEL: Record<BulkAction, string> = {
 function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
 
 export async function POST(req: Request) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   // Rate limit: 10 ações em massa por hora por usuário
-  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/items/bulk-action'), 10, 3_600_000)
+  const rl = await checkRateLimit(rateLimitKey(dataOwnerId, 'POST:/api/mercadolivre/items/bulk-action'), 10, 3_600_000)
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Muitas requisições. Tente novamente mais tarde.' },
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 
   for (const item_id of item_ids) {
     try {
-      await mlFetch(user.id, `/items/${item_id}`, {
+      await mlFetch(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body:   JSON.stringify({ status: newStatus }),
       })
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     await supabaseAdmin()
       .from('activity_logs')
       .insert({
-        user_id:     user.id,
+        user_id:     dataOwnerId,
         action:      `ml.items.bulk_${action}`,
         category:    'products',
         description: `${success.length} anúncio(s) ${ACTION_LABEL[action]} em massa`,

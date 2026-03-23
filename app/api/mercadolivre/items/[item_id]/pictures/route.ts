@@ -4,14 +4,14 @@
  * Body: { urls: string[] }  — URLs públicas das imagens
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }                from '@/lib/server-auth'
+import { resolveDataOwner }            from '@/lib/auth/api-permissions'
 import { mlFetch }                    from '@/lib/mercadolivre'
 
 type Params = { params: { item_id: string } }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   let body: { urls: string[] }
   try {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const pictures = body.urls.map(url => ({ source: url }))
 
   try {
-    const updated = await mlFetch(user.id, `/items/${params.item_id}`, {
+    const updated = await mlFetch(dataOwnerId, `/items/${params.item_id}`, {
       method: 'PUT',
       body: JSON.stringify({ pictures }),
     })

@@ -3,7 +3,7 @@
  * Fluxo: arquivo → Supabase Storage (temp) → URL pública → ML PUT → cleanup Supabase
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { mlFetch }                   from '@/lib/mercadolivre'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 
@@ -25,8 +25,8 @@ async function ensureBucket() {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   const { item_id } = params
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const buffer      = Buffer.from(arrayBuffer)
   const ext         = file.type === 'image/png' ? 'png' : 'jpg'
   const filename    = `${crypto.randomUUID()}.${ext}`
-  const path        = `temp/${user.id}/${filename}`
+  const path        = `temp/${dataOwnerId}/${filename}`
 
   try {
     await ensureBucket()
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // 3. Fetch current item pictures
     const currentItem = await mlFetch<{ pictures: { secure_url: string; id: string }[] }>(
-      user.id,
+      dataOwnerId,
       `/items/${item_id}`,
     )
     const existingUrls = (currentItem.pictures ?? []).map(p => p.secure_url)
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // 4. Send to ML
     const updated = await mlFetch<{ pictures: { id: string; secure_url: string }[] }>(
-      user.id,
+      dataOwnerId,
       `/items/${item_id}`,
       {
         method: 'PUT',

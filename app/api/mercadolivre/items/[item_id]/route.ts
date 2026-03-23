@@ -3,7 +3,7 @@
  * PATCH /api/mercadolivre/items/[item_id] — editar campo por campo com validação
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }                from '@/lib/server-auth'
+import { resolveDataOwner }            from '@/lib/auth/api-permissions'
 import { mlFetch }                    from '@/lib/mercadolivre'
 import { supabaseAdmin }              from '@/lib/supabase-admin'
 
@@ -30,15 +30,15 @@ async function enforceRateLimit(userId: string) {
 
 /* ── GET ─────────────────────────────────────────────────────────────────── */
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   const { item_id } = params
 
   try {
     const [item, desc] = await Promise.allSettled([
-      mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`),
-      mlFetch<{ plain_text: string }>(user.id, `/items/${item_id}/description`),
+      mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`),
+      mlFetch<{ plain_text: string }>(dataOwnerId, `/items/${item_id}/description`),
     ])
 
     const itemData = item.status === 'fulfilled' ? item.value : null
@@ -100,8 +100,8 @@ const ALLOWED_LISTING_TYPES = ['gold_pro', 'gold_special', 'free']
 const ALLOWED_CONDITIONS     = ['new', 'used', 'not_specified']
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
 
   const { item_id } = params
   let body: PatchBody
@@ -155,21 +155,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'pictures deve ser um array de URLs' }, { status: 400 })
   }
 
-  await enforceRateLimit(user.id)
+  await enforceRateLimit(dataOwnerId)
 
   try {
     let updatedItem: Record<string, unknown>
 
     if (field === 'description') {
-      await mlFetch(user.id, `/items/${item_id}/description?api_version=2`, {
+      await mlFetch(dataOwnerId, `/items/${item_id}/description?api_version=2`, {
         method: 'PUT',
         body: JSON.stringify({ plain_text: String(value) }),
       })
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`)
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`)
 
     } else if (field === 'listing_type_id') {
       // Check if current type is free (cannot upgrade from free)
-      const current = await mlFetch<{ listing_type_id: string }>(user.id, `/items/${item_id}`)
+      const current = await mlFetch<{ listing_type_id: string }>(dataOwnerId, `/items/${item_id}`)
       if (current.listing_type_id === 'free') {
         return NextResponse.json(
           { error: 'Não é possível alterar o tipo de um anúncio Gratuito' },
@@ -177,23 +177,23 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         )
       }
       // POST to /listing_type endpoint (free conversion)
-      await mlFetch(user.id, `/items/${item_id}/listing_type`, {
+      await mlFetch(dataOwnerId, `/items/${item_id}/listing_type`, {
         method: 'POST',
         body: JSON.stringify({ id: String(value) }),
       })
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`)
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`)
 
     } else if (field === 'flex_shipping') {
       const current = await mlFetch<{
         shipping: { tags?: string[]; free_shipping?: boolean; mode?: string; logistic_type?: string; local_pick_up?: boolean }
-      }>(user.id, `/items/${item_id}`)
+      }>(dataOwnerId, `/items/${item_id}`)
       const tags    = current.shipping?.tags ?? []
       const enable  = Boolean(value)
       const newTags = enable
         ? [...Array.from(new Set([...tags, 'self_service_in']))]
         : tags.filter(t => t !== 'self_service_in')
 
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify({
           shipping: {
@@ -205,26 +205,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       })
 
     } else if (field === 'free_shipping') {
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify({ shipping: { free_shipping: Boolean(value) } }),
       })
 
     } else if (field === 'local_pick_up') {
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify({ shipping: { local_pick_up: Boolean(value) } }),
       })
 
     } else if (field === 'attributes') {
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify({ attributes: value }),
       })
 
     } else if (field === 'warranty') {
       // Update WARRANTY_TYPE in sale_terms
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify({
           sale_terms: [{ id: 'WARRANTY_TYPE', value_name: value ? String(value) : null }],
@@ -234,7 +234,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     } else if (field === 'pictures') {
       // Replace entire pictures array
       const urls = value as string[]
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify({
           pictures: urls.map((url: string) => ({ source: url })),
@@ -248,7 +248,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       else if (field === 'seller_custom_field') payload['seller_custom_field'] = String(value)
       else payload[field]                  = value
 
-      updatedItem = await mlFetch<Record<string, unknown>>(user.id, `/items/${item_id}`, {
+      updatedItem = await mlFetch<Record<string, unknown>>(dataOwnerId, `/items/${item_id}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       })
@@ -274,7 +274,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     await supabaseAdmin()
       .from('activity_logs')
       .insert({
-        user_id:     user.id,
+        user_id:     dataOwnerId,
         action:      'ml.item.updated',
         category:    'products',
         description: `Anúncio ${item_id} atualizado: ${fieldLabels[field] ?? field} alterado`,

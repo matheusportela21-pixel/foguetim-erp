@@ -4,7 +4,7 @@
  * mesmo user_product_id, incluindo dados completos + descrição de cada um.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 
 type Params = { params: { item_id: string } }
@@ -53,15 +53,15 @@ async function fetchWithToken(token: string, url: string): Promise<Response> {
 }
 
 export async function GET(req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'ML não conectado', notConnected: true }, { status: 200 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const { item_id } = params

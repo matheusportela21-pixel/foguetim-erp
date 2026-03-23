@@ -8,7 +8,7 @@
  *   3. Se tiver shipment_id: GET /shipments/{id} (x-format-new: true)
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 
 const safeParse = async (r: PromiseSettledResult<Response>) => {
@@ -20,13 +20,13 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { pack_id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) return NextResponse.json({ connected: false })
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ connected: false, error: 'Token inválido' })
 
   const { pack_id } = params
