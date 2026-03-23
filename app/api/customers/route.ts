@@ -12,7 +12,7 @@
  *   vip     — "true" para só VIPs
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { requirePermission }        from '@/lib/auth/api-permissions'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 type SortField = 'total_spent' | 'total_orders' | 'last_order_date'
@@ -20,8 +20,8 @@ type SortField = 'total_spent' | 'total_orders' | 'last_order_date'
 const ALLOWED_SORTS: SortField[] = ['total_spent', 'total_orders', 'last_order_date']
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('orders:view')
+  if (authError) return authError
 
   const sp     = new URL(req.url).searchParams
   const search = sp.get('search')?.trim() ?? ''
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin()
     .from('customers')
     .select('*', { count: 'exact' })
-    .eq('user_id', user.id)
+    .eq('user_id', dataOwnerId)
     .order(sort, { ascending: !order })
     .range(from, to)
 

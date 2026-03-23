@@ -3,7 +3,7 @@
  * POST /api/armazem/produtos  — create a new warehouse product
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { requirePermission } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 function computeCompletion(p: Record<string, unknown>) {
@@ -17,8 +17,8 @@ function computeCompletion(p: Record<string, unknown>) {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('inventory:view')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   const sp       = new URL(req.url).searchParams
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
          mappings:warehouse_product_mappings(id, channel, mapping_status, listing_title)`,
         { count: 'exact' },
       )
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .is('parent_id', null)
       .order('created_at', { ascending: false })
       .range(from, to)
@@ -80,8 +80,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('inventory:manage')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     const { data: existing } = await db
       .from('warehouse_products')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .eq('sku', sku.trim())
       .maybeSingle()
 
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     const productData: Record<string, unknown> = {
-      user_id:      user.id,
+      user_id:      dataOwnerId,
       name:         name.trim(),
       sku:          sku.trim(),
       product_type,

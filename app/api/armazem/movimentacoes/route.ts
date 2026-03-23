@@ -3,7 +3,7 @@
  * POST /api/armazem/movimentacoes  — create a stock movement and update inventory
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { requirePermission } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 type MovementType =
@@ -49,8 +49,8 @@ const DECREASE_TYPES: MovementType[] = [
 ]
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('inventory:view')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     const { data: userWarehouses, error: whError } = await db
       .from('warehouses')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (whError) {
       console.error('[armazem/movimentacoes GET warehouses]', whError)
@@ -130,8 +130,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { userId, dataOwnerId, error: authError } = await requirePermission('inventory:manage')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       .from('warehouses')
       .select('id')
       .eq('id', warehouse_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (whError) {
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
       .from('warehouse_products')
       .select('id')
       .eq('id', product_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (prodError) {
@@ -272,7 +272,7 @@ export async function POST(req: NextRequest) {
           .from('warehouse_products')
           .select('average_cost')
           .eq('id', product_id)
-          .eq('user_id', user.id)
+          .eq('user_id', dataOwnerId)
           .maybeSingle()
 
         const currentAvg = Number((prodCost as { average_cost?: number | null } | null)?.average_cost ?? 0) || unitCostNum
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
             average_cost:    Math.round(newAvg * 100) / 100,
           })
           .eq('id', product_id)
-          .eq('user_id', user.id)
+          .eq('user_id', dataOwnerId)
       } catch (costErr) {
         console.error('[movimentacoes POST cost update]', costErr)
         // non-critical — don't fail the whole request
@@ -301,7 +301,7 @@ export async function POST(req: NextRequest) {
       quantity_before: currentAvailable,
       quantity_change: quantityChange,
       quantity_after:  newAvailable,
-      created_by:      user.id,
+      created_by:      userId,
     }
 
     if (location_id     !== undefined) movementData.location_id    = location_id

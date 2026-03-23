@@ -15,7 +15,7 @@
  *   save_draft?    boolean  — se true, salva rascunho no Supabase mesmo em caso de erro parcial
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { requirePermission }        from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
@@ -41,11 +41,11 @@ interface CreateBody {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { userId, dataOwnerId, error: authError } = await requirePermission('products:edit')
+  if (authError) return authError
 
   // Rate limit: 20 criações de anúncios por hora por usuário
-  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/items'), 20, 3_600_000)
+  const rl = await checkRateLimit(rateLimitKey(userId, 'POST:/api/mercadolivre/items'), 20, 3_600_000)
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Muitas requisições. Tente novamente mais tarde.' },
@@ -53,12 +53,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'ML não conectado', notConnected: true }, { status: 200 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   let body: CreateBody
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
   const hasSuccess = results.some(r => r.item_id)
   try {
     await supabaseAdmin().from('activity_logs').insert({
-      user_id:     user.id,
+      user_id:     userId,
       entity_id:   firstItemId ?? 'draft',
       entity_type: 'ml_item',
       action:      'create',
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
   if (save_draft) {
     try {
       await supabaseAdmin().from('product_drafts').upsert({
-        user_id:  user.id,
+        user_id:  dataOwnerId,
         title:    title.trim(),
         data:     body,
         status:   hasSuccess ? 'published' : 'draft',

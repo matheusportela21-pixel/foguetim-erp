@@ -3,7 +3,7 @@
  * POST /api/armazem/categorias  — create a new category
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { requirePermission } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 function generateSlug(name: string): string {
@@ -16,15 +16,15 @@ function generateSlug(name: string): string {
 }
 
 export async function GET(_req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('inventory:view')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
     const { data, error } = await db
       .from('warehouse_categories')
       .select('id, name, slug, parent_id, active, created_at, parent:warehouse_categories!parent_id(id, name)')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .order('name', { ascending: true })
 
     if (error) {
@@ -41,8 +41,8 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('inventory:manage')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const slug = slugInput?.trim() || generateSlug(name)
 
     const categoryData: Record<string, unknown> = {
-      user_id: user.id,
+      user_id: dataOwnerId,
       name:    name.trim(),
       slug,
     }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         .from('warehouse_categories')
         .select('id')
         .eq('id', parent_id)
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .maybeSingle()
 
       if (!parent) {
