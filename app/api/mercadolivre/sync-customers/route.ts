@@ -5,7 +5,7 @@
  * Retorna: { synced, new, updated }
  */
 import { NextResponse } from 'next/server'
-import { getAuthUser }  from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createNotification } from '@/lib/notify'
@@ -54,15 +54,15 @@ interface CustomerAccum {
 }
 
 export async function POST() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'ML não conectado', notConnected: true })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const auth    = { Authorization: `Bearer ${token}` }
@@ -151,14 +151,14 @@ export async function POST() {
   const { data: existing } = await supabaseAdmin()
     .from('customers')
     .select('ml_buyer_id')
-    .eq('user_id', user.id)
+    .eq('user_id', dataOwnerId)
     .in('ml_buyer_id', mlIds)
 
   const existingSet = new Set((existing ?? []).map((r: { ml_buyer_id: string }) => r.ml_buyer_id))
 
   /* ── Preparar payload e upsert ───────────────────────────────────────────── */
   const payload = Array.from(map.values()).map(c => ({
-    user_id:          user.id,
+    user_id:          dataOwnerId,
     ml_buyer_id:      c.ml_buyer_id,
     nickname:         c.nickname     || null,
     first_name:       c.first_name   || null,
@@ -193,7 +193,7 @@ export async function POST() {
   // Notificação automática após sync bem-sucedido
   if (newCount > 0) {
     await createNotification({
-      userId:   user.id,
+      userId:   dataOwnerId,
       title:    'Clientes sincronizados',
       message:  `${newCount} novo${newCount > 1 ? 's clientes importados' : ' cliente importado'} do Mercado Livre. ${updatedCount > 0 ? `${updatedCount} atualizado${updatedCount > 1 ? 's' : ''}.` : ''}`.trim(),
       type:     'success',

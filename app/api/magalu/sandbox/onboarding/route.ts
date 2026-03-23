@@ -3,7 +3,7 @@
  * Cria seller fictício no sandbox do Magalu para testes.
  */
 import { NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidMagaluToken } from '@/lib/magalu/auth'
 import { magaluPut } from '@/lib/magalu/client'
 import { MAGALU_PATH_SANDBOX_ONBOARDING, MAGALU_SANDBOX_CHANNEL_ID } from '@/lib/magalu/config'
@@ -11,10 +11,10 @@ import { MAGALU_PATH_SANDBOX_ONBOARDING, MAGALU_SANDBOX_CHANNEL_ID } from '@/lib
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const tokenData = await getValidMagaluToken(user.id)
+  const tokenData = await getValidMagaluToken(dataOwnerId)
   if (!tokenData) {
     return NextResponse.json({ error: 'Nenhuma conexão Magalu ativa. Conecte primeiro.' }, { status: 400 })
   }

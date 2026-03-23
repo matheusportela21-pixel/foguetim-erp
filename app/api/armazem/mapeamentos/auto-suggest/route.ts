@@ -4,7 +4,7 @@
  * Returns SUGGESTIONS only — does NOT create any mappings
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 interface WarehouseProduct {
@@ -40,8 +40,8 @@ interface Suggestion {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     let productsQuery = db
       .from('warehouse_products')
       .select('id, sku, name, barcode')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (product_ids && product_ids.length > 0) {
       productsQuery = productsQuery.in('id', product_ids)
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const { data: listings, error: listError } = await db
       .from('ml_listings')
       .select('item_id, seller_sku, ean, title, status, thumbnail')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (listError) {
       console.error('[mapeamentos/auto-suggest listings]', listError)
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     const { data: existingMappings } = await db
       .from('warehouse_product_mappings')
       .select('warehouse_product_id, channel')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     const mappedProductIds = new Set(
       (existingMappings ?? []).map((m: { warehouse_product_id: number }) => m.warehouse_product_id),

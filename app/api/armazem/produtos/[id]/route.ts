@@ -4,7 +4,7 @@
  * DELETE /api/armazem/produtos/[id]  — hard delete
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 function computeCompletion(p: Record<string, unknown>) {
@@ -21,8 +21,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -43,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
 
-    if ((product as Record<string, unknown>).user_id !== user.id) {
+    if ((product as Record<string, unknown>).user_id !== dataOwnerId) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
 
@@ -59,8 +59,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -74,7 +74,7 @@ export async function PATCH(
     if (findError || !existing) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
-    if ((existing as Record<string, unknown>).user_id !== user.id) {
+    if ((existing as Record<string, unknown>).user_id !== dataOwnerId) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
 
@@ -133,8 +133,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -148,7 +148,7 @@ export async function DELETE(
     if (findError || !existing) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
-    if ((existing as Record<string, unknown>).user_id !== user.id) {
+    if ((existing as Record<string, unknown>).user_id !== dataOwnerId) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
 

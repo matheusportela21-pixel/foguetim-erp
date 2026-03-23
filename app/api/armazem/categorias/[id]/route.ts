@@ -3,15 +3,15 @@
  * DELETE /api/armazem/categorias/[id]  — delete a category
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -25,7 +25,7 @@ export async function PATCH(
     if (findError || !existing) {
       return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 })
     }
-    if ((existing as Record<string, unknown>).user_id !== user.id) {
+    if ((existing as Record<string, unknown>).user_id !== dataOwnerId) {
       return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 })
     }
 
@@ -52,7 +52,7 @@ export async function PATCH(
         .from('warehouse_categories')
         .select('id')
         .eq('id', updates.parent_id as string)
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .maybeSingle()
 
       if (!parent) {
@@ -84,8 +84,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -99,7 +99,7 @@ export async function DELETE(
     if (findError || !existing) {
       return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 })
     }
-    if ((existing as Record<string, unknown>).user_id !== user.id) {
+    if ((existing as Record<string, unknown>).user_id !== dataOwnerId) {
       return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 })
     }
 
@@ -108,7 +108,7 @@ export async function DELETE(
       .from('warehouse_products')
       .select('id', { count: 'exact', head: true })
       .eq('category_id', params.id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (countError) {
       console.error('[armazem/categorias/[id] DELETE count]', countError)

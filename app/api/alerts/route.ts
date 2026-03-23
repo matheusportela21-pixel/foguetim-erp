@@ -2,14 +2,14 @@
  * GET /api/alerts — list alerts (filters: type, severity, is_read, channel)
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
   const sp       = new URL(req.url).searchParams
   const type     = sp.get('type')
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin()
     .from('alerts')
     .select('*', { count: 'exact' })
-    .eq('user_id', user.id)
+    .eq('user_id', dataOwnerId)
     .is('resolved_at', null)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)

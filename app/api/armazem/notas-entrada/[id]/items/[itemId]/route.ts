@@ -3,7 +3,7 @@
  * Resolve an invoice item: map to existing product OR create new
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'foguetim_support']
@@ -12,8 +12,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string; itemId: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -21,7 +21,7 @@ export async function PATCH(
     const { data: profile } = await db
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', dataOwnerId)
       .maybeSingle()
 
     if (!profile || !ADMIN_ROLES.includes(profile.role)) {
@@ -35,7 +35,7 @@ export async function PATCH(
       .from('purchase_invoices_beta')
       .select('id, status')
       .eq('id', invoiceId)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (invoiceError) {
@@ -90,7 +90,7 @@ export async function PATCH(
         .from('warehouse_products')
         .select('id')
         .eq('id', mapped_product_id)
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .maybeSingle()
 
       if (epError) {
@@ -112,7 +112,7 @@ export async function PATCH(
 
       // Create new warehouse_product
       const newProductData: Record<string, unknown> = {
-        user_id: user.id,
+        user_id: dataOwnerId,
         name: product_data.name,
         sku: product_data.sku,
         cost_price:

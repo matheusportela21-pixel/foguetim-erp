@@ -6,7 +6,7 @@
  * Máximo 100 por chamada.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 interface BulkApplyItem {
@@ -18,8 +18,8 @@ interface BulkApplyItem {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       const { data: existing } = await db
         .from('warehouse_product_mappings')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .eq('warehouse_product_id', item.warehouseProductId)
         .eq('channel', item.channel)
         .maybeSingle()
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         .from('warehouse_products')
         .select('id, completion_status')
         .eq('id', item.warehouseProductId)
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .maybeSingle()
 
       if (!prod) {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       const { error: insertErr } = await db
         .from('warehouse_product_mappings')
         .insert({
-          user_id:              user.id,
+          user_id:              dataOwnerId,
           warehouse_product_id: item.warehouseProductId,
           channel:              item.channel,
           marketplace_item_id:  item.externalItemId,

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Sparkles, X, Minus, ChevronUp, Send, Rocket } from 'lucide-react'
+import DOMPurify from 'dompurify'
 
 interface ChatMessage {
   id:      string
@@ -145,7 +146,7 @@ export function PublicChatWidget() {
                     ${msg.role === 'user'
                       ? 'bg-violet-600 text-white rounded-br-sm'
                       : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm shadow-sm'}`}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(msg.content)) }}
                 />
               </div>
             ))}

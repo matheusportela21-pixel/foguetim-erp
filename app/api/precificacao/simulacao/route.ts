@@ -7,12 +7,12 @@
  * LEITURA APENAS — nunca modifica dados.
  */
 import { NextResponse }  from 'next/server'
-import { getAuthUser }   from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   const db = supabaseAdmin()
 
@@ -21,7 +21,7 @@ export async function GET() {
     const { data: products, error: prodErr } = await db
       .from('products')
       .select('id, name, cost_price, weight_g, ml_item_id')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .not('cost_price', 'is', null)
       .not('ml_item_id', 'is', null)
       .gt('cost_price', 0)
@@ -36,7 +36,7 @@ export async function GET() {
     const { data: listings } = await db
       .from('ml_listings')
       .select('item_id, title, price, listing_type, status')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .in('item_id', mlIds)
 
     const listingMap = new Map((listings ?? []).map(l => [l.item_id, l]))

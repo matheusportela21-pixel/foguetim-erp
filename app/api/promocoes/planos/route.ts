@@ -3,7 +3,7 @@
  * PUT  /api/promocoes/planos       — criar ou atualizar um plano (upsert por event_id)
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -28,15 +28,15 @@ function makeSupabase() {
 /* ── GET ─────────────────────────────────────────────────────────────── */
 
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
   const supabase = makeSupabase()
 
   const { data, error } = await supabase
     .from('promotion_plans')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', dataOwnerId)
     .order('event_id')
 
   if (error) {
@@ -57,8 +57,8 @@ interface PlanBody {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
   let body: PlanBody
   try {
@@ -77,7 +77,7 @@ export async function PUT(req: NextRequest) {
     .from('promotion_plans')
     .upsert(
       {
-        user_id:   user.id,
+        user_id:   dataOwnerId,
         event_id:  body.event_id,
         status:    body.status    ?? 'sem_planejamento',
         notes:     body.notes     ?? null,

@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 interface CadastroBody {
   name:     string
@@ -13,6 +14,16 @@ interface CadastroBody {
 }
 
 export async function POST(req: NextRequest) {
+  // SEC-020: Rate limit — 3 cadastros por IP a cada 30 minutos
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const rl = await checkRateLimit(`auth:cadastro:${ip}`, 3, 30 * 60 * 1000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Muitas tentativas de cadastro. Tente novamente em ${rl.retryAfter}s.` },
+      { status: 429 },
+    )
+  }
+
   try {
     const body = await req.json() as CadastroBody
     const { name, email, password } = body

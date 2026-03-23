@@ -3,14 +3,14 @@
  * Lucratividade por produto (top 10 melhores + 10 piores).
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { requirePermission } from '@/lib/auth/api-permissions'
 import { calculateDRE } from '@/lib/financial/dre-engine'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await requirePermission('financial:view')
+  if (error) return error
 
   const sp = new URL(req.url).searchParams
   const now = new Date()
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const periodEnd   = sp.get('period_end')   ?? now.toISOString().slice(0, 10)
 
   try {
-    const dre = await calculateDRE(user.id, new Date(periodStart), new Date(periodEnd))
+    const dre = await calculateDRE(dataOwnerId, new Date(periodStart), new Date(periodEnd))
 
     const sorted = dre.productProfitability
     const top10    = sorted.slice(0, 10)

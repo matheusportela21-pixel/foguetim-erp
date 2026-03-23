@@ -67,21 +67,47 @@ function LoginForm() {
     }, 10000)
 
     try {
-      const { error } = await signIn(email, password)
+      // SEC-020: Login via API com rate limiting server-side
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
       clearTimeout(timeoutId)
 
-      if (error) {
+      if (res.status === 429) {
+        const d = await res.json()
+        setError(d.error || 'Muitas tentativas. Aguarde e tente novamente.')
+        setLoading(false)
+        return
+      }
+
+      if (!res.ok) {
         setError('Email ou senha inválidos. Verifique os dados e tente novamente.')
         setLoading(false)
-      } else {
+        return
+      }
+
+      // Setar sessão no client Supabase para manter cookies/state
+      const { session } = await res.json()
+      if (session) {
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        })
+      }
+
+      {
         void fetch('/api/auth/log', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'login', category: 'auth', description: 'Login realizado com sucesso' }),
         })
         // Hard redirect — garante que a cookie de sessão está presente no próximo request
-        const redirect = searchParams.get('redirect') ?? '/dashboard'
-        window.location.href = redirect
+        const rawRedirect = searchParams.get('redirect') ?? '/dashboard'
+        // SEC-019: Validar redirect para evitar open redirect
+        const safeRedirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/dashboard'
+        window.location.href = safeRedirect
       }
     } catch {
       clearTimeout(timeoutId)

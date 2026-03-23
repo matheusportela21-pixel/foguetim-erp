@@ -1,24 +1,17 @@
 /**
  * GET /api/mercadolivre/status
  * Returns the current ML connection status for the authenticated user.
+ * SEC-014: Resolve ownership para team members verem dados do dono.
  */
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getMLConnection } from '@/lib/mercadolivre'
 
 export async function GET() {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
-  )
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return NextResponse.json({ connected: false })
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ connected: false })
-
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) return NextResponse.json({ connected: false })
 
   return NextResponse.json({

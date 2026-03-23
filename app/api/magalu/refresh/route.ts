@@ -4,17 +4,17 @@
  * ATENÇÃO: O refresh_token do Magalu é USO ÚNICO!
  */
 import { NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidMagaluToken } from '@/lib/magalu/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   try {
-    const result = await getValidMagaluToken(user.id)
+    const result = await getValidMagaluToken(dataOwnerId)
     if (!result) {
       return NextResponse.json({ error: 'Nenhuma conexão Magalu ativa' }, { status: 404 })
     }

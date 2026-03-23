@@ -3,7 +3,7 @@
  * DELETE /api/empresa/custos/[id]  — remover custo
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }          from '@/lib/auth/api-permissions'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 const UPDATABLE_FIELDS = [
@@ -15,8 +15,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr2 } = await resolveDataOwner()
+  if (authErr2) return authErr2
   const db = supabaseAdmin()
 
   const id = params.id
@@ -28,7 +28,7 @@ export async function PATCH(
       .from('company_costs')
       .select('id')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (!existing) {
@@ -52,7 +52,7 @@ export async function PATCH(
       .from('company_costs')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .select()
       .single()
 
@@ -73,8 +73,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr2 } = await resolveDataOwner()
+  if (authErr2) return authErr2
   const db = supabaseAdmin()
 
   const id = params.id
@@ -85,7 +85,7 @@ export async function DELETE(
       .from('company_costs')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (error) {
       console.error('[empresa/custos DELETE]', error)

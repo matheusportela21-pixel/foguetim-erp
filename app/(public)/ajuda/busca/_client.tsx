@@ -30,10 +30,16 @@ const COLOR_MAP: Record<string, { bg: string; text: string }> = {
 
 function getColor(color: string) { return COLOR_MAP[color] ?? COLOR_MAP.slate }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function highlightText(text: string, query: string): string {
-  if (!query.trim()) return text
+  // SEC-XSS-002: Escapar HTML antes de injetar no dangerouslySetInnerHTML
+  const safeText = escapeHtml(text)
+  if (!query.trim()) return safeText
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="bg-yellow-100 text-yellow-800 rounded px-0.5">$1</mark>')
+  return safeText.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="bg-yellow-100 text-yellow-800 rounded px-0.5">$1</mark>')
 }
 
 export default function SearchContent() {

@@ -7,20 +7,20 @@
  * Retorna: { synced: N, errors: N, duration_ms: N }
  */
 import { NextResponse }            from 'next/server'
-import { getAuthUser }             from '@/lib/server-auth'
+import { resolveDataOwner }        from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken } from '@/lib/mercadolivre'
 import { syncListingsFromML }      from '@/lib/ml/listings/ml-listings-sync.service'
 
 export async function POST(req: Request) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   let limit: number = 2000
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
   try {
     const result = await syncListingsFromML(
-      user.id,
+      dataOwnerId,
       String(conn.ml_user_id),
       token,
       { limit },

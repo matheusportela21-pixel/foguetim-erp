@@ -10,20 +10,20 @@
  * SEGURANÇA: POST só deve ser chamado após confirmação explícita do usuário.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'ML não conectado', notConnected: true }, { status: 200 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido — reconecte o ML' }, { status: 401 })
 
   const sp     = new URL(req.url).searchParams
@@ -98,11 +98,11 @@ export async function GET(req: NextRequest) {
  * com diálogo "Tem certeza que deseja responder esta pergunta?"
  */
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   // Rate limit: 60 respostas por hora por usuário
-  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/questions'), 60, 3_600_000)
+  const rl = await checkRateLimit(rateLimitKey(dataOwnerId, 'POST:/api/mercadolivre/questions'), 60, 3_600_000)
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Muitas requisições. Tente novamente mais tarde.' },
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'question_id e text são obrigatórios' }, { status: 400 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   try {

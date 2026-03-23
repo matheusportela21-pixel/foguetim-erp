@@ -5,25 +5,15 @@
  * mas este endpoint permite forçar manualmente (ex: botão "Sincronizar").
  */
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidShopeeToken } from '@/lib/shopee/auth'
 
 export async function POST() {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-  }
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   try {
-    const result = await getValidShopeeToken(user.id)
+    const result = await getValidShopeeToken(dataOwnerId)
     if (!result) {
       return NextResponse.json({ error: 'Nenhuma conexão Shopee ativa' }, { status: 404 })
     }

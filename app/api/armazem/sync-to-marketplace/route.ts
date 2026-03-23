@@ -11,7 +11,7 @@
  * dry_run = true → loga o que enviaria mas NÃO chama o ML
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 import { ML_API_BASE }               from '@/lib/mercadolivre'
 
@@ -89,8 +89,8 @@ async function getValidMLToken(userId: string): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     const mappingQuery = db
       .from('warehouse_product_mappings')
       .select('id, channel, marketplace_item_id, auto_sync_stock, auto_sync_price')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .eq('warehouse_product_id', product_id)
 
     if (syncStock && !syncPrice)  mappingQuery.eq('auto_sync_stock', true)
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
         .from('warehouse_products')
         .select('reference_price, cost_price')
         .eq('id', product_id)
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .maybeSingle()
 
       referencePrice = Number((prod as { reference_price?: number; cost_price?: number } | null)?.reference_price
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Obter token ML válido
-    const token = dry_run ? 'DRY_RUN_TOKEN' : await getValidMLToken(user.id)
+    const token = dry_run ? 'DRY_RUN_TOKEN' : await getValidMLToken(dataOwnerId)
     if (!token && !dry_run) {
       return NextResponse.json({ error: 'Token ML não encontrado ou expirado' }, { status: 400 })
     }
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
       if (shouldSyncStock) {
         try {
           await db.from('sync_log').insert({
-            user_id:             user.id,
+            user_id:             dataOwnerId,
             mapping_id:          m.id,
             channel:             m.channel,
             direction:           'armazem_to_marketplace',
@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
       if (shouldSyncPrice && referencePrice > 0) {
         try {
           await db.from('sync_log').insert({
-            user_id:             user.id,
+            user_id:             dataOwnerId,
             mapping_id:          m.id,
             channel:             m.channel,
             direction:           'armazem_to_marketplace',

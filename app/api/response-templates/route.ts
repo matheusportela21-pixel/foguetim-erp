@@ -3,7 +3,7 @@
  * POST /api/response-templates   — criar novo template
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }          from '@/lib/auth/api-permissions'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 const DEFAULT_TEMPLATES = [
@@ -16,8 +16,8 @@ const DEFAULT_TEMPLATES = [
 
 /* ── GET ─────────────────────────────────────────────────────────────────── */
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
   const db = supabaseAdmin()
 
@@ -25,12 +25,12 @@ export async function GET() {
   const { count } = await db
     .from('response_templates')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('user_id', dataOwnerId)
 
   if ((count ?? 0) === 0) {
     await db.from('response_templates').insert(
       DEFAULT_TEMPLATES.map(t => ({
-        user_id:    user.id,
+        user_id:    dataOwnerId,
         name:       t.name,
         content:    t.content,
         category:   t.category,
@@ -42,7 +42,7 @@ export async function GET() {
   const { data, error } = await db
     .from('response_templates')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', dataOwnerId)
     .order('category')
     .order('name')
 
@@ -52,8 +52,8 @@ export async function GET() {
 
 /* ── POST ────────────────────────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
   const { name, content, category } = await req.json() as { name: string; content: string; category?: string }
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabaseAdmin()
     .from('response_templates')
     .insert({
-      user_id:  user.id,
+      user_id:  dataOwnerId,
       name:     name.trim(),
       content:  content.trim(),
       category: category ?? 'geral',

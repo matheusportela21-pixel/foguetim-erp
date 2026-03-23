@@ -9,7 +9,7 @@
  *   product_id — filtrar por produto específico do armazém
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import {
   findMappingSuggestions,
@@ -124,8 +124,8 @@ async function fetchShopeeListings(userId: string): Promise<ExternalListing[]> {
 // ─── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
     let prodQ = db
       .from('warehouse_products')
       .select('id, name, sku, barcode')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .eq('active', true)
     if (productId) prodQ = prodQ.eq('id', productId)
 
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
     const { data: existingMaps } = await db
       .from('warehouse_product_mappings')
       .select('warehouse_product_id, channel')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     const existingMappings = (existingMaps ?? []).map(m => ({
       productId: m.warehouse_product_id as number,
@@ -176,7 +176,7 @@ export async function GET(req: NextRequest) {
       const { data: mlListings } = await db
         .from('ml_listings')
         .select('item_id, seller_sku, ean, title, price, stock, thumbnail')
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
 
       for (const l of mlListings ?? []) {
         externalListings.push({
@@ -193,7 +193,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (includeShopee) {
-      const shopeeListings = await fetchShopeeListings(user.id)
+      const shopeeListings = await fetchShopeeListings(dataOwnerId)
       externalListings.push(...shopeeListings)
     }
 

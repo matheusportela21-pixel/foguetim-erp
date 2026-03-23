@@ -3,7 +3,7 @@
  * PATCH /api/magalu/products/[sku_id]/price — atualizar preço
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidMagaluToken } from '@/lib/magalu/auth'
 import { magaluGet, magaluPut } from '@/lib/magalu/client'
 import { MAGALU_PATH_SKU_PRICES } from '@/lib/magalu/config'
@@ -11,10 +11,10 @@ import { MAGALU_PATH_SKU_PRICES } from '@/lib/magalu/config'
 export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ sku_id: string }> }) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const tokenData = await getValidMagaluToken(user.id)
+  const tokenData = await getValidMagaluToken(dataOwnerId)
   if (!tokenData) return NextResponse.json({ error: 'Magalu não conectado' }, { status: 400 })
 
   const { sku_id } = await params
@@ -30,10 +30,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sku
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sku_id: string }> }) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const tokenData = await getValidMagaluToken(user.id)
+  const tokenData = await getValidMagaluToken(dataOwnerId)
   if (!tokenData) return NextResponse.json({ error: 'Magalu não conectado' }, { status: 400 })
 
   const { sku_id } = await params

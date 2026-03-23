@@ -3,15 +3,15 @@
  * DELETE /api/armazem/mapeamentos/[id]  — remove a mapping
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -34,7 +34,7 @@ export async function PATCH(
       .from('warehouse_product_mappings')
       .select('id')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (fetchErr) {
@@ -51,7 +51,7 @@ export async function PATCH(
       .from('warehouse_product_mappings')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .select()
       .single()
 
@@ -72,8 +72,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -84,7 +84,7 @@ export async function DELETE(
       .from('warehouse_product_mappings')
       .select('id, warehouse_product_id')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (fetchError) {
@@ -102,7 +102,7 @@ export async function DELETE(
       .from('warehouse_product_mappings')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (deleteError) {
       console.error('[armazem/mapeamentos DELETE delete]', deleteError)
@@ -114,7 +114,7 @@ export async function DELETE(
       .from('warehouse_product_mappings')
       .select('id', { count: 'exact', head: true })
       .eq('warehouse_product_id', warehouse_product_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (!countError && (count ?? 0) === 0) {
       // No more mappings — update completion_status.mapping = false

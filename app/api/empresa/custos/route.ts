@@ -3,12 +3,12 @@
  * POST /api/empresa/custos  — criar novo custo
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { requirePermission }          from '@/lib/auth/api-permissions'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('costs:view')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     let query = db
       .from('company_costs')
       .select('*', { count: 'exact' })
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -58,8 +58,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('costs:manage')
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     const insertData: Record<string, unknown> = {
-      user_id:    user.id,
+      user_id:    dataOwnerId,
       name,
       category,
       amount,

@@ -4,14 +4,14 @@
  * Retorna dados do mês atual + comparativo com mês anterior.
  */
 import { NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { requirePermission } from '@/lib/auth/api-permissions'
 import { calculateDRE } from '@/lib/financial/dre-engine'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await requirePermission('financial:view')
+  if (error) return error
 
   const now = new Date()
 
@@ -25,8 +25,8 @@ export async function GET() {
 
   try {
     const [current, previous] = await Promise.all([
-      calculateDRE(user.id, currentStart, currentEnd),
-      calculateDRE(user.id, prevStart, prevEnd).catch(() => null),
+      calculateDRE(dataOwnerId, currentStart, currentEnd),
+      calculateDRE(dataOwnerId, prevStart, prevEnd).catch(() => null),
     ])
 
     const pctChange = (cur: number, prev: number | undefined): number | null => {

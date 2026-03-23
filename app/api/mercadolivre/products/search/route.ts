@@ -16,7 +16,7 @@
  * Retorna: { items, paging: { total, offset, limit }, search_source, has_local_data }
  */
 import { NextRequest, NextResponse }      from 'next/server'
-import { getAuthUser }                    from '@/lib/server-auth'
+import { resolveDataOwner }               from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 import { supabaseAdmin }                  from '@/lib/supabase-admin'
 import { normalizeSearchTerm }            from '@/lib/ml/listings/normalize-search'
@@ -51,15 +51,15 @@ async function multiget(ids: string[], authHeader: string): Promise<MLItemRow[]>
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'ML não conectado', notConnected: true }, { status: 200 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const sp          = new URL(req.url).searchParams
@@ -77,11 +77,11 @@ export async function GET(req: NextRequest) {
 
   try {
     /* ── Local DB path ────────────────────────────────────────────────────── */
-    const localCount = await getLocalListingCount(user.id, supabase)
+    const localCount = await getLocalListingCount(dataOwnerId, supabase)
 
     if (localCount > 0) {
       const result = await searchLocalListings(
-        user.id,
+        dataOwnerId,
         {
           q:           raw,
           status:      status === 'all' ? undefined : status,

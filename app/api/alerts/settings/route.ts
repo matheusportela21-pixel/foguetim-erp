@@ -3,28 +3,28 @@
  * PATCH /api/alerts/settings — update alert settings
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { requirePermission } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAlertSettings } from '@/lib/alerts/helpers'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-  const settings = await getAlertSettings(user.id)
+  const { dataOwnerId, error } = await requirePermission('settings:manage')
+  if (error) return error
+  const settings = await getAlertSettings(dataOwnerId)
   return NextResponse.json({ settings })
 }
 
 export async function PATCH(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await requirePermission('settings:manage')
+  if (authError) return authError
 
   const body = await req.json()
   const db = supabaseAdmin()
 
   await db.from('alert_settings').upsert({
-    user_id: user.id,
+    user_id: dataOwnerId,
     ...body,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' })

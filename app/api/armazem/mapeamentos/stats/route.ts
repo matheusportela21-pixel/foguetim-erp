@@ -3,12 +3,12 @@
  * Estatísticas de mapeamento por canal para o usuário autenticado.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(_req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -16,14 +16,14 @@ export async function GET(_req: NextRequest) {
     const { count: totalProducts } = await db
       .from('warehouse_products')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .eq('active', true)
 
     // Todos os mapeamentos do usuário
     const { data: allMaps } = await db
       .from('warehouse_product_mappings')
       .select('warehouse_product_id, channel')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     const maps = allMaps ?? []
 

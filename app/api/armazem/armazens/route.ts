@@ -3,19 +3,19 @@
  * POST /api/armazem/armazens  — create a new warehouse
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(_req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
     const { data, error } = await db
       .from('warehouses')
       .select('*, locations:warehouse_locations(count)')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .order('is_default', { ascending: false })
       .order('name', { ascending: true })
 
@@ -33,8 +33,8 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       const { error: clearError } = await db
         .from('warehouses')
         .update({ is_default: false })
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
 
       if (clearError) {
         console.error('[armazem/armazens POST clear default]', clearError)
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     const warehouseData: Record<string, unknown> = {
-      user_id:    user.id,
+      user_id:    dataOwnerId,
       name:       name.trim(),
       is_default,
     }

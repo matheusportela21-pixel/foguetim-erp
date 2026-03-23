@@ -3,7 +3,7 @@
  * Confirm stock entry: create recebimento_nf movements for all resolved items
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'foguetim_support']
@@ -19,8 +19,8 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -28,7 +28,7 @@ export async function POST(
     const { data: profile } = await db
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', dataOwnerId)
       .maybeSingle()
 
     if (!profile || !ADMIN_ROLES.includes(profile.role)) {
@@ -42,7 +42,7 @@ export async function POST(
       .from('purchase_invoices_beta')
       .select('*')
       .eq('id', invoiceId)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (invoiceError) {
@@ -87,7 +87,7 @@ export async function POST(
     const { data: warehouses, error: whError } = await db
       .from('warehouses')
       .select('id, is_default')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .order('is_default', { ascending: false })
       .limit(1)
 
@@ -176,7 +176,7 @@ export async function POST(
           quantity_before: currentAvailable,
           quantity_change: qty,
           quantity_after: newAvailable,
-          created_by: user.id,
+          created_by: dataOwnerId,
           reference_type: 'invoice',
           reference_id: String(invoiceId),
           reason: `Recebimento NF ${invoice.invoice_number || invoiceId}`,
@@ -267,7 +267,7 @@ export async function POST(
       .from('purchase_invoices_beta')
       .update({ status: 'completed', updated_at: new Date().toISOString() })
       .eq('id', invoiceId)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .select()
       .single()
 

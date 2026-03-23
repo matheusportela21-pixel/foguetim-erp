@@ -3,7 +3,7 @@
  * PATCH /api/armazem/notas-entrada/[id] — update complementary costs
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'foguetim_support']
@@ -12,8 +12,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -21,7 +21,7 @@ export async function GET(
     const { data: profile } = await db
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', dataOwnerId)
       .maybeSingle()
 
     if (!profile || !ADMIN_ROLES.includes(profile.role)) {
@@ -35,7 +35,7 @@ export async function GET(
       .from('purchase_invoices_beta')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (invoiceError) {
@@ -84,8 +84,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -93,7 +93,7 @@ export async function PATCH(
     const { data: profile } = await db
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', dataOwnerId)
       .maybeSingle()
 
     if (!profile || !ADMIN_ROLES.includes(profile.role)) {
@@ -107,7 +107,7 @@ export async function PATCH(
       .from('purchase_invoices_beta')
       .select('id, status, user_id')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (invoiceError) {
@@ -138,7 +138,7 @@ export async function PATCH(
       .from('purchase_invoices_beta')
       .update(patch)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .select('*')
       .maybeSingle()
 

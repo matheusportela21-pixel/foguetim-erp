@@ -2,15 +2,15 @@
  * PATCH /api/armazem/localizacoes/[id]  — update a warehouse location
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -30,7 +30,7 @@ export async function PATCH(
       ? warehouseData[0]?.user_id
       : warehouseData?.user_id
 
-    if (ownerId !== user.id) {
+    if (ownerId !== dataOwnerId) {
       return NextResponse.json({ error: 'Localização não encontrada' }, { status: 404 })
     }
 

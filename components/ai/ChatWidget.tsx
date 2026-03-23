@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Sparkles, X, Minus, ChevronUp, Send, ThumbsUp, ThumbsDown, Rocket } from 'lucide-react'
 import { usePathname } from 'next/navigation'
+import DOMPurify from 'dompurify'
 
 interface ChatMessage {
   id:        string
@@ -190,7 +191,7 @@ export function ChatWidget() {
                       ${msg.role === 'user'
                         ? 'bg-indigo-600 text-white rounded-br-sm'
                         : 'bg-gray-800 text-gray-100 rounded-bl-sm'}`}
-                    dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(msg.content)) }}
                   />
                 </div>
                 {/* Feedback após respostas do assistente */}

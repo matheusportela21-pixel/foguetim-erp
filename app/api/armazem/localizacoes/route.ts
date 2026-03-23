@@ -3,7 +3,7 @@
  * POST /api/armazem/localizacoes  — create a new location
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 function generateLabel(parts: {
@@ -23,8 +23,8 @@ function generateLabel(parts: {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     let warehouseQuery = db
       .from('warehouses')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
 
     if (warehouse_id) {
       warehouseQuery = warehouseQuery.eq('id', warehouse_id)
@@ -74,8 +74,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       .from('warehouses')
       .select('id')
       .eq('id', warehouse_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (whError) {

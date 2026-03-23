@@ -9,8 +9,7 @@
  * Entre chamadas, aguarda 1s para respeitar rate limit.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidShopeeToken } from '@/lib/shopee/auth'
 import { shopeePost } from '@/lib/shopee/client'
 import { SHOPEE_PATH_UNLIST_ITEM } from '@/lib/shopee/config'
@@ -24,17 +23,10 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
-  )
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
-  const tokenData = await getValidShopeeToken(user.id)
+  const tokenData = await getValidShopeeToken(dataOwnerId)
   if (!tokenData) return NextResponse.json({ error: 'Shopee não conectada' }, { status: 404 })
 
   const body = await req.json() as { item_ids?: number[]; action?: string }
@@ -70,6 +62,6 @@ export async function POST(req: NextRequest) {
     if (chunks.length > 1) await sleep(1100) // rate limit: 1 call/s
   }
 
-  console.log(`[Shopee] bulk-action action=${action} count=${item_ids.length} user=${user.id}`)
+  console.log(`[Shopee] bulk-action action=${action} count=${item_ids.length} user=${dataOwnerId}`)
   return NextResponse.json({ results, action, count: item_ids.length })
 }

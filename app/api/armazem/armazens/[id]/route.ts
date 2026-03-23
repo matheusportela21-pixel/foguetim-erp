@@ -2,15 +2,15 @@
  * PATCH /api/armazem/armazens/[id]  — update a warehouse
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -24,7 +24,7 @@ export async function PATCH(
     if (findError || !existing) {
       return NextResponse.json({ error: 'Armazém não encontrado' }, { status: 404 })
     }
-    if ((existing as Record<string, unknown>).user_id !== user.id) {
+    if ((existing as Record<string, unknown>).user_id !== dataOwnerId) {
       return NextResponse.json({ error: 'Armazém não encontrado' }, { status: 404 })
     }
 
@@ -45,7 +45,7 @@ export async function PATCH(
       const { error: clearError } = await db
         .from('warehouses')
         .update({ is_default: false })
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .neq('id', params.id)
 
       if (clearError) {

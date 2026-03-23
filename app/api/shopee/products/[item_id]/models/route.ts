@@ -6,8 +6,7 @@
  * Retorna tier_variation (opções como Cor, Tamanho) e model[] (combinações com preço/estoque).
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidShopeeToken } from '@/lib/shopee/auth'
 import { shopeeGet } from '@/lib/shopee/client'
 import { SHOPEE_PATH_GET_MODELS } from '@/lib/shopee/config'
@@ -16,17 +15,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { item_id: string } },
 ) {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
-  )
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
-  const tokenData = await getValidShopeeToken(user.id)
+  const tokenData = await getValidShopeeToken(dataOwnerId)
   if (!tokenData) return NextResponse.json({ error: 'Shopee não conectada' }, { status: 404 })
 
   const itemId = params.item_id

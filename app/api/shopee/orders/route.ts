@@ -13,8 +13,7 @@
  * Para 30 dias, fazemos 2 chamadas paralelas: [hoje-30d, hoje-15d] e [hoje-15d, hoje].
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidShopeeToken } from '@/lib/shopee/auth'
 import { shopeeGet } from '@/lib/shopee/client'
 import {
@@ -129,17 +128,10 @@ async function fetchOrderDetails(
 }
 
 export async function GET(req: NextRequest) {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
-  )
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
-  const tokenData = await getValidShopeeToken(user.id)
+  const tokenData = await getValidShopeeToken(dataOwnerId)
   if (!tokenData) return NextResponse.json({ error: 'Shopee não conectada' }, { status: 404 })
 
   const sp             = req.nextUrl.searchParams

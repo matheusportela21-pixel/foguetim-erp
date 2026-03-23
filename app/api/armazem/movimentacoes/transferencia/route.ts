@@ -3,7 +3,7 @@
  * Creates TWO stock movements atomically: transferencia_saida + transferencia_entrada
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 interface InventoryRecord {
@@ -14,8 +14,8 @@ interface InventoryRecord {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authError } = await resolveDataOwner()
+  if (authError) return authError
   const db = supabaseAdmin()
 
   try {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       .from('warehouses')
       .select('id')
       .eq('id', from_warehouse_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (fromWhError) {
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       .from('warehouses')
       .select('id')
       .eq('id', to_warehouse_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (toWhError) {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       .from('warehouse_products')
       .select('id')
       .eq('id', product_id)
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .maybeSingle()
 
     if (prodError) {
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
       quantity_before: sourceAvailable,
       quantity_change: saidaChange,
       quantity_after: newSourceAvailable,
-      created_by: user.id,
+      created_by: dataOwnerId,
       reference_type: 'transfer',
       reference_id: String(to_warehouse_id),
     }
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
       quantity_before: destAvailable,
       quantity_change: qty,
       quantity_after: newDestAvailable,
-      created_by: user.id,
+      created_by: dataOwnerId,
       reference_type: 'transfer',
       reference_id: String(from_warehouse_id),
     }
