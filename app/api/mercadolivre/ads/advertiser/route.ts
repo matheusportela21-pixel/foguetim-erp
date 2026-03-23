@@ -4,7 +4,7 @@
  * Detecta quando o token não tem escopo de publicidade (200 + empty body).
  */
 import { NextResponse }                      from 'next/server'
-import { getAuthUser }                       from '@/lib/server-auth'
+import { resolveDataOwner }                  from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
 export const dynamic = 'force-dynamic'
@@ -13,13 +13,13 @@ const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
 
 export async function GET() {
   try {
-    const user = await getAuthUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { dataOwnerId, error } = await resolveDataOwner()
+    if (error) return error
 
-    const conn = await getMLConnection(user.id)
+    const conn = await getMLConnection(dataOwnerId)
     if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
 
-    const token = await getValidToken(user.id)
+    const token = await getValidToken(dataOwnerId)
     if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
     const id = conn.ml_user_id

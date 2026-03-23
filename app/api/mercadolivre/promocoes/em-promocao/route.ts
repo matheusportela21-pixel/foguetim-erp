@@ -12,7 +12,7 @@
  *  5. Retorna lista unificada com breakdown financeiro
  */
 import { NextResponse }              from 'next/server'
-import { getAuthUser }               from '@/lib/server-auth'
+import { resolveDataOwner }          from '@/lib/auth/api-permissions'
 import { getMLConnection, mlFetch }  from '@/lib/mercadolivre'
 import { supabaseAdmin }             from '@/lib/supabase-admin'
 import { getCommissionForCategory }  from '@/lib/pricing/ml-tariffs'
@@ -72,10 +72,10 @@ export interface EmPromocaoResponse {
 }
 
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -83,7 +83,7 @@ export async function GET() {
   try {
     /* 1. Busca todas as promoções — 404 = vendedor sem promoções (lista vazia) */
     const promosData = await mlFetch<{ results?: MLPromotion[] }>(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/users/${conn.ml_user_id}/promotions?app_version=v2`,
     ).catch((e: unknown) => {
       const msg = e instanceof Error ? e.message : String(e)
@@ -100,7 +100,7 @@ export async function GET() {
     await Promise.all(promos.map(async promo => {
       try {
         const itemsData = await mlFetch<{ results?: MLPromotionItem[] }>(
-          user.id,
+          dataOwnerId,
           `/seller-promotions/promotions/${promo.id}/items?promotion_type=${promo.type}&app_version=v2`,
         )
         const items = itemsData.results ?? []
@@ -158,7 +158,7 @@ export async function GET() {
       const { data: listings } = await supabaseAdmin()
         .from('ml_listings')
         .select('item_id, title, thumbnail')
-        .eq('user_id', user.id)
+        .eq('user_id', dataOwnerId)
         .in('item_id', itemIds)
 
       if (listings && listings.length > 0) {

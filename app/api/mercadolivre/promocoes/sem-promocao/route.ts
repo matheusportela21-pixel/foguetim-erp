@@ -15,7 +15,7 @@
  *   q      busca por título
  */
 import { NextRequest, NextResponse }  from 'next/server'
-import { getAuthUser }                from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { getMLConnection, mlFetch }   from '@/lib/mercadolivre'
 import { supabaseAdmin }              from '@/lib/supabase-admin'
 
@@ -47,10 +47,10 @@ export interface SemPromocaoResponse {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
   try {
     /* 1. Busca item_ids que ESTÃO em promoções ativas/pendentes */
     const promosData = await mlFetch<{ results?: MLPromotion[] }>(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/users/${conn.ml_user_id}/promotions?app_version=v2`,
     ).catch(() => ({ results: [] as MLPromotion[] }))
 
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     await Promise.all(promoBatch.map(async promo => {
       try {
         const data = await mlFetch<{ results?: MLPromotionItem[] }>(
-          user.id,
+          dataOwnerId,
           `/seller-promotions/promotions/${promo.id}/items?promotion_type=${promo.type}&app_version=v2`,
         )
         for (const item of data.results ?? []) {
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     let query = supabaseAdmin()
       .from('ml_listings')
       .select('item_id, title, thumbnail, price, status')
-      .eq('user_id', user.id)
+      .eq('user_id', dataOwnerId)
       .eq('status', 'active')
       .order('price', { ascending: false })
       .range(offset, offset + limit + promoItemIds.size - 1)  // margem para filtrar

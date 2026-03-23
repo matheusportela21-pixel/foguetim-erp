@@ -10,7 +10,7 @@
  *   Body: { item_id, promotion_id, promotion_type }
  */
 import { NextRequest, NextResponse }  from 'next/server'
-import { getAuthUser }                from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { getMLConnection, mlFetch }   from '@/lib/mercadolivre'
 import { supabaseAdmin }              from '@/lib/supabase-admin'
 
@@ -29,10 +29,10 @@ interface RemoveItemBody {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -55,13 +55,13 @@ export async function POST(req: NextRequest) {
     if (top_deal_price) payload.top_deal_price = top_deal_price
 
     await mlFetch(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/items/${item_id}?app_version=v2`,
       { method: 'POST', body: JSON.stringify(payload) },
     )
 
     void supabaseAdmin().from('activity_logs').insert({
-      user_id:     user.id,
+      user_id:     dataOwnerId,
       action:      'ml.promocao.adicionar_item',
       category:    'integracao',
       description: `Item ${item_id} adicionado à promoção #${promotion_id} com preço R$ ${deal_price}`,
@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -98,13 +98,13 @@ export async function DELETE(req: NextRequest) {
 
   try {
     await mlFetch(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/items/${item_id}?promotion_type=${promotion_type}&promotion_id=${promotion_id}&app_version=v2`,
       { method: 'DELETE' },
     )
 
     void supabaseAdmin().from('activity_logs').insert({
-      user_id:     user.id,
+      user_id:     dataOwnerId,
       action:      'ml.promocao.remover_item',
       category:    'integracao',
       description: `Item ${item_id} removido da promoção #${promotion_id}`,

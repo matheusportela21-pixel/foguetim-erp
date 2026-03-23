@@ -7,7 +7,7 @@
  * Requisito: prazo máximo 14 dias entre start_date e finish_date.
  */
 import { NextRequest, NextResponse }  from 'next/server'
-import { getAuthUser }                from '@/lib/server-auth'
+import { resolveDataOwner }           from '@/lib/auth/api-permissions'
 import { getMLConnection, mlFetch }   from '@/lib/mercadolivre'
 import { supabaseAdmin }              from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitKey, rateLimitHeaders } from '@/lib/rate-limit'
@@ -24,11 +24,11 @@ interface MLCreateResponse {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   // Rate limit: 10 campanhas criadas por hora por usuário
-  const rl = await checkRateLimit(rateLimitKey(user.id, 'POST:/api/mercadolivre/promocoes/criar'), 10, 3_600_000)
+  const rl = await checkRateLimit(rateLimitKey(dataOwnerId, 'POST:/api/mercadolivre/promocoes/criar'), 10, 3_600_000)
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Muitas requisições. Tente novamente mais tarde.' },
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const data = await mlFetch<MLCreateResponse>(
-      user.id,
+      dataOwnerId,
       '/seller-promotions/promotions?app_version=v2',
       {
         method: 'POST',
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     )
 
     void supabaseAdmin().from('activity_logs').insert({
-      user_id:     user.id,
+      user_id:     dataOwnerId,
       action:      'ml.promocao.criar',
       category:    'integracao',
       description: `Campanha criada: "${name.trim()}" (${start_date.slice(0,10)} → ${finish_date.slice(0,10)})`,

@@ -8,7 +8,7 @@
  * Redireciona para a URL do DANFE (PDF hospedado no ML).
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 
 interface MLInvoiceResponse {
@@ -20,13 +20,13 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { shipment_id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) return NextResponse.json({ error: 'Conta ML não conectada' }, { status: 401 })
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const { shipment_id } = params

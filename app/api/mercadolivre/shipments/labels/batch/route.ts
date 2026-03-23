@@ -11,12 +11,12 @@
  * Para ZPL2 → retorna application/zip (ML empacota ZPL + PLP em ZIP)
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthUser } from '@/lib/server-auth'
+import { resolveDataOwner } from '@/lib/auth/api-permissions'
 import { getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
   const { searchParams } = new URL(req.url)
   const idsParam = searchParams.get('ids') ?? ''
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'ids inválidos' }, { status: 400 })
   }
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Conta ML não conectada' }, { status: 401 })
 
   const mlFormat  = format === 'zpl2' ? 'zpl2' : 'pdf'

@@ -3,7 +3,7 @@
  * Lista anúncios no Product Ads. advertiser_id = ml_user_id da conexão.
  */
 import { NextRequest, NextResponse }         from 'next/server'
-import { getAuthUser }                       from '@/lib/server-auth'
+import { resolveDataOwner }                  from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 
 const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
@@ -47,13 +47,13 @@ export async function GET(req: NextRequest) {
   const offset = Number(searchParams.get('offset') ?? '0')
 
   try {
-    const user = await getAuthUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { dataOwnerId, error } = await resolveDataOwner()
+    if (error) return error
 
-    const conn = await getMLConnection(user.id)
+    const conn = await getMLConnection(dataOwnerId)
     if (!conn?.connected) return NextResponse.json(EMPTY(limit, offset))
 
-    const token = await getValidToken(user.id)
+    const token = await getValidToken(dataOwnerId)
     if (!token) return NextResponse.json(EMPTY(limit, offset))
 
     const advertiserId = conn.ml_user_id

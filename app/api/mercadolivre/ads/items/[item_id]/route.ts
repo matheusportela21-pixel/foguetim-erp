@@ -5,7 +5,7 @@
  * advertiser_id = ml_user_id da conexão (resolvido no servidor)
  */
 import { NextRequest, NextResponse }         from 'next/server'
-import { getAuthUser }                       from '@/lib/server-auth'
+import { resolveDataOwner }                  from '@/lib/auth/api-permissions'
 import { getMLConnection, getValidToken }    from '@/lib/mercadolivre'
 import type { MlAdsItem }                   from '../route'
 
@@ -14,13 +14,13 @@ const ML_ADS = 'https://api.mercadolibre.com/advertising/MLB'
 type Params = { params: { item_id: string } }
 
 export async function GET(req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const adId = req.nextUrl.searchParams.get('ad_id') ?? params.item_id
@@ -40,13 +40,13 @@ export async function GET(req: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) return NextResponse.json({ error: 'ML não conectado' }, { status: 400 })
 
-  const token = await getValidToken(user.id)
+  const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   let body: { ad_id?: string | number; status: 'active' | 'paused' }

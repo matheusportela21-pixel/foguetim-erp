@@ -8,7 +8,7 @@
  *   DELETE /seller-promotions/promotions/{id}?promotion_type=...&app_version=v2
  */
 import { NextRequest, NextResponse }        from 'next/server'
-import { getAuthUser }                      from '@/lib/server-auth'
+import { resolveDataOwner }                 from '@/lib/auth/api-permissions'
 import { getMLConnection, mlFetch }         from '@/lib/mercadolivre'
 import { supabaseAdmin }                    from '@/lib/supabase-admin'
 
@@ -31,10 +31,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { promotion_id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -43,7 +43,7 @@ export async function GET(
 
   try {
     const data = await mlFetch<MLItemsResponse>(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/promotions/${params.promotion_id}/items?promotion_type=${promotionType}&app_version=v2`,
     )
     return NextResponse.json({ items: data.results ?? [], total: data.paging?.total ?? 0 })
@@ -58,10 +58,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { promotion_id: string } },
 ) {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error: authErr } = await resolveDataOwner()
+  if (authErr) return authErr
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
@@ -70,13 +70,13 @@ export async function DELETE(
 
   try {
     await mlFetch(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/promotions/${params.promotion_id}?promotion_type=${promotionType}&app_version=v2`,
       { method: 'DELETE' },
     )
 
     void supabaseAdmin().from('activity_logs').insert({
-      user_id:     user.id,
+      user_id:     dataOwnerId,
       action:      'ml.promocao.encerrar',
       category:    'integracao',
       description: `Promoção #${params.promotion_id} encerrada`,

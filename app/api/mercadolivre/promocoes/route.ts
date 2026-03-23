@@ -4,7 +4,7 @@
  * GET /seller-promotions/users/{ml_user_id}/promotions?app_version=v2
  */
 import { NextResponse }                    from 'next/server'
-import { getAuthUser }                     from '@/lib/server-auth'
+import { resolveDataOwner }                from '@/lib/auth/api-permissions'
 import { getMLConnection, mlFetch }        from '@/lib/mercadolivre'
 
 export interface MLPromotion {
@@ -38,17 +38,17 @@ interface MLPromotionsResponse {
 }
 
 export async function GET() {
-  const user = await getAuthUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { dataOwnerId, error } = await resolveDataOwner()
+  if (error) return error
 
-  const conn = await getMLConnection(user.id)
+  const conn = await getMLConnection(dataOwnerId)
   if (!conn?.connected) {
     return NextResponse.json({ error: 'Mercado Livre não conectado' }, { status: 400 })
   }
 
   try {
     const data = await mlFetch<MLPromotionsResponse>(
-      user.id,
+      dataOwnerId,
       `/seller-promotions/users/${conn.ml_user_id}/promotions?app_version=v2`,
     )
 
