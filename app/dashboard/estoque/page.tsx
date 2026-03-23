@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import ExportPDFButton from '@/components/ExportPDFButton'
+import { generateEstoquePDF } from '@/lib/reports/pdf-generator'
 import {
   AlertTriangle, Package, RefreshCw, Search, ExternalLink,
   CheckCircle2, Loader2, Link2, Archive,
@@ -207,6 +209,22 @@ export default function EstoquePage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
+          <ExportPDFButton onExport={() => generateEstoquePDF({
+            items: items.map(i => ({
+              title: i.title,
+              sku: i.seller_sku ?? i.item_id,
+              available_quantity: i.stock,
+              level: i.level,
+              listing_id: i.item_id,
+            })),
+            totals: {
+              total:   summary?.total   ?? items.length,
+              ruptura: summary?.ruptura ?? 0,
+              alerta:  summary?.alerta  ?? 0,
+              normal:  summary?.normal  ?? 0,
+              excesso: 0,
+            },
+          })} />
           <ExportCSVButton
             data={items as unknown as Record<string, unknown>[]}
             filename="estoque"

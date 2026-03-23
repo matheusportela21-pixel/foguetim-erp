@@ -11,6 +11,8 @@ import {
   ChevronDown, FileText, List, BarChart3, Info, RefreshCw, ExternalLink, Scale, ArrowRight,
 } from 'lucide-react'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import ExportPDFButton from '@/components/ExportPDFButton'
+import { generateFinanceiroPDF } from '@/lib/reports/pdf-generator'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -346,6 +348,26 @@ export default function FinanceiroPage() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+
+          {selectedKey && receitaBruta > 0 && (
+            <ExportPDFButton onExport={() => generateFinanceiroPDF({
+              period:          selectedKey,
+              receita_bruta:   receitaBruta,
+              taxas:           charges,
+              receita_liquida: liquido,
+              pedidos:         ordersData?.pedidos ?? 0,
+              ticket_medio:    ordersData?.ticket_medio ?? 0,
+              periods: [...periods].reverse().map(p => {
+                const sv = extractSummaryValues(p.summary ?? null)
+                return {
+                  label:           periodShort(p.key),
+                  receita_bruta:   sv.bonuses + sv.charges,
+                  taxas:           sv.charges,
+                  receita_liquida: sv.bonuses,
+                }
+              }),
+            })} />
+          )}
 
           {selectedPeriod?.status === 'open' && (
             <div className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full">

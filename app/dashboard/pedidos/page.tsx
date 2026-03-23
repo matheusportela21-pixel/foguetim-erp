@@ -14,6 +14,8 @@ import {
   type Pedido, type PedidoStatus, type MKTPedido,
 } from './_data'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import ExportPDFButton from '@/components/ExportPDFButton'
+import { generatePedidosPDF } from '@/lib/reports/pdf-generator'
 import Header from '@/components/Header'
 
 // ─── ML ORDER TYPES ──────────────────────────────────────────────────────────
@@ -155,6 +157,23 @@ function MLOrdersTab() {
             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-1 disabled:opacity-50">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          <ExportPDFButton onExport={() => generatePedidosPDF({
+            pedidos: orders.map(o => ({
+              id:          o.id,
+              date:        o.date_created,
+              buyer:       o.buyer.nickname ?? String(o.buyer.id),
+              items:       o.order_items.map(i => i.title).join(', '),
+              status:      STATUS_PT[o.status]?.label ?? o.status,
+              marketplace: 'Mercado Livre',
+              total:       o.total_amount,
+            })),
+            totals: {
+              count:        paging.total,
+              receita:      orders.reduce((s, o) => s + o.total_amount, 0),
+              ticket_medio: orders.length ? orders.reduce((s, o) => s + o.total_amount, 0) / orders.length : 0,
+            },
+            period: `Últimos ${days} dias`,
+          })} />
           <ExportCSVButton
             data={orders.map(o => ({
               id:        o.id,

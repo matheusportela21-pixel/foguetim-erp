@@ -11,6 +11,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import Link from 'next/link'
+import ExportPDFButton from '@/components/ExportPDFButton'
+import { generateDREPDF } from '@/lib/reports/pdf-generator'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface DREData {
@@ -191,6 +193,9 @@ export default function DREPage() {
             className="px-3 py-2 text-sm bg-[#111318] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none">
             {months.map((m, i) => <option key={m.start} value={i}>{m.label}</option>)}
           </select>
+          {dre && (
+            <ExportPDFButton onExport={() => generateDREPDF(dre)} />
+          )}
           <button onClick={() => loadDRE(true)} disabled={recalculating}
             className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg hover:text-slate-200 transition-all disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${recalculating ? 'animate-spin' : ''}`} />
