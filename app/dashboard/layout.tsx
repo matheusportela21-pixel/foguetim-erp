@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 import { PlanProvider } from '@/context/PlanContext'
 import { SidebarProvider } from '@/context/SidebarContext'
-import Sidebar from '@/components/Sidebar'
+import Topbar from '@/components/layout/Topbar'
 import DashboardPlanGate from '@/components/DashboardPlanGate'
 import DashboardMobileWarning from '@/components/DashboardMobileWarning'
 
@@ -22,22 +22,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ThemeProvider>
       <PlanProvider>
         <SidebarProvider>
-          <div className="flex flex-1 min-w-0 h-screen overflow-hidden">
+          <div className="min-h-screen bg-space-900">
             {/* Ambient background */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
               <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-[0.04]"
-                style={{ background: 'radial-gradient(circle, #6c3fa0, transparent)' }} />
-              <div className="absolute bottom-0 left-64 w-[400px] h-[400px] rounded-full blur-[100px] opacity-[0.03]"
-                style={{ background: 'radial-gradient(circle, #00c2ff, transparent)' }} />
+                style={{ background: 'radial-gradient(circle, #7C3AED, transparent)' }} />
+              <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full blur-[100px] opacity-[0.03]"
+                style={{ background: 'radial-gradient(circle, #F97316, transparent)' }} />
             </div>
 
-            <Sidebar />
+            <Topbar />
 
-            <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden relative z-10 bg-dark-900 dash-main">
-              <DashboardMobileWarning />
-              <DashboardPlanGate>
-                {children}
-              </DashboardPlanGate>
+            <main className="relative z-10 pt-16 min-h-screen">
+              <div className="max-w-[1440px] mx-auto px-4 md:px-6 py-6">
+                <DashboardMobileWarning />
+                <DashboardPlanGate>
+                  {children}
+                </DashboardPlanGate>
+              </div>
             </main>
           </div>
           <ChatWidget />
