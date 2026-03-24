@@ -12,6 +12,7 @@ import {
   ChevronDown, FileText, List, BarChart3, Info, RefreshCw, ExternalLink, Scale, ArrowRight,
 } from 'lucide-react'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import { FinancialNav } from '@/components/shared/FinancialNav'
 import ExportPDFButton from '@/components/ExportPDFButton'
 import { generateFinanceiroPDF } from '@/lib/reports/pdf-generator'
 
@@ -183,6 +184,19 @@ export default function FinanceiroPage() {
   const [connected,   setConnected]   = useState(true)
   const [periodOpen,  setPeriodOpen]  = useState(false)
 
+  // DRE dashboard data (fallback when billing is empty)
+  const [dreData, setDreData] = useState<{
+    current: { revenue: number; netProfit: number; netMarginPct: number; ticketMedio: number; ordersCount: number; grossProfit: number; grossMarginPct: number }
+    changes: { revenue: number | null; netProfit: number | null; ticketMedio: number | null; ordersCount: number | null }
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/financial/dashboard')
+      .then(r => r.json())
+      .then(d => { if (!d.error) setDreData(d) })
+      .catch(() => {})
+  }, [])
+
   // ── 1. Carrega períodos + histórico ──────────────────────────────────────
   const loadPeriods = useCallback(async () => {
     setPeriodsLoading(true)
@@ -256,7 +270,7 @@ export default function FinanceiroPage() {
   // ── Not connected ────────────────────────────────────────────────────────
   if (!periodsLoading && !connected) {
     return (
-      <div className="flex-1 overflow-y-auto">
+      <div className="">
         <PageHeader title="Painel Financeiro" description="Faturamento e pagamentos do Mercado Livre" />
         <div className="flex flex-col items-center justify-center gap-4 mt-20 px-6">
           <div className="w-14 h-14 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
@@ -278,10 +292,11 @@ export default function FinanceiroPage() {
   const loading = detailLoading || periodsLoading
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <PageHeader title="Painel Financeiro" description="Faturamento e pagamentos do Mercado Livre" />
+    <div className="">
+      <PageHeader title="Painel Financeiro" description="Faturamento, custos e resultados" />
+      <FinancialNav />
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
 
         {/* ── DRE Link ────────────────────────────────────────────────────── */}
         <Link href="/dashboard/financeiro/dre"
@@ -378,12 +393,43 @@ export default function FinanceiroPage() {
           )}
         </div>
 
-        {/* ── KPI Cards ───────────────────────────────────────────────────── */}
+        {/* ── DRE-Powered KPIs (always visible with real data) ────────────── */}
+        {dreData?.current && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <KpiCard
+              title="Faturamento Mês"
+              value={fmtBRL(dreData.current.revenue)}
+              sub={dreData.current.ordersCount > 0 ? `${dreData.current.ordersCount} pedidos` : 'ML + Magalu'}
+              icon={DollarSign} colorKey="blue"
+            />
+            <KpiCard
+              title="Lucro Bruto"
+              value={fmtBRL(dreData.current.grossProfit)}
+              sub={`Margem: ${dreData.current.grossMarginPct.toFixed(1)}%`}
+              icon={TrendingUp} colorKey="green"
+            />
+            <KpiCard
+              title="Ticket Médio"
+              value={dreData.current.ticketMedio > 0 ? fmtBRL(dreData.current.ticketMedio) : '—'}
+              sub="por pedido"
+              icon={BarChart3} colorKey="purple"
+            />
+            <KpiCard
+              title="Lucro Líquido"
+              value={fmtBRL(dreData.current.netProfit)}
+              sub={`Margem: ${dreData.current.netMarginPct.toFixed(1)}%`}
+              icon={TrendingUp} colorKey={dreData.current.netProfit >= 0 ? 'green' : 'red'}
+            />
+          </div>
+        )}
+
+        {/* ── ML Billing KPIs (when ML billing data available) ──────────── */}
+        {(receitaBruta > 0 || loading) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
-            title="Receita Bruta"
+            title="Receita Bruta ML"
             value={fmtBRL(receitaBruta)}
-            sub={ordersData?.pedidos ? `${ordersData.pedidos} pedidos` : undefined}
+            sub={ordersData?.pedidos ? `${ordersData.pedidos} pedidos ML` : undefined}
             icon={DollarSign} colorKey="blue" loading={loading}
           />
           <KpiCard
@@ -405,6 +451,7 @@ export default function FinanceiroPage() {
             icon={TrendingUp} colorKey="green" loading={loading}
           />
         </div>
+        )}
 
         {/* ── Conciliação shortcut ────────────────────────────────────────── */}
         <Link

@@ -6,6 +6,7 @@ import {
   TrendingUp, ToggleLeft, ToggleRight, FileText, Activity,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { FinancialNav } from '@/components/shared/FinancialNav'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 type Recurrence = 'monthly' | 'annual' | 'biweekly' | 'weekly' | 'one_time'
@@ -261,6 +262,7 @@ export default function CustosPage() {
   return (
     <div>
       <PageHeader title="Custos da Empresa" description="Controle de custos fixos e variáveis" />
+      <FinancialNav />
 
       {/* Toast */}
       {toast && (
