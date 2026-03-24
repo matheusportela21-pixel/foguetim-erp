@@ -3,24 +3,23 @@
  * Cliente HTTP para a API Magalu (Open API).
  * Mais simples que Shopee — sem HMAC, usa Bearer token + headers.
  */
-import { getMagaluBaseUrl, MAGALU_SANDBOX_CHANNEL_ID } from './config'
+import { getMagaluBaseUrl, MAGALU_SANDBOX_CHANNEL_ID, isMagaluProd } from './config'
 
 /** Headers padrão para chamadas Magalu */
 function magaluHeaders(accessToken: string, sellerId?: string, channelId?: string): Record<string, string> {
   const headers: Record<string, string> = {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type':  'application/json',
+    'Accept':        'application/json',
   }
 
-  // Channel ID: usa sandbox se não especificado e env=sandbox
-  const ch = channelId ?? (
-    (process.env.MAGALU_ENV ?? 'sandbox') !== 'prod'
-      ? MAGALU_SANDBOX_CHANNEL_ID
-      : undefined
-  )
-  if (ch) headers['X-Channel-Id'] = ch
+  // Channel ID: só usa em sandbox
+  if (!isMagaluProd()) {
+    const ch = channelId ?? MAGALU_SANDBOX_CHANNEL_ID
+    if (ch) headers['X-Channel-Id'] = ch
+  }
 
-  // Tenant ID: seller_id
+  // Tenant ID: seller_id (obrigatório em produção para selecionar tenant)
   if (sellerId) headers['X-Tenant-Id'] = sellerId
 
   return headers
@@ -62,6 +61,7 @@ export async function magaluGet<T = unknown>(
 
   if (!res.ok) {
     const text = await res.text()
+    console.error(`[Magalu API] GET ${path} ERRO ${res.status}:`, text.substring(0, 500))
     throw new Error(`[Magalu] GET ${path} falhou (${res.status}): ${text}`)
   }
 

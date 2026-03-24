@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
 import {
-  ShoppingBag, Search, RefreshCw, Loader2, AlertTriangle,
-  ChevronLeft, ChevronRight, X, Package, Truck,
+  ShoppingBag, Search, RefreshCw, Loader2,
+  ChevronLeft, ChevronRight, X, Package,
 } from 'lucide-react'
 
 interface MagaluOrder {
@@ -12,20 +12,23 @@ interface MagaluOrder {
   id?:            string
   created_at?:    string
   status?:        string
-  total_amount?:  number
-  buyer_name?:    string
-  buyer_email?:   string
-  items?:         { title?: string; quantity?: number; price?: number }[]
+  total_amount?:  number | null
+  buyer_name?:    string | null
+  buyer_email?:   string | null
+  items?:         { title?: string; quantity?: number; price?: number | null; sku_id?: string | null }[]
   [key: string]:  unknown
 }
 
 const STATUS_BADGE: Record<string, string> = {
   new:        'bg-blue-500/10 text-blue-400',
   approved:   'bg-green-500/10 text-green-400',
+  processing: 'bg-cyan-500/10 text-cyan-400',
   shipped:    'bg-cyan-500/10 text-cyan-400',
   delivered:  'bg-emerald-500/10 text-emerald-400',
   cancelled:  'bg-red-500/10 text-red-400',
   returned:   'bg-orange-500/10 text-orange-400',
+  invoiced:   'bg-green-500/10 text-green-400',
+  paid:       'bg-green-500/10 text-green-400',
 }
 
 function fmtDate(iso?: string) {
@@ -34,26 +37,30 @@ function fmtDate(iso?: string) {
 }
 
 export default function MagaluPedidosPage() {
-  const [orders, setOrders]   = useState<MagaluOrder[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
-  const [offset, setOffset]   = useState(0)
-  const [total, setTotal]     = useState(0)
+  const [orders, setOrders]     = useState<MagaluOrder[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState<string | null>(null)
+  const [search, setSearch]     = useState('')
+  const [offset, setOffset]     = useState(0)
+  const [total, setTotal]       = useState(0)
   const [selected, setSelected] = useState<MagaluOrder | null>(null)
   const LIMIT = 50
 
   const loadOrders = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({ offset: String(offset), limit: String(LIMIT) })
       const res = await fetch(`/api/magalu/orders?${params}`)
       if (res.ok) {
         const data = await res.json()
-        const items = Array.isArray(data) ? data : data?.items ?? data?.results ?? []
-        setOrders(items)
-        setTotal(data?.meta?.total ?? data?.total ?? items.length)
+        setOrders(data.items ?? [])
+        setTotal(data.total ?? 0)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setError(err.error ?? `Erro ${res.status}`)
       }
-    } catch { /* silencia */ }
+    } catch { setError('Erro ao carregar pedidos') }
     finally { setLoading(false) }
   }, [offset])
 
@@ -70,11 +77,12 @@ export default function MagaluPedidosPage() {
     <div className="space-y-6">
       <Header title="Pedidos Magalu" subtitle="Pedidos recebidos no Magazine Luiza" />
 
-      {/* Sandbox banner */}
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-xs">
-        <AlertTriangle className="w-4 h-4 shrink-0" />
-        Ambiente sandbox — dados de teste.
-      </div>
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs">
+          <span>⚠️</span> {error}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3">
@@ -107,7 +115,9 @@ export default function MagaluPedidosPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-12 text-center">
                 <ShoppingBag className="w-8 h-8 text-slate-700 mx-auto mb-3" />
-                <p className="text-sm text-slate-600">Nenhum pedido encontrado</p>
+                <p className="text-sm text-slate-600">
+                  {error ? 'Erro ao carregar pedidos' : 'Nenhum pedido encontrado'}
+                </p>
               </td></tr>
             ) : filtered.map((o, i) => (
               <tr key={o.order_id ?? o.id ?? i} className="hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setSelected(o)}>

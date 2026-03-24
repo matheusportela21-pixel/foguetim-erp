@@ -11,11 +11,11 @@
  *   MAGALU_ENV             — 'sandbox' | 'prod' (padrão: sandbox)
  */
 
-/** Base URL de acordo com o ambiente */
+/** Base URL de acordo com o ambiente (default: prod) */
 export function getMagaluBaseUrl(): string {
-  return (process.env.MAGALU_ENV ?? 'sandbox') === 'prod'
-    ? 'https://api.magalu.com'
-    : 'https://api-sandbox.magalu.com'
+  return (process.env.MAGALU_ENV ?? 'prod') === 'sandbox'
+    ? 'https://api-sandbox.magalu.com'
+    : 'https://api.magalu.com'
 }
 
 /** URL do OAuth token endpoint (sempre produção — ID Magalu) */
@@ -41,7 +41,12 @@ export const MAGALU_PATH_SANDBOX_ONBOARDING = '/v1/samples/onboarding'
 
 /** Retorna 'sandbox' ou 'prod' para UI */
 export function getMagaluEnvLabel(): 'sandbox' | 'prod' {
-  return (process.env.MAGALU_ENV ?? 'sandbox') === 'prod' ? 'prod' : 'sandbox'
+  return (process.env.MAGALU_ENV ?? 'prod') === 'sandbox' ? 'sandbox' : 'prod'
+}
+
+/** Retorna true se ambiente é produção */
+export function isMagaluProd(): boolean {
+  return getMagaluEnvLabel() === 'prod'
 }
 
 /** Retorna as variáveis de ambiente Magalu, lançando erro se ausentes */

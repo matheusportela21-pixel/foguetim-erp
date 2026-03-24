@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import {
   ShoppingBag, Package, TrendingUp, AlertCircle,
-  RefreshCw, ExternalLink, Loader2, AlertTriangle,
+  RefreshCw, ExternalLink, Loader2, CheckCircle2,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -14,17 +14,31 @@ interface MagaluStatus {
   seller_name?: string | null
 }
 
-const isSandbox = () => typeof window !== 'undefined'
+interface KPIs {
+  totalProducts: number
+  totalOrders:   number
+}
 
 export default function MagaluOverviewPage() {
   const [status,  setStatus]  = useState<MagaluStatus | null>(null)
+  const [kpis,    setKpis]    = useState<KPIs>({ totalProducts: 0, totalOrders: 0 })
   const [loading, setLoading] = useState(true)
 
   async function loadData() {
     setLoading(true)
     try {
-      const res = await fetch('/api/magalu/status')
-      if (res.ok) setStatus(await res.json())
+      const [statusRes, prodsRes, ordersRes] = await Promise.all([
+        fetch('/api/magalu/status').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/magalu/products?offset=0&limit=1').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/magalu/orders?offset=0&limit=1').then(r => r.ok ? r.json() : null).catch(() => null),
+      ])
+
+      if (statusRes) setStatus(statusRes)
+
+      setKpis({
+        totalProducts: prodsRes?.total ?? 0,
+        totalOrders:   ordersRes?.total ?? 0,
+      })
     } catch { /* silencia */ }
     finally { setLoading(false) }
   }
@@ -34,12 +48,6 @@ export default function MagaluOverviewPage() {
   return (
     <div className="space-y-6">
       <Header title="Magalu" subtitle="Visão geral da sua loja no Magazine Luiza" />
-
-      {/* Sandbox banner */}
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-xs">
-        <AlertTriangle className="w-4 h-4 shrink-0" />
-        Ambiente sandbox — dados de teste. Para produção, configure MAGALU_ENV=prod.
-      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -68,7 +76,9 @@ export default function MagaluOverviewPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs px-2.5 py-1 bg-green-500/10 text-green-400 rounded-full font-medium">Conectado</span>
+                <span className="text-xs px-2.5 py-1 bg-green-500/10 text-green-400 rounded-full font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Conectado
+                </span>
                 <button onClick={loadData} className="p-2 text-slate-500 hover:text-slate-200 transition-colors">
                   <RefreshCw className="w-4 h-4" />
                 </button>
@@ -79,9 +89,9 @@ export default function MagaluOverviewPage() {
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { icon: Package, label: 'Produtos', value: '—', color: 'text-[#0086ff]', bg: 'bg-[#0086ff]/10', href: '/dashboard/magalu/produtos' },
-              { icon: ShoppingBag, label: 'Pedidos', value: '—', color: 'text-[#0086ff]', bg: 'bg-[#0086ff]/10', href: '/dashboard/magalu/pedidos' },
-              { icon: TrendingUp, label: 'Status', value: 'Sandbox', color: 'text-amber-400', bg: 'bg-amber-500/10', href: '#' },
+              { icon: Package, label: 'Produtos', value: String(kpis.totalProducts), color: 'text-[#0086ff]', bg: 'bg-[#0086ff]/10', href: '/dashboard/magalu/produtos' },
+              { icon: ShoppingBag, label: 'Pedidos', value: String(kpis.totalOrders), color: 'text-[#0086ff]', bg: 'bg-[#0086ff]/10', href: '/dashboard/magalu/pedidos' },
+              { icon: TrendingUp, label: 'Status', value: 'Produção', color: 'text-green-400', bg: 'bg-green-500/10', href: '#' },
             ].map(k => (
               <Link key={k.label} href={k.href} className="glass-card p-4 hover:bg-white/[0.04] transition-all group">
                 <div className="flex items-center gap-3">

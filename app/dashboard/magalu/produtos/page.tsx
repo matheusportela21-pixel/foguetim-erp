@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
 import {
-  Package, Search, RefreshCw, Loader2, AlertTriangle,
+  Package, Search, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, X, DollarSign, Box,
 } from 'lucide-react'
 
@@ -11,24 +11,28 @@ interface MagaluSku {
   sku_id?:      string
   title?:       string
   status?:      string
-  price?:       number
-  stock?:       number
-  image_url?:   string
-  brand?:       string
-  category?:    string
+  price?:       number | null
+  stock?:       number | null
+  image_url?:   string | null
+  brand?:       string | null
+  category?:    string | null
   [key: string]: unknown
 }
 
 const STATUS_BADGE: Record<string, string> = {
   active:   'bg-green-500/10 text-green-400',
+  enabled:  'bg-green-500/10 text-green-400',
   inactive: 'bg-slate-500/10 text-slate-400',
+  disabled: 'bg-slate-500/10 text-slate-400',
   blocked:  'bg-red-500/10 text-red-400',
   pending:  'bg-amber-500/10 text-amber-400',
+  selling:  'bg-green-500/10 text-green-400',
 }
 
 export default function MagaluProdutosPage() {
   const [products, setProducts] = useState<MagaluSku[]>([])
   const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState<string | null>(null)
   const [search, setSearch]     = useState('')
   const [offset, setOffset]     = useState(0)
   const [total, setTotal]       = useState(0)
@@ -37,16 +41,19 @@ export default function MagaluProdutosPage() {
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({ offset: String(offset), limit: String(LIMIT) })
       const res = await fetch(`/api/magalu/products?${params}`)
       if (res.ok) {
         const data = await res.json()
-        const items = Array.isArray(data) ? data : data?.items ?? data?.results ?? []
-        setProducts(items)
-        setTotal(data?.meta?.total ?? data?.total ?? items.length)
+        setProducts(data.items ?? [])
+        setTotal(data.total ?? 0)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setError(err.error ?? `Erro ${res.status}`)
       }
-    } catch { /* silencia */ }
+    } catch { setError('Erro ao carregar produtos') }
     finally { setLoading(false) }
   }, [offset])
 
@@ -58,23 +65,18 @@ export default function MagaluProdutosPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
   const page = Math.floor(offset / LIMIT) + 1
+  const activeCount = products.filter(p => ['active', 'enabled', 'selling'].includes(p.status ?? '')).length
 
   return (
     <div className="space-y-6">
       <Header title="Produtos Magalu" subtitle="SKUs cadastrados no Magazine Luiza" />
 
-      {/* Sandbox banner */}
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-xs">
-        <AlertTriangle className="w-4 h-4 shrink-0" />
-        Ambiente sandbox — dados de teste.
-      </div>
-
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Total', value: total, color: 'text-[#0086ff]' },
-          { label: 'Ativos', value: products.filter(p => p.status === 'active').length, color: 'text-green-400' },
-          { label: 'Inativos', value: products.filter(p => p.status !== 'active').length, color: 'text-slate-400' },
+          { label: 'Ativos', value: activeCount, color: 'text-green-400' },
+          { label: 'Inativos', value: products.length - activeCount, color: 'text-slate-400' },
         ].map(k => (
           <div key={k.label} className="glass-card px-4 py-3">
             <p className="text-[11px] text-slate-500">{k.label}</p>
@@ -82,6 +84,13 @@ export default function MagaluProdutosPage() {
           </div>
         ))}
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs">
+          <span>⚠️</span> {error}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3">
@@ -114,7 +123,9 @@ export default function MagaluProdutosPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-12 text-center">
                 <Package className="w-8 h-8 text-slate-700 mx-auto mb-3" />
-                <p className="text-sm text-slate-600">Nenhum produto encontrado</p>
+                <p className="text-sm text-slate-600">
+                  {error ? 'Erro ao carregar produtos' : 'Nenhum produto encontrado'}
+                </p>
               </td></tr>
             ) : filtered.map((p, i) => (
               <tr key={p.sku_id ?? i} className="hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setSelected(p)}>
