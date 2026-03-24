@@ -1,7 +1,6 @@
 /**
  * GET /api/magalu/callback
- * OAuth callback do Magalu. O seller autoriza via Portal Magalu,
- * que redireciona pra cá com code, state (CNPJ), email e seller_id.
+ * OAuth callback do Magalu. O ID Magalu redireciona pra cá com code e state.
  *
  * O code expira em 10 minutos — trocar imediatamente!
  */
@@ -13,11 +12,9 @@ import { createNotification } from '@/lib/notify'
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
-  const code     = searchParams.get('code')
-  const cnpj     = searchParams.get('state')    // state = CNPJ do seller
-  const email    = searchParams.get('email')
-  const sellerId = searchParams.get('seller_id')
-  const error    = searchParams.get('error')
+  const code  = searchParams.get('code')
+  const state = searchParams.get('state')
+  const error = searchParams.get('error')
 
   const redirect = (path: string) => NextResponse.redirect(`${origin}${path}`)
 
@@ -45,30 +42,43 @@ export async function GET(req: NextRequest) {
     return redirect('/login?redirect=/dashboard/integracoes')
   }
 
-  console.log('[Magalu callback] user:', user.id, 'seller_id:', sellerId, 'cnpj:', cnpj, 'email:', email)
+  // Validar CSRF state
+  const savedState = cookieStore.get('magalu_oauth_state')?.value
+  if (savedState && state && savedState !== state) {
+    console.error('[Magalu callback] CSRF state mismatch')
+    return redirect('/dashboard/integracoes?magalu_error=csrf_mismatch')
+  }
+
+  console.log('[Magalu callback] user:', user.id, 'state:', state?.substring(0, 8) + '...')
 
   try {
     // 1. Trocar code por tokens (expira em 10 min!)
     const tokens = await magaluExchangeCode(code)
     console.log('[Magalu callback] token exchange OK — expires_in:', tokens.expires_in)
 
-    // 2. Salvar no banco
-    const sid   = sellerId ?? 'unknown'
-    const alias = email ?? `Seller ${sid}`
-    await saveMagaluConnection(user.id, tokens, sid, alias)
+    // 2. Extrair seller_id do scope ou usar um placeholder
+    // O ID Magalu retorna o tenant/seller info nos tokens
+    // Por enquanto usar um ID baseado no user até conseguirmos extrair do token
+    const sellerId = tokens.scope?.match(/tenant:(\S+)/)?.[1] ?? `magalu_${user.id.substring(0, 8)}`
+    const alias    = `Seller Magalu`
+
+    await saveMagaluConnection(user.id, tokens, sellerId, alias)
     console.log('[Magalu callback] saveMagaluConnection OK')
 
     // 3. Notificação de sucesso
     await createNotification({
       userId:    user.id,
       title:     'Magalu conectado!',
-      message:   `Sua conta Magalu (${alias}) foi conectada com sucesso ao Foguetim ERP.`,
+      message:   `Sua conta Magalu foi conectada com sucesso ao Foguetim ERP.`,
       type:      'success',
       category:  'integration',
       actionUrl: '/dashboard/integracoes',
     })
 
-    return redirect(`/dashboard/integracoes?magalu_connected=true`)
+    // Limpar cookie CSRF
+    const res = redirect('/dashboard/integracoes?magalu_connected=true')
+    res.cookies.delete('magalu_oauth_state')
+    return res
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[Magalu callback] ERRO:', message)

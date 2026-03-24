@@ -379,6 +379,16 @@ interface ShopeeConnectionInfo {
   connected:     boolean
 }
 
+interface MagaluConnectionInfo {
+  id:            string
+  seller_id:     string
+  seller_name:   string
+  account_label: string | null
+  is_primary:    boolean
+  expires_at:    string
+  connected:     boolean
+}
+
 interface MLStatus {
   connected:   boolean
   nickname?:   string
@@ -413,8 +423,9 @@ function IntegracoesContent() {
   const [shopeeDisconnecting, setShopeeDisconnecting] = useState<string | null>(null)
 
   // Magalu state
-  const [magaluConnected, setMagaluConnected] = useState(false)
-  const [magaluLoading, setMagaluLoading]     = useState(true)
+  const [magaluConnections, setMagaluConnections] = useState<MagaluConnectionInfo[]>([])
+  const [magaluLoading, setMagaluLoading]         = useState(true)
+  const [magaluDisconnecting, setMagaluDisconnecting] = useState<string | null>(null)
 
   // Handle ?connected=true or ?ml_error=... from OAuth redirect
   useEffect(() => {
@@ -494,8 +505,8 @@ function IntegracoesContent() {
   useEffect(() => {
     fetch('/api/magalu/status')
       .then(r => r.json())
-      .then((data: { connected: boolean }) => {
-        setMagaluConnected(data.connected)
+      .then((data: { connected: boolean; connections?: MagaluConnectionInfo[] }) => {
+        setMagaluConnections(data.connections ?? [])
         if (data.connected) {
           setMks(prev => prev.map(m =>
             m.id === 'magalu' ? { ...m, connected: true, apiStatus: 'conectado' } : m
@@ -522,6 +533,26 @@ function IntegracoesContent() {
       setToast({ type: 'error', msg: 'Erro ao desconectar loja Shopee.' })
     } finally {
       setShopeeDisconnecting(null)
+    }
+  }
+
+  async function disconnectMagaluAccount(connectionId: string) {
+    setMagaluDisconnecting(connectionId)
+    try {
+      await fetch(`/api/magalu/connections?id=${connectionId}`, { method: 'DELETE' })
+      const remaining = magaluConnections.filter(c => c.id !== connectionId)
+      setMagaluConnections(remaining)
+      if (remaining.length === 0) {
+        setMks(prev => prev.map(m =>
+          m.id === 'magalu' ? { ...m, connected: false, apiStatus: 'nao_configurado' } : m
+        ))
+      }
+      clearMarketplaceCache()
+      setToast({ type: 'success', msg: 'Conta Magalu desconectada com sucesso.' })
+    } catch {
+      setToast({ type: 'error', msg: 'Erro ao desconectar conta Magalu.' })
+    } finally {
+      setMagaluDisconnecting(null)
     }
   }
 
@@ -575,7 +606,7 @@ function IntegracoesContent() {
     setFts(prev => prev.map(f => f.name === name ? { ...f, connected: !f.connected } : f))
   }
 
-  const connectedCount = mks.filter(m => m.connected).length + (shopeeConnections.length > 0 ? 1 : 0)
+  const connectedCount = mks.filter(m => m.connected).length + (shopeeConnections.length > 0 ? 1 : 0) + (magaluConnections.length > 0 ? 1 : 0)
 
   return (
     <div>
@@ -820,6 +851,101 @@ function IntegracoesContent() {
             </div>
           </div>
 
+          {/* Magalu — active integration */}
+          <div className="mb-4">
+            <div className="dash-card rounded-2xl border border-blue-500/30 bg-blue-500/5 overflow-hidden">
+              <div className="p-4">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center text-xl shrink-0">🔷</div>
+                    <div>
+                      <p className="font-bold text-white text-sm">Magalu</p>
+                      {magaluLoading ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Loader2 className="w-3 h-3 text-slate-600 animate-spin" />
+                          <span className="text-[10px] text-slate-600">Verificando...</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">
+                          {magaluConnections.length === 0
+                            ? 'Não conectado'
+                            : `${magaluConnections.length} conta${magaluConnections.length > 1 ? 's' : ''} conectada${magaluConnections.length > 1 ? 's' : ''}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {magaluConnections.length > 0 && (
+                      <button
+                        onClick={() => { setSyncing('magalu'); fetch('/api/magalu/refresh', { method: 'POST' }).finally(() => setSyncing(null)) }}
+                        title="Sincronizar agora"
+                        className={`p-1.5 rounded-lg border border-white/[0.06] text-slate-500 hover:text-slate-200 transition-all ${syncing === 'magalu' ? 'animate-spin text-blue-400' : ''}`}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <a
+                      href="/api/magalu/auth"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all"
+                    >
+                      <Plus className="w-3 h-3" />
+                      {magaluConnections.length === 0 ? 'Conectar' : 'Adicionar conta'}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Connected accounts list */}
+                {!magaluLoading && magaluConnections.length > 0 && (
+                  <div className="space-y-2">
+                    {magaluConnections.map(conn => (
+                      <div key={conn.id}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
+                          conn.is_primary
+                            ? 'border-blue-500/30 bg-blue-500/5'
+                            : 'border-white/[0.04] bg-white/[0.02]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                            <span className="text-sm">🔷</span>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-xs font-bold text-white truncate">
+                                {conn.account_label ?? conn.seller_name}
+                              </p>
+                              {conn.is_primary && (
+                                <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-900/40 text-blue-400">
+                                  <Star className="w-2.5 h-2.5" /> Principal
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-600 font-mono">Seller: {conn.seller_id}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => disconnectMagaluAccount(conn.id)}
+                            disabled={magaluDisconnecting === conn.id}
+                            title="Desconectar esta conta"
+                            className="p-1.5 text-slate-600 hover:text-red-400 disabled:opacity-50 transition-colors rounded-lg hover:bg-red-500/10"
+                          >
+                            {magaluDisconnecting === conn.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Coming soon marketplaces */}
           <div>
             <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -828,7 +954,6 @@ function IntegracoesContent() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {[
-                { id: 'magalu', name: 'Magalu',      color: 'border-blue-500/20 bg-blue-500/5',    dot: 'bg-blue-400',   desc: 'Pedidos e catálogo Magazine Luiza'  },
                 { id: 'tiktok', name: 'TikTok Shop', color: 'border-slate-500/20 bg-slate-500/5',  dot: 'bg-slate-400',  desc: 'Social commerce TikTok'             },
                 { id: 'ame',    name: 'Americanas',  color: 'border-red-500/20 bg-red-500/5',      dot: 'bg-red-400',    desc: 'Marketplace Americanas/B2W'         },
                 { id: 'cb',     name: 'Casas Bahia', color: 'border-green-500/20 bg-green-500/5',  dot: 'bg-green-400',  desc: 'Via Varejo e Casas Bahia'           },
