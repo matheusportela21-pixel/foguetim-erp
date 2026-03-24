@@ -110,20 +110,72 @@ h1, h2, h3 { font-family: 'Space Grotesk', 'Sora', sans-serif; }
 .badge-new   { background: #f0fbff; color: #0077a3; border: 1px solid #a8ecff; }
 
 /* ─── Dashboard Components ────────────────────────────────────────────────── */
-.dash-bg { background: #0f1117; color: #f1f5f9; }
+.dash-bg { background: #0F0B1E; color: #f1f5f9; }
 
 .dash-card {
-  background: #1c2233;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: #1A1530;
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
-.dash-card:hover { border-color: rgba(0,194,255,0.15); }
+.dash-card:hover { border-color: rgba(124,58,237,0.2); }
 
 .dash-surface {
-  background: #161b27;
+  background: #0F0B1E;
   border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ─── Glass morphism card (new design system) ──────────────────────────── */
+.glass-card {
+  background: rgba(26, 21, 48, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ─── Star background ───────────────────────────────────────────────────── */
+.stars-bg {
+  position: relative;
+}
+.stars-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 40%, rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 38% 8%,  rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 52% 60%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 65% 25%, rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 74% 80%, rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 50%, rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 12%, rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 18% 72%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 44% 88%, rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 58% 42%, rgba(255,255,255,0.40) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 78% 35%, rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 6%  90%, rgba(255,255,255,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 55%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(2px 2px at 95% 70%, rgba(167,139,250,0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 20% 20%, rgba(167,139,250,0.3) 0%, transparent 100%);
+}
+
+/* ─── Gradient text utilities ───────────────────────────────────────────── */
+.text-gradient-violet {
+  background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 60%, #5B21B6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-brand {
+  background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 40%, #F97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Canonical input class — use this for new code */

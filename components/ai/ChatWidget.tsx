@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Sparkles, X, Minus, ChevronUp, Send, ThumbsUp, ThumbsDown, Rocket } from 'lucide-react'
+import Image from 'next/image'
+import { X, Minus, ChevronUp, Send, ThumbsUp, ThumbsDown, Rocket, Sparkles } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import DOMPurify from 'dompurify'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ChatMessage {
   id:        string
@@ -23,22 +25,42 @@ const QUICK_SUGGESTIONS = [
 
 function renderMarkdown(content: string): string {
   return content
-    // Bold
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Italic
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Links markdown [text](url)
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-400 underline">$1</a>')
-    // Internal links /dashboard/xxx → link
-    .replace(/\[([^\]]+)\]\((\/[^\)]+)\)/g, '<a href="$2" class="text-indigo-400 underline">$1</a>')
-    // Numbered lists: lines starting with "1." "2." etc
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-violet-400 underline">$1</a>')
+    .replace(/\[([^\]]+)\]\((\/[^\)]+)\)/g, '<a href="$2" class="text-violet-400 underline">$1</a>')
     .replace(/^(\d+)\.\s+(.+)$/gm, '<li class="ml-3">$2</li>')
-    // Bullet lists: lines starting with "- " or "• "
     .replace(/^[-•]\s+(.+)$/gm, '<li class="ml-3 list-disc">$1</li>')
-    // Wrap consecutive <li> in <ul>
     .replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/gm, (match) => `<ul class="space-y-0.5 my-1">${match}</ul>`)
-    // Line breaks
     .replace(/\n/g, '<br/>')
+}
+
+/* ── Timm Avatar ─────────────────────────────────────────────────── */
+function TimmAvatar({ size = 'sm' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const [imgErr, setImgErr] = useState(false)
+  const dim = size === 'lg' ? 48 : size === 'md' ? 36 : 24
+
+  if (!imgErr) {
+    return (
+      <Image
+        src="/mascot/timm-standing.png"
+        alt="Timm"
+        width={dim}
+        height={dim}
+        className="object-contain drop-shadow-lg"
+        onError={() => setImgErr(true)}
+      />
+    )
+  }
+  // Fallback rocket icon
+  return (
+    <div
+      className={`rounded-full bg-primary-500/20 border border-primary-500/30 flex items-center justify-center shrink-0`}
+      style={{ width: dim, height: dim }}
+    >
+      <Rocket className="text-primary-400" style={{ width: dim * 0.5, height: dim * 0.5 }} />
+    </div>
+  )
 }
 
 export function ChatWidget() {
@@ -52,7 +74,7 @@ export function ChatWidget() {
     {
       id:        '1',
       role:      'assistant',
-      content:   'Oi! 👋 Sou o **Foguetim AI**. Posso te ajudar com dúvidas sobre o sistema, dicas de e-commerce e tudo sobre o Mercado Livre. O que precisa?',
+      content:   'Oi! 👋 Sou o **Timm**, seu assistente Foguetim. Posso te ajudar com dúvidas sobre o sistema, dicas de e-commerce e tudo sobre o Mercado Livre. O que precisa?',
       timestamp: new Date(),
     },
   ])
@@ -60,7 +82,6 @@ export function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef       = useRef<HTMLInputElement>(null)
 
-  // Detectar módulo atual pela URL
   const moduloAtual = pathname?.split('/').filter(Boolean).slice(-1)[0] ?? 'dashboard'
 
   useEffect(() => {
@@ -125,162 +146,196 @@ export function ChatWidget() {
     setMessages(prev => prev.map(m => m.id === id ? { ...m, feedback } : m))
   }
 
+  /* ── Floating button ─────────────────────────────────────────── */
   if (!isOpen) {
     return (
-      <button
+      <motion.button
         onClick={() => { setIsOpen(true); setIsMinimized(false) }}
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2
-                   px-3 py-2.5 md:px-4 md:py-3 bg-indigo-600 hover:bg-indigo-700
-                   text-white rounded-full shadow-lg transition-all
-                   hover:scale-105 active:scale-95"
+        className="fixed bottom-5 right-5 md:bottom-6 md:right-6 z-50
+                   flex items-center gap-2.5 pr-4 pl-2 py-2
+                   bg-gradient-to-r from-primary-600 to-primary-500
+                   text-white rounded-full shadow-xl
+                   border border-primary-400/30"
+        whileHover={{ scale: 1.05, boxShadow: '0 0 28px rgba(124,58,237,0.5)' }}
+        whileTap={{ scale: 0.96 }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       >
-        <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
-        <span className="text-xs md:text-sm font-medium">Foguetim AI</span>
-      </button>
+        {/* Timm mini avatar */}
+        <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center overflow-hidden shrink-0">
+          <TimmAvatar size="sm" />
+        </div>
+        <div className="flex flex-col items-start leading-none">
+          <span className="text-xs font-semibold">Timm AI</span>
+          <span className="text-[10px] text-white/60 mt-0.5">Pergunte algo</span>
+        </div>
+      </motion.button>
     )
   }
 
+  /* ── Chat panel ──────────────────────────────────────────────── */
   return (
-    <div
-      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px]
-                 bg-gray-950 border border-gray-800 rounded-2xl
-                 shadow-2xl flex flex-col overflow-hidden
-                 transition-all duration-200"
+    <motion.div
+      className="fixed bottom-5 right-5 md:bottom-6 md:right-6 z-50
+                 w-[calc(100vw-2.5rem)] max-w-[380px]
+                 bg-space-800 border border-white/[0.08] rounded-2xl
+                 shadow-2xl flex flex-col overflow-hidden"
       style={{ height: isMinimized ? 'auto' : '540px' }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
     >
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-2.5 px-4 py-3 bg-indigo-600 cursor-pointer select-none shrink-0"
+        className="flex items-center gap-3 px-4 py-3
+                   bg-gradient-to-r from-primary-700 to-primary-600
+                   cursor-pointer select-none shrink-0"
         onClick={() => setIsMinimized(v => !v)}
       >
-        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-          <Rocket className="w-3.5 h-3.5 text-white" />
+        {/* Timm avatar */}
+        <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">
+          <TimmAvatar size="md" />
         </div>
+
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white text-sm leading-none">Foguetim AI</p>
-          <p className="text-white/60 text-[11px] mt-0.5">Sempre online • responde em segundos</p>
+          <p className="font-semibold text-white text-sm leading-none font-display">Timm</p>
+          <p className="text-white/60 text-[11px] mt-0.5 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-400 inline-block animate-pulse" />
+            Sempre online • responde em segundos
+          </p>
         </div>
+
         <button
           onClick={e => { e.stopPropagation(); setIsMinimized(v => !v) }}
-          className="text-white/70 hover:text-white p-0.5 rounded transition-colors"
+          className="text-white/60 hover:text-white p-1 rounded transition-colors"
         >
           {isMinimized ? <ChevronUp className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
         </button>
         <button
           onClick={e => { e.stopPropagation(); setIsOpen(false) }}
-          className="text-white/70 hover:text-white p-0.5 rounded transition-colors"
+          className="text-white/60 hover:text-white p-1 rounded transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      {!isMinimized && (
-        <>
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-            {messages.map(msg => (
-              <div key={msg.id}>
-                <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-1.5`}>
-                  {msg.role === 'assistant' && (
-                    <div className="w-6 h-6 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center shrink-0 mb-0.5">
-                      <Rocket className="w-3 h-3 text-indigo-400" />
+      <AnimatePresence>
+        {!isMinimized && (
+          <motion.div
+            className="flex flex-col flex-1 min-h-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {/* ── Messages ───────────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+              {messages.map(msg => (
+                <div key={msg.id}>
+                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-1.5`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-6 h-6 rounded-full bg-primary-500/20 border border-primary-500/30 flex items-center justify-center shrink-0 mb-0.5 overflow-hidden">
+                        <TimmAvatar size="sm" />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[82%] px-3 py-2 rounded-xl text-sm leading-relaxed
+                        ${msg.role === 'user'
+                          ? 'bg-primary-600 text-white rounded-br-sm'
+                          : 'bg-space-700 text-slate-100 rounded-bl-sm border border-white/[0.06]'}`}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(msg.content)) }}
+                    />
+                  </div>
+                  {/* Feedback */}
+                  {msg.role === 'assistant' && msg.id !== '1' && (
+                    <div className="flex items-center gap-1 mt-1 ml-8">
+                      <span className="text-[10px] text-slate-600">Útil?</span>
+                      <button
+                        onClick={() => setFeedback(msg.id, 'up')}
+                        className={`p-0.5 rounded transition-colors ${msg.feedback === 'up' ? 'text-green-400' : 'text-slate-600 hover:text-slate-400'}`}
+                      >
+                        <ThumbsUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setFeedback(msg.id, 'down')}
+                        className={`p-0.5 rounded transition-colors ${msg.feedback === 'down' ? 'text-red-400' : 'text-slate-600 hover:text-slate-400'}`}
+                      >
+                        <ThumbsDown className="w-3 h-3" />
+                      </button>
                     </div>
                   )}
-                  <div
-                    className={`max-w-[82%] px-3 py-2 rounded-xl text-sm leading-relaxed
-                      ${msg.role === 'user'
-                        ? 'bg-indigo-600 text-white rounded-br-sm'
-                        : 'bg-gray-800 text-gray-100 rounded-bl-sm'}`}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(msg.content)) }}
-                  />
                 </div>
-                {/* Feedback após respostas do assistente */}
-                {msg.role === 'assistant' && msg.id !== '1' && (
-                  <div className="flex items-center gap-1 mt-1 ml-8">
-                    <span className="text-[10px] text-gray-600">Útil?</span>
-                    <button
-                      onClick={() => setFeedback(msg.id, 'up')}
-                      className={`p-0.5 rounded transition-colors ${msg.feedback === 'up' ? 'text-green-400' : 'text-gray-600 hover:text-gray-400'}`}
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => setFeedback(msg.id, 'down')}
-                      className={`p-0.5 rounded transition-colors ${msg.feedback === 'down' ? 'text-red-400' : 'text-gray-600 hover:text-gray-400'}`}
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
 
-            {isLoading && (
-              <div className="flex justify-start items-end gap-1.5">
-                <div className="w-6 h-6 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                  <Rocket className="w-3 h-3 text-indigo-400" />
-                </div>
-                <div className="bg-gray-800 px-3 py-2.5 rounded-xl rounded-bl-sm">
-                  <div className="flex gap-1 items-center">
-                    {[0, 1, 2].map(i => (
-                      <div key={i} className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                           style={{ animationDelay: `${i * 0.12}s` }} />
-                    ))}
+              {isLoading && (
+                <div className="flex justify-start items-end gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-primary-500/20 border border-primary-500/30 flex items-center justify-center shrink-0 overflow-hidden">
+                    <TimmAvatar size="sm" />
+                  </div>
+                  <div className="bg-space-700 border border-white/[0.06] px-3 py-2.5 rounded-xl rounded-bl-sm">
+                    <div className="flex gap-1 items-center">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce"
+                             style={{ animationDelay: `${i * 0.12}s` }} />
+                      ))}
+                    </div>
                   </div>
                 </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* ── Quick suggestions ───────────────────────────────── */}
+            {messages.length === 1 && (
+              <div className="px-4 pb-2 flex flex-wrap gap-1.5 shrink-0">
+                {QUICK_SUGGESTIONS.slice(0, 4).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => void sendMessage(s)}
+                    className="text-xs bg-space-700 hover:bg-space-600
+                               text-slate-300 hover:text-white
+                               px-2.5 py-1.5 rounded-lg border border-white/[0.06]
+                               hover:border-primary-500/40 transition-all"
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             )}
 
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Quick suggestions — só na boas-vindas */}
-          {messages.length === 1 && (
-            <div className="px-4 pb-2 flex flex-wrap gap-1.5 shrink-0">
-              {QUICK_SUGGESTIONS.slice(0, 4).map(s => (
-                <button
-                  key={s}
-                  onClick={() => void sendMessage(s)}
-                  className="text-xs bg-gray-800 hover:bg-gray-700
-                             text-gray-300 px-2.5 py-1.5 rounded-lg border
-                             border-gray-700 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
+            {/* ── Input ───────────────────────────────────────────── */}
+            <div className="px-4 py-3 border-t border-white/[0.06] flex gap-2 shrink-0">
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    void sendMessage()
+                  }
+                }}
+                placeholder="Pergunte algo..."
+                disabled={isLoading}
+                className="flex-1 bg-space-700 border border-white/[0.08] rounded-xl
+                           px-3 py-2 text-sm text-white placeholder-slate-500
+                           focus:outline-none focus:border-primary-500/60
+                           disabled:opacity-50 transition-colors"
+              />
+              <button
+                onClick={() => void sendMessage()}
+                disabled={!input.trim() || isLoading}
+                className="p-2 bg-primary-600 hover:bg-primary-500 disabled:opacity-40
+                           text-white rounded-xl transition-colors"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </div>
-          )}
-
-          {/* Input */}
-          <div className="px-4 py-3 border-t border-gray-800 flex gap-2 shrink-0">
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  void sendMessage()
-                }
-              }}
-              placeholder="Pergunte algo..."
-              disabled={isLoading}
-              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg
-                         px-3 py-2 text-sm text-white placeholder-gray-500
-                         focus:outline-none focus:border-indigo-500
-                         disabled:opacity-50 transition-colors"
-            />
-            <button
-              onClick={() => void sendMessage()}
-              disabled={!input.trim() || isLoading}
-              className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40
-                         text-white rounded-lg transition-colors"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }

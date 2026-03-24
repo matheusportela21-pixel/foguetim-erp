@@ -125,13 +125,13 @@ function EmptyCard({ message, hint }: { message: string; hint?: string }) {
 /* ── KPI Skeleton ──────────────────────────────────────────────────────── */
 function KpiSkeleton() {
   return (
-    <div className="dash-card p-4 rounded-2xl animate-pulse">
+    <div className="glass-card p-4 rounded-2xl animate-pulse">
       <div className="flex items-center justify-between mb-3">
-        <div className="h-2.5 w-24 bg-slate-800 rounded" />
-        <div className="w-7 h-7 rounded-lg bg-slate-800" />
+        <div className="h-2.5 w-24 bg-white/5 rounded" />
+        <div className="w-8 h-8 rounded-xl bg-white/5" />
       </div>
-      <div className="h-6 w-20 bg-slate-800 rounded mb-2" />
-      <div className="h-2 w-32 bg-slate-800 rounded" />
+      <div className="h-6 w-20 bg-white/5 rounded mb-2" />
+      <div className="h-2 w-32 bg-white/5 rounded" />
     </div>
   )
 }
@@ -346,17 +346,18 @@ export default function DashboardPage() {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <span className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Dashboard</span>
+          <span className="text-sm font-bold text-white">Dashboard</span>
         </div>
 
         {/* ── Greeting ── */}
         <div className="animate-slide-up">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-                {greeting}, {firstName}!
+              <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
+                <span className="text-white">{greeting}, </span>
+                <span className="text-gradient-violet">{firstName}!</span>
               </h1>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-slate-500 mt-1.5">
                 {ml?.connected
                   ? `Conta ML: ${ml.nickname} · dados dos últimos 30 dias`
                   : anyMarketplace
@@ -365,7 +366,19 @@ export default function DashboardPage() {
               </p>
             </div>
             {todayStr && (
-              <p className="text-xs text-slate-600 shrink-0">{todayStr}</p>
+              <div className="shrink-0 text-right">
+                <p className="text-xs text-slate-500">{todayStr}</p>
+                {nextHoliday && (
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    {nextHoliday.icone} {nextHoliday.nome}
+                    {nextHoliday.days === 0
+                      ? ' · hoje!'
+                      : nextHoliday.days === 1
+                        ? ' · amanhã'
+                        : ` · em ${nextHoliday.days} dias`}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -445,17 +458,18 @@ export default function DashboardPage() {
         )}
 
         {/* ── Próxima data comemorativa ── */}
-        {nextHoliday && (
+        {nextHoliday && nextHoliday.days <= 14 && (
           <Link href="/dashboard/calendario">
-            <div className="flex items-center gap-3 p-4 bg-purple-950/30 border border-purple-800/40 rounded-xl hover:bg-purple-900/30 transition-colors">
-              <Calendar className="w-5 h-5 text-purple-400 shrink-0" />
+            <div className="flex items-center gap-3 p-4 glass-card rounded-xl hover:border-primary-500/30 transition-all">
+              <Calendar className="w-5 h-5 text-primary-400 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-white">
-                  {nextHoliday.icone} {nextHoliday.nome} em {nextHoliday.days} dia{nextHoliday.days !== 1 ? 's' : ''}
+                  {nextHoliday.icone} {nextHoliday.nome}{' '}
+                  {nextHoliday.days === 0 ? '· hoje!' : nextHoliday.days === 1 ? '· amanhã' : `· em ${nextHoliday.days} dias`}
                 </p>
-                <p className="text-xs text-purple-400 mt-0.5">Clique para planejar sua promoção</p>
+                <p className="text-xs text-primary-400/70 mt-0.5">Clique para planejar sua promoção</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-purple-600 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-primary-600 shrink-0" />
             </div>
           </Link>
         )}
@@ -507,17 +521,17 @@ export default function DashboardPage() {
               },
             ].map(k => (
               <Link key={k.label} href={k.href}
-                className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
+                className="glass-card p-4 rounded-2xl hover:border-primary-500/25 hover:shadow-glow-sm transition-all group">
                 <div className="flex items-center justify-between mb-3">
                   <div className="relative">
-                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
                     <KpiTooltip text={k.tooltip} />
                   </div>
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
-                    <k.icon className="w-3.5 h-3.5" />
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${k.color}`}>
+                    <k.icon className="w-4 h-4" />
                   </div>
                 </div>
-                <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
+                <p className="text-xl font-bold text-white font-display">{k.value}</p>
                 <p className="text-[10px] text-slate-600 mt-1.5">{k.sub}</p>
               </Link>
             ))}
@@ -570,33 +584,33 @@ export default function DashboardPage() {
                   },
                 ].map(k => (
                   <Link key={k.label} href={k.href}
-                    className="dash-card p-4 rounded-2xl hover:border-orange-600/20 hover:shadow-lg hover:shadow-orange-900/10 transition-all group">
+                    className="glass-card p-4 rounded-2xl hover:border-accent-500/25 hover:shadow-glow-sm transition-all group">
                     <div className="flex items-center justify-between mb-3">
                       <div className="relative">
-                        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
                         <KpiTooltip text={k.tooltip} />
                       </div>
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
-                        <k.icon className="w-3.5 h-3.5" />
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${k.color}`}>
+                        <k.icon className="w-4 h-4" />
                       </div>
                     </div>
-                    <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
+                    <p className="text-xl font-bold text-white font-display">{k.value}</p>
                     <p className="text-[10px] text-slate-600 mt-1.5">{k.sub}</p>
                   </Link>
                 ))}
               </div>
             )
           ) : (
-            <div className="dash-card p-5 rounded-2xl flex items-center gap-4 border-dashed">
-              <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
-                <Link2 className="w-5 h-5 text-yellow-400" />
+            <div className="glass-card p-5 rounded-2xl flex items-center gap-4 border-dashed border-white/10">
+              <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center shrink-0">
+                <Link2 className="w-5 h-5 text-primary-400" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-white">Conecte seu Mercado Livre para ver métricas reais</p>
                 <p className="text-xs text-slate-500 mt-0.5">Pedidos, faturamento e anúncios aparecerão aqui automaticamente.</p>
               </div>
               <Link href="/dashboard/integracoes"
-                className="shrink-0 px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+                className="shrink-0 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-300 text-xs font-bold hover:bg-primary-500/20 transition-colors">
                 Conectar ML
               </Link>
             </div>
@@ -605,23 +619,23 @@ export default function DashboardPage() {
           /* Only ML connected */
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
             {[
-              { label: 'Faturamento 30d',   value: revenue,   sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-purple-400 bg-purple-400/10', href: '/dashboard/financeiro', tooltip: 'Receita bruta dos últimos 30 dias no Mercado Livre' },
-              { label: 'Pedidos 30d',       value: orders,    sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',     href: '/dashboard/pedidos',    tooltip: 'Total de pedidos recebidos nos últimos 30 dias' },
-              { label: 'Anúncios Ativos',   value: active,    sub: 'Mercado Livre',       icon: Package,      color: 'text-orange-400 bg-orange-400/10', href: '/dashboard/produtos-ml',   tooltip: 'Total de anúncios ativos sincronizados' },
-              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Ver Central Pós-Venda' : 'Nenhuma pendente', icon: MessageSquare, color: questions > 0 ? 'text-orange-400 bg-orange-400/10' : 'text-green-400 bg-green-400/10', href: '/dashboard/pos-venda', tooltip: 'Perguntas não respondidas dos seus compradores no ML' },
+              { label: 'Faturamento 30d',   value: revenue,   sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-primary-400 bg-primary-400/10', href: '/dashboard/financeiro', tooltip: 'Receita bruta dos últimos 30 dias no Mercado Livre' },
+              { label: 'Pedidos 30d',       value: orders,    sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',        href: '/dashboard/pedidos',    tooltip: 'Total de pedidos recebidos nos últimos 30 dias' },
+              { label: 'Anúncios Ativos',   value: active,    sub: 'Mercado Livre',       icon: Package,      color: 'text-accent-400 bg-accent-400/10',    href: '/dashboard/produtos-ml',   tooltip: 'Total de anúncios ativos sincronizados' },
+              { label: 'Perguntas Pend.',   value: questions, sub: questions > 0 ? 'Ver Central Pós-Venda' : 'Nenhuma pendente', icon: MessageSquare, color: questions > 0 ? 'text-accent-400 bg-accent-400/10' : 'text-emerald-400 bg-emerald-400/10', href: '/dashboard/pos-venda', tooltip: 'Perguntas não respondidas dos seus compradores no ML' },
             ].map(k => (
               <Link key={k.label} href={k.href}
-                className="dash-card p-4 rounded-2xl hover:border-purple-600/20 hover:shadow-lg hover:shadow-purple-900/10 transition-all group">
+                className="glass-card p-4 rounded-2xl hover:border-primary-500/25 hover:shadow-glow-sm transition-all group">
                 <div className="flex items-center justify-between mb-3">
                   <div className="relative">
-                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider leading-tight cursor-default">{k.label}</p>
                     <KpiTooltip text={k.tooltip} />
                   </div>
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${k.color}`}>
-                    <k.icon className="w-3.5 h-3.5" />
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${k.color}`}>
+                    <k.icon className="w-4 h-4" />
                   </div>
                 </div>
-                <p className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>{k.value}</p>
+                <p className="text-xl font-bold text-white font-display">{k.value}</p>
                 <p className="text-[10px] text-slate-600 mt-1.5">{k.sub}</p>
               </Link>
             ))}
@@ -638,7 +652,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center">
                 <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Pedidos</p>
+              <p className="text-sm font-bold text-white">Pedidos</p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
@@ -668,7 +682,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
                 <Package className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Anúncios ML</p>
+              <p className="text-sm font-bold text-white">Anúncios ML</p>
             </div>
             {mlLoading ? (
               <div className="p-4 flex items-center gap-2 text-xs text-slate-600">
@@ -703,7 +717,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center">
                 <MessageCircle className="w-3.5 h-3.5 text-cyan-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>SAC / Atendimento</p>
+              <p className="text-sm font-bold text-white">SAC / Atendimento</p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
@@ -733,7 +747,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
                 <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Reputação ML</p>
+              <p className="text-sm font-bold text-white">Reputação ML</p>
             </div>
             {reputaLoading ? (
               <div className="p-4 flex items-center gap-2 text-xs text-slate-600">
@@ -791,7 +805,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center">
                 <ShoppingBag className="w-3.5 h-3.5 text-orange-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Pedidos Shopee</p>
+              <p className="text-sm font-bold text-white">Pedidos Shopee</p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
@@ -821,7 +835,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center">
                 <Package className="w-3.5 h-3.5 text-cyan-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Produtos Shopee</p>
+              <p className="text-sm font-bold text-white">Produtos Shopee</p>
             </div>
             {shopeeKpi.loading ? (
               <div className="p-4 flex items-center gap-2 text-xs text-slate-600">
@@ -856,7 +870,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
                 <MessageCircle className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Atendimento</p>
+              <p className="text-sm font-bold text-white">Atendimento</p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               {[
@@ -886,7 +900,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
                 <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Minha Loja Shopee</p>
+              <p className="text-sm font-bold text-white">Minha Loja Shopee</p>
             </div>
             <div className="divide-y divide-white/[0.04]">
               <div className="flex items-center justify-between px-4 py-3">
@@ -961,7 +975,7 @@ export default function DashboardPage() {
                 <div className="dash-card p-4 rounded-2xl border border-yellow-500/20">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-base">🟡</span>
-                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Mercado Livre</p>
+                    <p className="text-sm font-bold text-white">Mercado Livre</p>
                     <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">● Conectado</span>
                   </div>
                   <div className="space-y-1.5 text-xs text-slate-400">
@@ -984,7 +998,7 @@ export default function DashboardPage() {
                 <div className="dash-card p-4 rounded-2xl border border-orange-500/20">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-base">🟠</span>
-                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Shopee</p>
+                    <p className="text-sm font-bold text-white">Shopee</p>
                     <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">● Conectado</span>
                   </div>
                   <div className="space-y-1.5 text-xs text-slate-400">
@@ -1034,7 +1048,7 @@ export default function DashboardPage() {
             <div className="dash-card p-5 rounded-2xl">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Financeiro do Mês</p>
+                  <p className="font-bold text-white text-sm">Financeiro do Mês</p>
                   <p className="text-xs text-slate-600 mt-0.5">Receita bruta · taxas ML · receita líquida</p>
                 </div>
                 <Link href="/dashboard/financeiro" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
@@ -1103,7 +1117,7 @@ export default function DashboardPage() {
             {/* Recent orders */}
             <div className="dash-card rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Últimos Pedidos</p>
+                <p className="font-bold text-white text-sm">Últimos Pedidos</p>
                 <Link href={hasShopee && !hasML ? '/dashboard/shopee/pedidos' : '/dashboard/pedidos'} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
                   Ver todos <ArrowUpRight className="w-3 h-3" />
                 </Link>
@@ -1118,7 +1132,7 @@ export default function DashboardPage() {
           {/* Right: Platform distribution + Stats */}
           <div className="space-y-4">
             <div className="dash-card p-5 rounded-2xl">
-              <p className="font-bold text-white text-sm mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>Plataformas</p>
+              <p className="font-bold text-white text-sm mb-1">Plataformas</p>
               <p className="text-xs text-slate-600 mb-4">Canais conectados</p>
               <div className="space-y-3">
                 {hasML && (
@@ -1181,7 +1195,7 @@ export default function DashboardPage() {
               <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Estoque Crítico</p>
+                  <p className="text-sm font-bold text-white">Estoque Crítico</p>
                 </div>
                 <Link href="/dashboard/produtos" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
                   <ArrowUpRight className="w-3.5 h-3.5" />
@@ -1320,7 +1334,7 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-lg bg-green-500/15 flex items-center justify-center">
                 <Megaphone className="w-3.5 h-3.5 text-green-400" />
               </div>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Performance de Anúncios</p>
+              <p className="text-sm font-bold text-white">Performance de Anúncios</p>
             </div>
             <div className="p-4 space-y-3">
               {(mlLoading && hasML) || (shopeeKpi.loading && hasShopee && !hasML) ? (
