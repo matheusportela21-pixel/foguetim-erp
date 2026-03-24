@@ -19,6 +19,7 @@ import { useAuth } from '@/lib/auth-context'
 import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
 import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
 import { DevBanner } from '@/components/DevBanner'
+import { TrialBanner } from '@/components/shared/TrialBanner'
 import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
 import { EmptyState } from '@/components/shared/EmptyState'
 
@@ -310,6 +311,7 @@ export default function DashboardPage() {
 
   return (
     <motion.div className="space-y-6" variants={stagger.container} initial="hidden" animate="visible">
+      <TrialBanner />
       <DevBanner />
 
       {/* ── Greeting + period filter ─────────────────────────────────── */}

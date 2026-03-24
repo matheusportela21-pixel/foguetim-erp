@@ -34,12 +34,12 @@ const PLANS: PlanCard[] = [
   {
     id: 'explorador',
     name: 'Explorador',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    desc: 'Para quem está começando no marketplace',
+    monthlyPrice: 19.90,
+    annualPrice: 15.92,
+    desc: 'Para quem está começando a vender online',
     popular: false,
-    cta: 'Começar grátis',
-    ctaHref: 'https://app.foguetim.com.br/cadastro',
+    cta: '7 dias grátis',
+    ctaHref: 'https://app.foguetim.com.br/cadastro?plan=explorador',
     color: 'border-gray-200',
     badge: null,
     features: [
@@ -165,7 +165,7 @@ const COMPARISON: (CompRow & { section?: string })[] = [
   { label: 'Suporte por e-mail',    values: [true, true, true, true], section: 'SUPORTE' },
   { label: 'Suporte prioritário',   values: [false, false, true, true] },
   { label: 'Suporte 24/7',          values: [false, false, false, true] },
-  { label: '7 dias grátis',         values: [false, true, true, true], section: 'TRIAL' },
+  { label: '7 dias grátis',         values: [true, true, true, true], section: 'TRIAL' },
 ]
 
 const FAQS: FaqItem[] = [
@@ -186,8 +186,8 @@ const FAQS: FaqItem[] = [
     a: 'Sim, você pode fazer upgrade ou downgrade a qualquer momento. O upgrade é imediato; o downgrade entra em vigor no próximo ciclo de cobrança.',
   },
   {
-    q: 'O plano gratuito tem limite de tempo?',
-    a: 'Não. O plano Explorador é gratuito para sempre — não é um trial. Você pode usar indefinidamente com as limitações do plano (até 10 produtos, 1 marketplace).',
+    q: 'Como funciona o período de teste?',
+    a: 'Todos os planos incluem 7 dias de teste grátis com acesso total. Sem cartão de crédito. Após o trial, escolha o plano ideal para sua operação.',
   },
 ]
 
@@ -260,7 +260,7 @@ export default function PlanosPage() {
               Entrar
             </Link>
             <Link href="https://app.foguetim.com.br/cadastro" className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
-              Começar grátis
+              Teste grátis
             </Link>
           </div>
 
@@ -296,7 +296,7 @@ export default function PlanosPage() {
           </h1>
           <p className="text-lg text-gray-500 max-w-xl mx-auto leading-relaxed mb-8">
             Escolha o plano ideal para o tamanho da sua operação.
-            Comece grátis e escale quando precisar.
+            7 dias grátis. Sem cartão de crédito.
           </p>
 
           {/* Billing toggle */}
@@ -375,7 +375,7 @@ export default function PlanosPage() {
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-8">
-            Todos os planos pagos incluem 7 dias de teste grátis. Cancele quando quiser.
+            Todos os planos incluem 7 dias grátis. Sem cartão de crédito. Cancele quando quiser.
           </p>
         </div>
       </section>
@@ -444,7 +444,7 @@ export default function PlanosPage() {
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-6">
-            Todos os planos pagos incluem 7 dias de teste grátis. Cancele quando quiser.
+            Todos os planos incluem 7 dias grátis. Sem cartão de crédito. Cancele quando quiser.
           </p>
         </div>
       </section>
@@ -494,13 +494,13 @@ export default function PlanosPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="https://app.foguetim.com.br/cadastro" className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-lg text-base transition-colors">
-              Criar conta grátis <ArrowRight className="w-4 h-4" />
+              Começar 7 dias grátis <ArrowRight className="w-4 h-4" />
             </Link>
             <a href="mailto:contato@foguetim.com.br" className="inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold px-8 py-3.5 rounded-lg text-base transition-colors">
               Falar com a equipe
             </a>
           </div>
-          <p className="text-xs text-gray-400 mt-4">Sem cartão de crédito. 7 dias grátis nos planos pagos.</p>
+          <p className="text-xs text-gray-400 mt-4">7 dias grátis em todos os planos. Sem cartão de crédito.</p>
         </div>
       </section>
 

@@ -1,35 +1,45 @@
 /**
  * lib/plan-limits.ts
  * Limites de recursos por plano do Foguetim ERP.
- * Referência única para frontend e backend.
+ * Derivado de lib/plans.ts — referência única.
  */
+import { PLANS, getPlan, type PlanId } from './plans'
 
 export interface PlanLimits {
   maxWarehouses:   number
   maxProducts:     number
   maxTeamMembers:  number
+  maxOrders:       number
+  maxMarketplaces: number
   label:           string
 }
 
-const PLAN_LIMITS: Record<string, PlanLimits> = {
-  explorador:      { maxWarehouses: 1,         maxProducts: 10,       maxTeamMembers: 1,  label: 'Explorador'     },
-  explorer:        { maxWarehouses: 1,         maxProducts: 10,       maxTeamMembers: 1,  label: 'Explorador'     },
-  piloto:          { maxWarehouses: 1,         maxProducts: 200,      maxTeamMembers: 2,  label: 'Piloto'         },
-  crescimento:     { maxWarehouses: 2,         maxProducts: 200,      maxTeamMembers: 3,  label: 'Crescimento'    },
-  comandante:      { maxWarehouses: 2,         maxProducts: 500,      maxTeamMembers: 3,  label: 'Comandante'     },
-  commander:       { maxWarehouses: 2,         maxProducts: 500,      maxTeamMembers: 3,  label: 'Comandante'     },
-  almirante:       { maxWarehouses: 3,         maxProducts: Infinity, maxTeamMembers: 5,  label: 'Almirante'      },
-  admiral:         { maxWarehouses: 3,         maxProducts: Infinity, maxTeamMembers: 5,  label: 'Almirante'      },
-  missao_espacial: { maxWarehouses: 5,         maxProducts: Infinity, maxTeamMembers: 10, label: 'Missão Espacial' },
-  enterprise:      { maxWarehouses: Infinity,  maxProducts: Infinity, maxTeamMembers: Infinity, label: 'Enterprise' },
+function toLimits(planId: PlanId): PlanLimits {
+  const p = PLANS[planId]
+  return {
+    maxWarehouses:   p.limits.warehouses,
+    maxProducts:     p.limits.products,
+    maxTeamMembers:  p.limits.teamMembers,
+    maxOrders:       p.limits.orders,
+    maxMarketplaces: p.limits.marketplaces,
+    label:           p.name,
+  }
 }
 
-const DEFAULT_LIMITS: PlanLimits = {
-  maxWarehouses:  1,
-  maxProducts:    10,
-  maxTeamMembers: 1,
-  label:          'Explorador',
+const PLAN_LIMITS: Record<string, PlanLimits> = {
+  explorador:      toLimits('explorador'),
+  explorer:        toLimits('explorador'),
+  comandante:      toLimits('comandante'),
+  commander:       toLimits('comandante'),
+  almirante:       toLimits('almirante'),
+  admiral:         toLimits('almirante'),
+  missao:          toLimits('missao'),
+  missao_espacial: toLimits('missao'),
+  enterprise:      { maxWarehouses: Infinity, maxProducts: Infinity, maxTeamMembers: Infinity, maxOrders: Infinity, maxMarketplaces: Infinity, label: 'Enterprise' },
+  trial:           toLimits('missao'), // trial = Missão Espacial access
 }
+
+const DEFAULT_LIMITS: PlanLimits = toLimits('explorador')
 
 export function getPlanLimits(plan?: string | null): PlanLimits {
   if (!plan) return DEFAULT_LIMITS
@@ -39,3 +49,6 @@ export function getPlanLimits(plan?: string | null): PlanLimits {
 export function getWarehouseLimit(plan?: string | null): number {
   return getPlanLimits(plan).maxWarehouses
 }
+
+// Re-export for convenience
+export { getPlan, PLANS, type PlanId }
