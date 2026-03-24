@@ -32,6 +32,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (a && VALID_ACCENTS.includes(a)) setAccentState(a)
   }, [])
 
+  // Sync theme class to <html> for Tailwind dark: prefix
+  useEffect(() => {
+    if (!mounted) return
+    const html = document.documentElement
+    if (theme === 'dark') {
+      html.classList.add('dark')
+      html.style.colorScheme = 'dark'
+    } else {
+      html.classList.remove('dark')
+      html.style.colorScheme = 'light'
+    }
+  }, [theme, mounted])
+
   function setTheme(t: DashTheme) {
     setThemeState(t)
     localStorage.setItem('fgt-theme', t)
