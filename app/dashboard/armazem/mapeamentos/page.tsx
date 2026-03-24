@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Trash2, Loader2, RefreshCw, DollarSign,
   Zap, Download, ChevronDown, Layers, ExternalLink,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -860,7 +860,7 @@ export default function MapeamentosPage() {
 
   return (
     <div>
-      <Header title="Mapeamentos" subtitle="Vínculo entre produtos do armazém e anúncios nos marketplaces" />
+      <PageHeader title="Mapeamentos" description="Vínculo entre produtos do armazém e anúncios nos marketplaces" />
 
       <div className="p-4 md:p-6 space-y-4">
         {/* ── KPI Cards ─────────────────────────────────────────────────────── */}

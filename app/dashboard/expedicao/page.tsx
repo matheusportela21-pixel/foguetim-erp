@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Package, Printer, Truck, CheckCircle, AlertTriangle,
   RefreshCw, Search, X, ExternalLink, Clock, MapPin, User,
@@ -440,7 +440,7 @@ export default function ExpedicaoPage() {
 
   return (
     <div>
-      <Header title="Expedição" subtitle="Envios, tracking e etiquetas" />
+      <PageHeader title="Expedição" description="Envios, tracking e etiquetas" />
 
       <div className="p-6 space-y-5">
 

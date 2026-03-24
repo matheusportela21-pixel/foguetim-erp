@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { Tag, Plus, Search, Pencil, Trash2, Eye, EyeOff, X, ChevronRight } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface Category {
@@ -177,7 +177,7 @@ export default function CategoriasPage() {
 
   return (
     <div>
-      <Header title="Categorias" subtitle="Organização interna dos produtos" />
+      <PageHeader title="Categorias" description="Organização interna dos produtos" />
 
       {/* Toast */}
       {toast && (

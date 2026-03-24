@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { Building2, Plus, Pencil, Star, Eye, EyeOff, X, AlertTriangle } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useAuth } from '@/lib/auth-context'
 import { getWarehouseLimit } from '@/lib/plan-limits'
 
@@ -135,7 +135,7 @@ export default function ArmazensPage() {
 
   return (
     <div>
-      <Header title="Armazéns" subtitle="Gerencie seus centros de distribuição" />
+      <PageHeader title="Armazéns" description="Gerencie seus centros de distribuição" />
 
       {/* Toast */}
       {toast && (

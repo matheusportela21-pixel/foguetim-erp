@@ -5,7 +5,7 @@ import {
   DollarSign, Plus, Search, Pencil, X, Check, Minus,
   TrendingUp, ToggleLeft, ToggleRight, FileText, Activity,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 type Recurrence = 'monthly' | 'annual' | 'biweekly' | 'weekly' | 'one_time'
@@ -260,7 +260,7 @@ export default function CustosPage() {
 
   return (
     <div>
-      <Header title="Custos da Empresa" subtitle="Controle de custos fixos e variáveis" />
+      <PageHeader title="Custos da Empresa" description="Controle de custos fixos e variáveis" />
 
       {/* Toast */}
       {toast && (

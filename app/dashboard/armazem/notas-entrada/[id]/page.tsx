@@ -6,7 +6,7 @@ import {
   ArrowLeft, CheckCircle2, XCircle, X, AlertTriangle,
   Search, Loader2, Lock,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useAuth } from '@/lib/auth-context'
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'foguetim_support']
@@ -308,7 +308,7 @@ export default function InvoiceDetailPage() {
   if (profile === null || (profile !== undefined && !isAdmin)) {
     return (
       <div>
-        <Header title="Nota de Entrada" subtitle="NF-e de compra — Beta" />
+        <PageHeader title="Nota de Entrada" description="NF-e de compra — Beta" />
         <div className="p-6">
           <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
@@ -325,7 +325,7 @@ export default function InvoiceDetailPage() {
   if (loading) {
     return (
       <div>
-        <Header title="Nota de Entrada" subtitle="Carregando..." />
+        <PageHeader title="Nota de Entrada" description="Carregando..." />
         <div className="p-6 space-y-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="animate-pulse h-16 bg-white/[0.04] rounded-xl" />
@@ -338,7 +338,7 @@ export default function InvoiceDetailPage() {
   if (!invoice) {
     return (
       <div>
-        <Header title="Nota de Entrada" subtitle="Não encontrada" />
+        <PageHeader title="Nota de Entrada" description="Não encontrada" />
         <div className="p-6">
           <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
             <XCircle className="w-12 h-12 text-red-500 mb-4" />
@@ -360,7 +360,7 @@ export default function InvoiceDetailPage() {
 
   return (
     <div>
-      <Header title={`NF-e #${invoice.invoice_number}`} subtitle="Resolução de itens e entrada no estoque" />
+      <PageHeader title={`NF-e #${invoice.invoice_number}`} description="Resolução de itens e entrada no estoque" />
 
       <div className="p-6 space-y-4">
         {/* Back */}

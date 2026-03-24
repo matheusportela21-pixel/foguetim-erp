@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Search, ExternalLink, Truck, Shield, ShieldAlert, ShieldOff,
   AlertTriangle, AlertCircle, CheckCircle2, Users, Tag,
@@ -586,9 +586,9 @@ export default function MonitoramentoPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <Header
+      <PageHeader
         title="Monitoramento Competitivo"
-        subtitle="Analise concorrentes e monitore a saúde dos seus anúncios"
+        description="Analise concorrentes e monitore a saúde dos seus anúncios"
       />
 
       <div className="p-6 space-y-5">

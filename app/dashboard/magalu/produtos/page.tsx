@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import {
   Package, Search, RefreshCw, Loader2,
@@ -70,7 +70,7 @@ export default function MagaluProdutosPage() {
 
   return (
     <div className="space-y-6">
-      <Header title="Produtos Magalu" subtitle="SKUs cadastrados no Magazine Luiza" />
+      <PageHeader title="Produtos Magalu" description="SKUs cadastrados no Magazine Luiza" />
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">

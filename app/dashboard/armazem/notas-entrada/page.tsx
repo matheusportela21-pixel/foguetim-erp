@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, Upload, Lock, AlertTriangle, CheckCircle2, XCircle, X, ExternalLink } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { useAuth } from '@/lib/auth-context'
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'foguetim_support']
@@ -105,7 +105,7 @@ export default function NotasEntradaPage() {
   if (profile === null) {
     return (
       <div>
-        <Header title="Notas de Entrada" subtitle="NF-e de compra — Beta" />
+        <PageHeader title="Notas de Entrada" description="NF-e de compra — Beta" />
         <div className="p-6">
           <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
@@ -122,7 +122,7 @@ export default function NotasEntradaPage() {
   if (!isAdmin) {
     return (
       <div>
-        <Header title="Notas de Entrada" subtitle="NF-e de compra — Beta" />
+        <PageHeader title="Notas de Entrada" description="NF-e de compra — Beta" />
         <div className="p-6">
           <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
@@ -138,7 +138,7 @@ export default function NotasEntradaPage() {
 
   return (
     <div>
-      <Header title="Notas de Entrada" subtitle="Upload e processamento de NF-e de compra" />
+      <PageHeader title="Notas de Entrada" description="Upload e processamento de NF-e de compra" />
 
       <div className="p-6 space-y-4">
         {/* Beta warning */}

@@ -13,7 +13,7 @@ import {
   AlertCircle, Link2, Star, Clock,
 } from 'lucide-react'
 import Link from 'next/link'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type Period = '7d' | '30d' | '90d' | '12m'
@@ -255,7 +255,7 @@ export default function PerformancePage() {
 
   return (
     <div>
-      <Header title="Performance de Vendas" subtitle="Análise detalhada do seu desempenho ao longo do tempo" />
+      <PageHeader title="Performance de Vendas" description="Análise detalhada do seu desempenho ao longo do tempo" />
 
       <div className="p-4 md:p-6 space-y-5">
 

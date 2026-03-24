@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import ExportPDFButton from '@/components/ExportPDFButton'
@@ -122,7 +122,7 @@ export default function EstoquePage() {
   if (!loading && !connected) {
     return (
       <div className="flex-1 overflow-y-auto">
-        <Header title="Estoque" subtitle="Monitoramento de estoque por anúncio" />
+        <PageHeader title="Estoque" description="Monitoramento de estoque por anúncio" />
         <div className="flex flex-col items-center justify-center gap-4 mt-20 px-6">
           <div className="w-14 h-14 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
             <Link2 className="w-6 h-6 text-slate-600" />
@@ -142,7 +142,7 @@ export default function EstoquePage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <Header title="Estoque" subtitle="Monitoramento de estoque por anúncio" />
+      <PageHeader title="Estoque" description="Monitoramento de estoque por anúncio" />
 
       <div className="p-6 space-y-5">
 

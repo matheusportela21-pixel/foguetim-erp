@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import {
   ShoppingBag, Search, RefreshCw, Loader2,
@@ -76,7 +76,7 @@ export default function MagaluPedidosPage() {
 
   return (
     <div className="space-y-6">
-      <Header title="Pedidos Magalu" subtitle="Pedidos recebidos no Magazine Luiza" />
+      <PageHeader title="Pedidos Magalu" description="Pedidos recebidos no Magazine Luiza" />
 
       {/* Error banner */}
       {error && (

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   ShoppingCart, Package, RefreshCw, Search, MapPin, User,
   Truck, ChevronDown, ChevronUp, Printer, AlertCircle, Link2,
@@ -202,7 +202,7 @@ export default function PacksPage() {
 
   return (
     <div>
-      <Header title="Packs" subtitle="Pedidos agrupados do Mercado Livre" />
+      <PageHeader title="Packs" description="Pedidos agrupados do Mercado Livre" />
 
       <div className="p-6 space-y-5">
 

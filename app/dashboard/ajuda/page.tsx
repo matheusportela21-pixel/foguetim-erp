@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2, History, BookOpen, ExternalLink } from 'lucide-react'
 
 const faqs = [
@@ -107,7 +107,7 @@ export default function AjudaPage() {
 
   return (
     <div>
-      <Header title="Central de Ajuda" subtitle="Tutoriais, FAQ e suporte" />
+      <PageHeader title="Central de Ajuda" description="Tutoriais, FAQ e suporte" />
 
       <div className="p-6 space-y-8">
 

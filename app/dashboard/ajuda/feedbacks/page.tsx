@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { RefreshCw, ArrowLeft, Ticket, Circle, Clock, CheckCircle2 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type TicketStatus   = 'open' | 'in_progress' | 'waiting_user' | 'resolved' | 'closed'
@@ -74,7 +74,7 @@ export default function FeedbacksPage() {
 
   return (
     <div>
-      <Header title="Meus Feedbacks" subtitle="Histórico dos seus tickets e sugestões enviadas" />
+      <PageHeader title="Meus Feedbacks" description="Histórico dos seus tickets e sugestões enviadas" />
 
       <div className="p-6 space-y-6 max-w-3xl">
         {/* Back + refresh */}

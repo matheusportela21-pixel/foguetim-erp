@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ClaimEvidenceChecklist } from '@/components/ml/ClaimEvidenceChecklist'
 import {
@@ -510,9 +510,9 @@ export default function ReclamacoesPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Header
+      <PageHeader
         title="Devoluções e Reclamações"
-        subtitle="Gerencie disputas abertas e evite impacto na sua reputação"
+        description="Gerencie disputas abertas e evite impacto na sua reputação"
       />
 
       {notConnected ? (

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
 import {
   CheckCircle, RefreshCw, Zap, Truck, ChevronDown, ChevronUp,
@@ -610,7 +610,7 @@ function IntegracoesContent() {
 
   return (
     <div>
-      <Header title="Integrações" subtitle="Conecte seus canais de venda e ferramentas" />
+      <PageHeader title="Integrações" description="Conecte seus canais de venda e ferramentas" />
 
       {/* Toast notification */}
       {toast && (

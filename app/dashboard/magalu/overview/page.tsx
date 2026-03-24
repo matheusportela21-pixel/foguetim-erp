@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   ShoppingBag, Package, TrendingUp, AlertCircle,
   RefreshCw, ExternalLink, Loader2, CheckCircle2,
@@ -47,7 +47,7 @@ export default function MagaluOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <Header title="Magalu" subtitle="Visão geral da sua loja no Magazine Luiza" />
+      <PageHeader title="Magalu" description="Visão geral da sua loja no Magazine Luiza" />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">

@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, Loader2, ShieldCheck,
   AlertCircle, RefreshCw, X, Calculator, Lock,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 
@@ -177,7 +177,7 @@ export default function NfePage() {
   if (!isAdmin) {
     return (
       <div>
-        <Header title="NF-e" subtitle="Notas Fiscais Eletrônicas — Beta" />
+        <PageHeader title="NF-e" description="Notas Fiscais Eletrônicas — Beta" />
         <div className="p-6">
           <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
@@ -193,7 +193,7 @@ export default function NfePage() {
 
   return (
     <div>
-      <Header title="NF-e" subtitle="Notas Fiscais Eletrônicas" />
+      <PageHeader title="NF-e" description="Notas Fiscais Eletrônicas" />
 
       <div className="p-4 md:p-6 space-y-5">
 

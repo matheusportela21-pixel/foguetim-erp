@@ -3,7 +3,7 @@
 import React, {
   useState, useEffect, useCallback, useRef, useMemo,
 } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import ShopeeSandboxBanner from '@/components/ShopeeSandboxBanner'
 import ExportCSVButton from '@/components/ExportCSVButton'
@@ -1127,9 +1127,9 @@ export default function ShopeePedidosPage() {
 
   return (
     <div className="min-h-screen">
-      <Header
+      <PageHeader
         title="Pedidos Shopee"
-        subtitle={`${orders.length} pedido${orders.length !== 1 ? 's' : ''} nos últimos ${days} dias`}
+        description={`${orders.length} pedido${orders.length !== 1 ? 's' : ''} nos últimos ${days} dias`}
       />
 
       <div className="p-6 space-y-5">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { MapPin, Plus, Search, Pencil, Eye, EyeOff, X } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface Location {
@@ -219,7 +219,7 @@ export default function LocalizacoesPage() {
 
   return (
     <div>
-      <Header title="Localizações" subtitle="Pontos de armazenamento dentro dos armazéns" />
+      <PageHeader title="Localizações" description="Pontos de armazenamento dentro dos armazéns" />
 
       {/* Toast */}
       {toast && (

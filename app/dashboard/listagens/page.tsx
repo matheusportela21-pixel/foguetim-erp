@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { FileText, Wand2, Copy, CheckCheck, RefreshCw, ChevronDown, ChevronUp, Star, Tag, Zap } from 'lucide-react'
 
 // ─── Types & data ──────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ export default function Listagens() {
 
   return (
     <div className="min-h-screen">
-      <Header title="Gerador de Listagens" subtitle="Crie anúncios otimizados para cada marketplace com IA" />
+      <PageHeader title="Gerador de Listagens" description="Crie anúncios otimizados para cada marketplace com IA" />
 
       <div className="p-6 lg:p-8">
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">

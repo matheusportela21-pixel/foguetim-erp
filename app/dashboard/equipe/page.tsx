@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Users, Plus, Search, RefreshCw, Edit3, Trash2, X,
   Mail, Shield, Loader2, UserPlus, UserCheck, UserX,
@@ -137,7 +137,7 @@ export default function EquipePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Header title="Equipe" subtitle="Gerencie os membros da sua equipe" />
+        <PageHeader title="Equipe" description="Gerencie os membros da sua equipe" />
         {isOwner && (
           <button onClick={() => setShowInvite(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition-colors">

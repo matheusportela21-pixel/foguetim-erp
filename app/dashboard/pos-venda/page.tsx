@@ -6,7 +6,7 @@ import {
   Send, RefreshCw, Loader2, Sparkles, X,
   Clock, ShoppingBag, ChevronRight,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { getClaimReasonLabel, getClaimSLAMessage } from '@/lib/ml/claim-reasons'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -516,7 +516,7 @@ export default function PosVendaPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Header title="Central Pós-Venda" />
+      <PageHeader title="Central Pós-Venda" />
 
       <div className="flex flex-col flex-1 overflow-hidden p-6 gap-4">
         {/* Tabs */}

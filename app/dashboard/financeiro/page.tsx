@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -257,7 +257,7 @@ export default function FinanceiroPage() {
   if (!periodsLoading && !connected) {
     return (
       <div className="flex-1 overflow-y-auto">
-        <Header title="Painel Financeiro" subtitle="Faturamento e pagamentos do Mercado Livre" />
+        <PageHeader title="Painel Financeiro" description="Faturamento e pagamentos do Mercado Livre" />
         <div className="flex flex-col items-center justify-center gap-4 mt-20 px-6">
           <div className="w-14 h-14 rounded-2xl bg-dark-800 border border-white/[0.06] flex items-center justify-center">
             <Link2 className="w-6 h-6 text-slate-600" />
@@ -279,7 +279,7 @@ export default function FinanceiroPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <Header title="Painel Financeiro" subtitle="Faturamento e pagamentos do Mercado Livre" />
+      <PageHeader title="Painel Financeiro" description="Faturamento e pagamentos do Mercado Livre" />
 
       <div className="p-6 space-y-6">
 

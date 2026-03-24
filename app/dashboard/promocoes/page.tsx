@@ -9,7 +9,7 @@ import {
   Unlock, BadgePercent, ArrowRight, Zap, Gift,
   CircleDollarSign, Star, Eye, FlaskConical,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
 import type { EmPromocaoItem } from '@/app/api/mercadolivre/promocoes/em-promocao/route'
 import type { SemPromocaoItem } from '@/app/api/mercadolivre/promocoes/sem-promocao/route'
@@ -1139,7 +1139,7 @@ export default function PromocoesPage() {
   if (!isAdmin) {
     return (
       <div>
-        <Header title="Promoções" subtitle="Módulo Beta" />
+        <PageHeader title="Promoções" description="Módulo Beta" />
         <div className="p-6">
           <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
@@ -1155,7 +1155,7 @@ export default function PromocoesPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#03050f]">
-      <Header title="Promoções" />
+      <PageHeader title="Promoções" />
 
       <div className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-5">
 

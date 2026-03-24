@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Bell, Info, AlertTriangle, XCircle, CheckCircle2,
   ShoppingCart, MessageSquareWarning, Package, DollarSign,
@@ -106,7 +106,7 @@ export default function NotificacoesPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <Header title="Notificações" subtitle="Central de alertas e atualizações" />
+      <PageHeader title="Notificações" description="Central de alertas e atualizações" />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         {/* KPIs */}

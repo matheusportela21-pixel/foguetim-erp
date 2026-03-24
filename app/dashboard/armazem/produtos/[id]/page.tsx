@@ -7,7 +7,7 @@ import {
   Package, DollarSign, FileText, Truck, BarChart3, Link2,
   Layers, Package2, Info, Search, X, Plus, ExternalLink, Zap, Loader2,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -696,7 +696,7 @@ export default function ProductDetailPage() {
   if (loading) {
     return (
       <div style={{ background: '#0f1117' }} className="min-h-screen">
-        <Header title="Carregando..." subtitle="Produto" />
+        <PageHeader title="Carregando..." description="Produto" />
         <div className="p-4 md:p-6 space-y-4 animate-pulse">
           {[1, 2, 3].map(i => (
             <div key={i} className="h-16 bg-white/[0.04] rounded-xl" />
@@ -730,9 +730,9 @@ export default function ProductDetailPage() {
 
   return (
     <div style={{ background: '#0f1117' }} className="min-h-screen">
-      <Header
+      <PageHeader
         title={product.name}
-        subtitle={`SKU: ${product.sku}`}
+        description={`SKU: ${product.sku}`}
       />
 
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}

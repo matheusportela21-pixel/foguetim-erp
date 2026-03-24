@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Layers, Plus, Search, X, AlertTriangle, TrendingUp, TrendingDown, PackageX, PackageMinus, Package } from 'lucide-react'
 import Link from 'next/link'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface InventoryItem {
@@ -255,7 +255,7 @@ export default function EstoquePage() {
 
   return (
     <div>
-      <Header title="Estoque" subtitle="Posição de estoque por produto e armazém" />
+      <PageHeader title="Estoque" description="Posição de estoque por produto e armazém" />
 
       {/* Toast */}
       {toast && (

@@ -13,11 +13,14 @@ import {
   Bell, Cpu, Settings, Users, HelpCircle, LogOut, Shield,
   Menu, X, ChevronDown, ChevronRight, Plus, ExternalLink,
   Eye, Megaphone, Scale, BarChart, Activity, Archive,
+  Search, Sun, Moon, Info, AlertTriangle, XCircle, CheckCircle2,
+  CheckCheck, Bug, Lightbulb,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useConnectedMarketplaces } from '@/lib/hooks/useConnectedMarketplaces'
 import { usePermissions } from '@/lib/hooks/usePermissions'
+import { useTheme } from '@/context/ThemeContext'
 import { megaMenu, mobileMenu } from '@/lib/animations'
 
 // ─── Icon map ────────────────────────────────────────────────────────────────
@@ -27,35 +30,51 @@ const ICONS: Record<string, React.ElementType> = {
   Star, Send, Truck, Calculator, FileText, Receipt, Download, Bell, Cpu,
   Settings, Users, HelpCircle, LogOut, Shield, Plus, ExternalLink,
   Eye, Megaphone, Scale, BarChart, Activity, Archive, Menu, X, ChevronDown,
+  Search, Bug, Lightbulb,
+}
+
+// ─── Notification types ─────────────────────────────────────────────────────
+interface Notification {
+  id:         string
+  title:      string
+  message:    string
+  type:       'info' | 'warning' | 'error' | 'success'
+  category:   string
+  read:       boolean
+  action_url: string | null
+  created_at: string
+}
+
+const NOTIF_TYPE_CONFIG = {
+  info:    { icon: Info,          color: 'text-blue-400',   bg: 'bg-blue-500/10'   },
+  warning: { icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+  error:   { icon: XCircle,       color: 'text-red-400',    bg: 'bg-red-500/10'    },
+  success: { icon: CheckCircle2,  color: 'text-green-400',  bg: 'bg-green-500/10'  },
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60_000)
+  if (m < 1) return 'agora'
+  if (m < 60) return `há ${m}min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `há ${h}h`
+  const d = Math.floor(h / 24)
+  return `há ${d} dia${d > 1 ? 's' : ''}`
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface MenuItem {
-  label: string
-  href: string
-  icon?: string
-}
-
+interface MenuItem { label: string; href: string; icon?: string }
 interface MenuSection {
-  title: string
-  color?: string
-  visible?: string // 'hasML' | 'hasShopee' | 'hasMagalu'
-  items?: MenuItem[]
-  href?: string
-  icon?: string
-  isAction?: boolean
+  title: string; color?: string; visible?: string
+  items?: MenuItem[]; href?: string; icon?: string; isAction?: boolean
 }
-
 interface TopMenu {
-  label: string
-  icon: string
-  href?: string          // direct link (no dropdown)
-  items?: MenuItem[]     // simple dropdown
-  sections?: MenuSection[] // mega-menu with sections
+  label: string; icon: string; href?: string
+  items?: MenuItem[]; sections?: MenuSection[]
 }
 
 // ─── Menu config ─────────────────────────────────────────────────────────────
-
 const TOPBAR_MENUS: TopMenu[] = [
   { label: 'Home', icon: 'Home', href: '/dashboard' },
   {
@@ -137,28 +156,92 @@ export default function Topbar() {
   const { user } = useAuth()
   const { hasML, hasShopee, hasMagalu } = useConnectedMarketplaces()
   const { isOwner: isAdmin } = usePermissions()
+  const { theme } = useTheme()
 
+  // Menu state
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null)
-  const [alertCount, setAlertCount] = useState(0)
 
+  // Notifications state
+  const [notifs, setNotifs] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notifsOpen, setNotifsOpen] = useState(false)
+  const [loadingNotifs, setLoadingNotifs] = useState(false)
+  const [markingAll, setMarkingAll] = useState(false)
+
+  // Refs
   const openTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
+  const notifsRef = useRef<HTMLDivElement>(null)
 
-  // Fetch unread alerts
+  // ── Notifications ──────────────────────────────────────────────────────
+  const fetchNotifs = useCallback(async (silent = false) => {
+    if (!silent) setLoadingNotifs(true)
+    try {
+      const res = await fetch('/api/notifications')
+      if (!res.ok) return
+      const data = await res.json()
+      setNotifs(data.notifications ?? [])
+      setUnreadCount(data.unread_count ?? 0)
+    } catch {
+      // non-critical
+    } finally {
+      if (!silent) setLoadingNotifs(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (!user) return
-    fetch('/api/notifications?unread=true&limit=1')
-      .then(r => r.ok ? r.json() : { count: 0 })
-      .then(d => setAlertCount(d.count ?? d.unread ?? 0))
-      .catch(() => {})
-  }, [user])
+    fetchNotifs()
+    const id = setInterval(() => fetchNotifs(true), 60_000)
+    return () => clearInterval(id)
+  }, [user, fetchNotifs])
 
-  // Check visibility of channel sections
+  async function markRead(id: string, actionUrl: string | null) {
+    setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    setUnreadCount(prev => Math.max(0, prev - 1))
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (actionUrl) {
+      setNotifsOpen(false)
+      router.push(actionUrl)
+    }
+  }
+
+  async function markAllRead() {
+    setMarkingAll(true)
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })))
+    setUnreadCount(0)
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+    })
+    setMarkingAll(false)
+  }
+
+  // ── Keyboard shortcut ⌘K ──────────────────────────────────────────────
+  const [searchOpen, setSearchOpen] = useState(false)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(o => !o)
+      }
+      if (e.key === 'Escape') setSearchOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // ── Visibility helpers ─────────────────────────────────────────────────
   const isVisible = useCallback((key?: string) => {
     if (!key) return true
     if (key === 'hasML') return hasML
@@ -167,12 +250,10 @@ export default function Topbar() {
     return true
   }, [hasML, hasShopee, hasMagalu])
 
-  // Handle hover open/close with delays
   const handleMenuEnter = (label: string) => {
     if (closeTimeout.current) clearTimeout(closeTimeout.current)
     openTimeout.current = setTimeout(() => setOpenMenu(label), 80)
   }
-
   const handleMenuLeave = () => {
     if (openTimeout.current) clearTimeout(openTimeout.current)
     closeTimeout.current = setTimeout(() => setOpenMenu(null), 250)
@@ -182,18 +263,17 @@ export default function Topbar() {
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false)
+      if (notifsRef.current && !notifsRef.current.contains(e.target as Node)) setNotifsOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  // Is active check
   const isActive = (href?: string) => {
     if (!href) return false
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
   }
-
   const isMenuActive = (menu: TopMenu) => {
     if (menu.href) return isActive(menu.href)
     if (menu.items) return menu.items.some(i => isActive(i.href))
@@ -204,7 +284,6 @@ export default function Topbar() {
   const userInitials = user?.user_metadata?.name
     ? user.user_metadata.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
     : user?.email?.[0]?.toUpperCase() ?? '?'
-
   const fullName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuário'
   const firstName = fullName.split(' ')[0]
 
@@ -213,11 +292,17 @@ export default function Topbar() {
     router.push('/login')
   }
 
+  // Theme toggle (light mode coming soon)
+  const handleThemeToggle = () => {
+    // For now, just show that it's coming soon
+    // In the future: setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
   return (
     <>
       {/* ─── Desktop Topbar ────────────────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-space-900/90 backdrop-blur-xl border-b border-space-600/50">
-        <div className="max-w-[1440px] mx-auto h-full px-6 flex items-center justify-between">
+        <div className="max-w-[1440px] mx-auto h-full px-4 md:px-6 flex items-center justify-between">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0 group">
             <Image
@@ -287,7 +372,6 @@ export default function Topbar() {
                       onMouseEnter={() => { if (closeTimeout.current) clearTimeout(closeTimeout.current) }}
                       onMouseLeave={handleMenuLeave}
                     >
-                      {/* Simple dropdown */}
                       {menu.items && (
                         <div className="p-2">
                           {menu.items.map(item => {
@@ -308,8 +392,6 @@ export default function Topbar() {
                           })}
                         </div>
                       )}
-
-                      {/* Mega-menu with sections */}
                       {menu.sections && (
                         <div className="flex divide-x divide-space-600">
                           {menu.sections.filter(s => isVisible(s.visible)).map(section => (
@@ -326,12 +408,8 @@ export default function Topbar() {
                               ) : (
                                 <>
                                   <div className="flex items-center gap-2 px-3 py-1.5 mb-1">
-                                    {section.color && (
-                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: section.color }} />
-                                    )}
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                      {section.title}
-                                    </span>
+                                    {section.color && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: section.color }} />}
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{section.title}</span>
                                   </div>
                                   {section.items?.map(item => (
                                     <Link
@@ -358,23 +436,169 @@ export default function Topbar() {
             ))}
           </nav>
 
-          {/* Right side */}
-          <div className="flex items-center gap-3">
-            {/* Notifications */}
-            <Link href="/dashboard/notificacoes" className="relative p-2 text-gray-400 hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-              {alertCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {alertCount > 9 ? '9+' : alertCount}
-                </span>
-              )}
+          {/* ─── Right side: Search + Theme + Help + Notifications + Profile ─── */}
+          <div className="flex items-center gap-1.5">
+            {/* Search input (desktop) */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-space-800 border border-space-600 text-sm text-gray-500 hover:text-gray-300 hover:border-space-500 transition-all cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="w-32 lg:w-40 text-left">Buscar...</span>
+              <kbd className="hidden lg:inline text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500">⌘K</kbd>
+            </button>
+
+            {/* Search icon (mobile) */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+              title="Buscar"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
+            {/* Theme toggle */}
+            <button
+              onClick={handleThemeToggle}
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+              title={theme === 'dark' ? 'Modo claro (em breve)' : 'Modo escuro'}
+            >
+              {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+            </button>
+
+            {/* Help */}
+            <Link
+              href="/dashboard/ajuda"
+              className="hidden sm:flex p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+              title="Central de Ajuda"
+            >
+              <HelpCircle className="w-4.5 h-4.5" />
             </Link>
 
-            {/* Profile */}
+            {/* ── Notifications ─────────────────────────────────────────────── */}
+            <div className="relative" ref={notifsRef}>
+              <button
+                onClick={() => { setNotifsOpen(o => !o); if (!notifsOpen) fetchNotifs() }}
+                className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+                aria-label="Notificações"
+              >
+                <Bell className={`w-5 h-5 ${notifsOpen ? 'text-primary-400' : ''}`} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {notifsOpen && (
+                  <motion.div
+                    variants={megaMenu}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="absolute right-0 mt-1 w-[380px] max-h-[480px] flex flex-col bg-space-800 border border-space-600 rounded-xl shadow-2xl z-50 overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-space-600 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-primary-400" />
+                        <span className="text-sm font-semibold text-white">Notificações</span>
+                        {unreadCount > 0 && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllRead}
+                          disabled={markingAll}
+                          className="flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 transition-colors disabled:opacity-50"
+                        >
+                          <CheckCheck className="w-3 h-3" />
+                          Marcar todas
+                        </button>
+                      )}
+                    </div>
+
+                    {/* List */}
+                    <div className="overflow-y-auto flex-1 divide-y divide-space-600/30">
+                      {loadingNotifs ? (
+                        Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="flex items-start gap-3 p-3 animate-pulse">
+                            <div className="w-7 h-7 rounded-lg bg-space-700 shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="h-3 bg-space-700 rounded w-36" />
+                              <div className="h-3 bg-space-700 rounded w-56" />
+                              <div className="h-2.5 bg-space-700 rounded w-20" />
+                            </div>
+                          </div>
+                        ))
+                      ) : notifs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-2">
+                          <Bell className="w-8 h-8 text-gray-700" />
+                          <p className="text-xs text-gray-600">Nenhuma notificação</p>
+                        </div>
+                      ) : (
+                        notifs.map(n => {
+                          const tc = NOTIF_TYPE_CONFIG[n.type] ?? NOTIF_TYPE_CONFIG.info
+                          const NIcon = tc.icon
+                          return (
+                            <div
+                              key={n.id}
+                              onClick={() => markRead(n.id, n.action_url)}
+                              className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-space-700/50 transition-all ${
+                                !n.read ? 'bg-primary-900/10' : ''
+                              }`}
+                            >
+                              <div className={`w-7 h-7 rounded-lg ${tc.bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                                <NIcon className={`w-3.5 h-3.5 ${tc.color}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className={`text-xs font-semibold truncate ${!n.read ? 'text-white' : 'text-gray-300'}`}>
+                                    {n.title}
+                                  </p>
+                                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-accent-400 shrink-0" />}
+                                </div>
+                                <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mt-0.5">{n.message}</p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
+                                  {n.action_url && (
+                                    <>
+                                      <span className="text-[10px] text-gray-700">·</span>
+                                      <ExternalLink className="w-2.5 h-2.5 text-primary-500" />
+                                      <span className="text-[10px] text-primary-400">Ver</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 py-2.5 border-t border-space-600 shrink-0">
+                      <button
+                        onClick={() => { setNotifsOpen(false); router.push('/dashboard/notificacoes') }}
+                        className="w-full text-center text-xs text-primary-400 hover:text-primary-300 transition-colors py-0.5"
+                      >
+                        Ver todas as notificações →
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ── Profile dropdown ────────────────────────────────────────── */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-space-700/50 transition-all"
+                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-space-700/50 transition-all ml-1"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs font-bold">
                   {userInitials}
@@ -420,6 +644,20 @@ export default function Topbar() {
                           </Link>
                         )
                       })}
+
+                      {/* Feedback (moved from floating button) */}
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false)
+                          // Open feedback modal - dispatch custom event
+                          window.dispatchEvent(new CustomEvent('open-feedback'))
+                        }}
+                        className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                      >
+                        <Bug className="w-4 h-4" />
+                        <span>Enviar Feedback</span>
+                      </button>
+
                       {isAdmin && (
                         <Link
                           href="/admin"
@@ -457,6 +695,65 @@ export default function Topbar() {
           </div>
         </div>
       </header>
+
+      {/* ─── Search Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]"
+            onClick={() => setSearchOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.97 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-lg mx-4 bg-space-800 border border-space-600 rounded-xl shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-space-600">
+                <Search className="w-5 h-5 text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Buscar pedidos, produtos, páginas..."
+                  className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none"
+                  autoFocus
+                />
+                <kbd className="text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500">ESC</kbd>
+              </div>
+              <div className="p-4">
+                <p className="text-xs text-gray-500 mb-3">Páginas rápidas</p>
+                <div className="space-y-1">
+                  {[
+                    { label: 'Pedidos',       href: '/dashboard/pedidos',      icon: 'ShoppingBag' },
+                    { label: 'Produtos ML',   href: '/dashboard/produtos-ml',  icon: 'Package' },
+                    { label: 'Financeiro',    href: '/dashboard/financeiro',   icon: 'DollarSign' },
+                    { label: 'Integrações',   href: '/dashboard/integracoes',  icon: 'Link2' },
+                    { label: 'Configurações', href: '/dashboard/configuracoes', icon: 'Settings' },
+                  ].map(item => {
+                    const Icon = ICONS[item.icon]
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setSearchOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                      >
+                        {Icon && <Icon className="w-4 h-4" />}
+                        <span>{item.label}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── Mobile full-screen menu ────────────────────────────────────── */}
       <AnimatePresence>
@@ -496,7 +793,6 @@ export default function Topbar() {
                         </div>
                         <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${mobileExpanded === menu.label ? 'rotate-90' : ''}`} />
                       </button>
-
                       <AnimatePresence>
                         {mobileExpanded === menu.label && (
                           <motion.div
@@ -566,6 +862,7 @@ export default function Topbar() {
                   { label: 'Configurações', href: '/dashboard/configuracoes', icon: 'Settings' },
                   { label: 'Equipe',        href: '/dashboard/equipe',        icon: 'Users' },
                   { label: 'Integrações',   href: '/dashboard/integracoes',   icon: 'Link2' },
+                  { label: 'Ajuda',         href: '/dashboard/ajuda',         icon: 'HelpCircle' },
                 ].map(item => {
                   const Icon = ICONS[item.icon]
                   return (

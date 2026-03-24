@@ -7,7 +7,7 @@ import {
   BarChart3, Mail, RefreshCw, ChevronDown, Clock, ShieldOff, Send,
   FilePlus, FileSpreadsheet, BookOpen, TrendingUp,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
@@ -1040,7 +1040,7 @@ export default function ContadorPage() {
 
   return (
     <div>
-      <Header title="Espaço do Contador" subtitle="Documentos e relatórios organizados para sua contabilidade" />
+      <PageHeader title="Espaço do Contador" description="Documentos e relatórios organizados para sua contabilidade" />
 
       <div className="p-4 md:p-6 space-y-5">
 

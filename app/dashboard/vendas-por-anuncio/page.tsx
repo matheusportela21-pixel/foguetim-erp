@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -214,9 +214,9 @@ export default function VendasPorAnuncioPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 overflow-y-auto">
-      <Header
+      <PageHeader
         title="Vendas por Anúncio"
-        subtitle="Ranking de desempenho dos seus produtos"
+        description="Ranking de desempenho dos seus produtos"
       />
 
       <div className="p-6 space-y-6">

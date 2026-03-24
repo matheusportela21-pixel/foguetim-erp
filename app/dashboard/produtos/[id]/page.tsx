@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   ArrowLeft, Save, Send, AlertTriangle, X, Plus, GripVertical,
   ToggleLeft, ToggleRight, ChevronDown, Package, Ruler, FileText,
@@ -1621,9 +1621,9 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
 
   return (
     <div>
-      <Header
+      <PageHeader
         title={isNew ? 'Novo Produto' : produto.nome}
-        subtitle={isNew ? 'Cadastro de produto' : `SKU ${produto.sku} · ${produto.marca}`}
+        description={isNew ? 'Cadastro de produto' : `SKU ${produto.sku} · ${produto.marca}`}
       />
 
       <div className="p-6 space-y-4">

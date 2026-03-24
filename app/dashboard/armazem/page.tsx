@@ -7,7 +7,7 @@ import {
   TrendingUp, DollarSign, Unlink,
 } from 'lucide-react'
 import Link from 'next/link'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 // ─── Module grid data (unchanged) ────────────────────────────────────────────
 
@@ -226,7 +226,7 @@ export default function ArmazemPage() {
 
   return (
     <div className="min-h-screen bg-[#03050f]">
-      <Header title="Armazém" subtitle="Central de gestão do seu estoque interno" />
+      <PageHeader title="Armazém" description="Central de gestão do seu estoque interno" />
 
       <div className="p-6 space-y-6">
 

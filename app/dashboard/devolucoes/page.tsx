@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   RotateCcw, Search, RefreshCw, Loader2, AlertCircle,
   ChevronLeft, ChevronRight, X, Package, Clock, Check,
@@ -94,7 +94,7 @@ export default function DevolucoesPage() {
 
   return (
     <div className="space-y-6">
-      <Header title="Devoluções" subtitle="Devoluções e reembolsos de todos os marketplaces" />
+      <PageHeader title="Devoluções" description="Devoluções e reembolsos de todos os marketplaces" />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

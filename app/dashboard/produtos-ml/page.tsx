@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import BulkActionModal, { type BulkAction, type BulkProgress } from '@/components/ml/BulkActionModal'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
@@ -1771,7 +1771,7 @@ export default function ProdutosMLPage() {
   useEffect(() => { document.title = 'Produtos ML — Foguetim ERP' }, [])
   return (
     <div>
-      <Header title="Produtos" subtitle="Seus anúncios no Mercado Livre" />
+      <PageHeader title="Produtos" description="Seus anúncios no Mercado Livre" />
       <div className="p-6">
         <MLProductsTab />
       </div>

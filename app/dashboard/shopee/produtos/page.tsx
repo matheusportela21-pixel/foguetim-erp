@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import ShopeeSandboxBanner from '@/components/ShopeeSandboxBanner'
@@ -1430,7 +1430,7 @@ export default function ShopeeProdutosPage() {
 
   return (
     <div>
-      <Header title="Produtos Shopee" />
+      <PageHeader title="Produtos Shopee" />
       <div className="p-6 space-y-6">
 
         <ShopeeSandboxBanner />

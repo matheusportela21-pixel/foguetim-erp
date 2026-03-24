@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   BarChart3, TrendingUp, Package, Users, DollarSign, ShoppingCart,
@@ -193,7 +193,7 @@ export default function RelatoriosPage() {
 
   return (
     <div>
-      <Header title="Relatórios" subtitle="Análises e insights do seu negócio" />
+      <PageHeader title="Relatórios" description="Análises e insights do seu negócio" />
 
       <div className="p-6 space-y-6">
 

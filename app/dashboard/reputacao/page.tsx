@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   ShieldCheck, TrendingDown, Clock, XCircle, CheckCircle2,
   AlertTriangle, Star, Package, Loader2, RefreshCw, Link2,
@@ -187,7 +187,7 @@ export default function ReputacaoPage() {
 
   return (
     <div className="min-h-screen">
-      <Header title="Reputação ML" subtitle="Monitore sua reputação no Mercado Livre em tempo real" />
+      <PageHeader title="Reputação ML" description="Monitore sua reputação no Mercado Livre em tempo real" />
 
       <div className="p-6 lg:p-8 space-y-6">
 

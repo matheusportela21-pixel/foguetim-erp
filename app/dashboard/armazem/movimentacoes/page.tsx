@@ -5,7 +5,7 @@ import {
   ArrowLeftRight, Plus, Search, Download, ChevronLeft, ChevronRight,
   X, Check, ChevronDown, AlertCircle,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -367,7 +367,7 @@ export default function MovimentacoesPage() {
         </div>
       )}
 
-      <Header title="Movimentações" subtitle="Histórico completo de movimentações de estoque" />
+      <PageHeader title="Movimentações" description="Histórico completo de movimentações de estoque" />
 
       <div className="p-6 space-y-4">
 

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import {
   Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History, FileText, Mail,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import EmpresaSection     from './components/EmpresaSection'
 import ContaSection       from './components/ContaSection'
 import ImpressaoSection   from './components/ImpressaoSection'
@@ -72,7 +72,7 @@ export default function ConfigPage() {
 
   return (
     <div>
-      <Header title="Configurações" subtitle="Gerencie sua empresa, conta e preferências" />
+      <PageHeader title="Configurações" description="Gerencie sua empresa, conta e preferências" />
 
       <div className="p-4 md:p-6">
         <div className="flex flex-col lg:flex-row gap-5 max-w-6xl mx-auto">

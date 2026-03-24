@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   RefreshCw, TrendingUp, TrendingDown, DollarSign,
   Percent, AlertTriangle, Info, Package, ChevronDown, ChevronUp,
@@ -187,7 +187,7 @@ export default function DREPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Header title="DRE Simplificado" subtitle="Demonstrativo de Resultados do Exercício" />
+        <PageHeader title="DRE Simplificado" description="Demonstrativo de Resultados do Exercício" />
         <div className="flex items-center gap-3">
           <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
             className="px-3 py-2 text-sm bg-[#111318] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none">

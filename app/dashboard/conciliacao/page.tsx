@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import Link from 'next/link'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -143,7 +143,7 @@ export default function ConciliacaoPage() {
 
   return (
     <div>
-      <Header title="Conciliação Financeira" subtitle="Receita dos pedidos vs cobranças do Mercado Livre" />
+      <PageHeader title="Conciliação Financeira" description="Receita dos pedidos vs cobranças do Mercado Livre" />
 
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
 

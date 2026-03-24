@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import ExportPDFButton from '@/components/ExportPDFButton'
 import { generatePedidosPDF } from '@/lib/reports/pdf-generator'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 // ─── ML ORDER TYPES ──────────────────────────────────────────────────────────
 
@@ -540,7 +540,7 @@ export default function PedidosPage() {
     <div className="flex-1 overflow-y-auto">
 
       {/* ── HEADER ── */}
-      <Header title="Pedidos" subtitle="Gerencie todos os pedidos da sua loja" />
+      <PageHeader title="Pedidos" description="Gerencie todos os pedidos da sua loja" />
 
       {/* ── View Tabs ── */}
       <div className="px-6 py-3 border-b border-white/[0.06] flex items-center gap-2">

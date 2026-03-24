@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { ChatWidget } from '@/components/ai/ChatWidget'
-import { FeedbackButton } from '@/components/FeedbackButton'
 import { WelcomeModal } from '@/components/WelcomeModal'
 import { PlanProvider } from '@/context/PlanContext'
 import Topbar from '@/components/layout/Topbar'
@@ -41,7 +40,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
         <ChatWidget />
-        <FeedbackButton />
         <WelcomeModal />
       </PlanProvider>
     </ThemeProvider>

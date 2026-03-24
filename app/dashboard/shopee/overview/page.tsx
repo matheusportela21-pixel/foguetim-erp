@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   ShoppingBag, Package, TrendingUp, Star, AlertCircle,
   RefreshCw, ExternalLink, Loader2, Zap,
@@ -69,9 +69,9 @@ export default function ShopeeOverviewPage() {
 
   return (
     <div>
-      <Header
+      <PageHeader
         title="Shopee — Visão Geral"
-        subtitle={status?.shop_name ? `Loja: ${status.shop_name}` : 'Painel da sua loja Shopee'}
+        description={status?.shop_name ? `Loja: ${status.shop_name}` : 'Painel da sua loja Shopee'}
       />
 
       <div className="p-6 space-y-6">

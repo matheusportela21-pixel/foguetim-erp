@@ -6,7 +6,7 @@ import {
   Package, Package2, Layers, Plus, Search, ChevronLeft, ChevronRight,
   Pencil, Trash2, CheckCircle2, XCircle, X, Info,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -601,7 +601,7 @@ export default function ArmazemProdutosPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#0f1117' }}>
-      <Header title="Produtos" subtitle="Catálogo interno do armazém" />
+      <PageHeader title="Produtos" description="Catálogo interno do armazém" />
 
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
 

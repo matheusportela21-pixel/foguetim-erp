@@ -8,7 +8,7 @@ import {
   ToggleLeft, ToggleRight, Layers, Lock, Unlock, Settings2,
   CircleDollarSign, Scale, BarChart3, Loader2, FlaskConical,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
 import {
   calcSuggestedPrice, calcMarginFromPrice,
@@ -427,9 +427,9 @@ export default function PrecificacaoPage() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen">
-      <Header
+      <PageHeader
         title="Precificação Inteligente"
-        subtitle="Simule preços com as tarifas reais do Mercado Livre"
+        description="Simule preços com as tarifas reais do Mercado Livre"
       />
 
       <div className="p-4 lg:p-6 xl:p-8 space-y-6 max-w-[1600px]">

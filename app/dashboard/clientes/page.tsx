@@ -8,7 +8,7 @@ import {
   Plus, Trash2, Package, MapPin, Clock, Calendar,
   Zap, RotateCcw, ExternalLink,
 } from 'lucide-react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 interface Customer {
@@ -634,9 +634,9 @@ export default function ClientesPage() {
 
   return (
     <div>
-      <Header
+      <PageHeader
         title="Clientes"
-        subtitle="Histórico e relacionamento com seus compradores"
+        description="Histórico e relacionamento com seus compradores"
       />
 
       <div className="p-4 md:p-6 space-y-5">

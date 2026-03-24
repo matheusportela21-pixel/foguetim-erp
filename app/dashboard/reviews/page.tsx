@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import Header from '@/components/Header'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Star, StarOff, ThumbsUp, ThumbsDown, AlertCircle, CheckCircle2,
   Loader2, Link2, ShieldCheck, MessageSquare, BarChart2, TrendingDown,
@@ -421,9 +421,9 @@ export default function ReviewsPage() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 overflow-y-auto">
-      <Header
+      <PageHeader
         title="Reviews e Opiniões"
-        subtitle="Acompanhe o que os compradores estão falando dos seus produtos"
+        description="Acompanhe o que os compradores estão falando dos seus produtos"
       />
 
       <div className="p-6 space-y-5">
