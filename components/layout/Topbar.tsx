@@ -121,9 +121,13 @@ const TOPBAR_MENUS: TopMenu[] = [
       {
         title: 'Magalu', color: '#0086FF', visible: 'hasMagalu',
         items: [
-          { label: 'Overview',  href: '/dashboard/magalu/overview' },
-          { label: 'Produtos',  href: '/dashboard/magalu/produtos' },
-          { label: 'Pedidos',   href: '/dashboard/magalu/pedidos' },
+          { label: 'Overview',   href: '/dashboard/magalu/overview' },
+          { label: 'Produtos',   href: '/dashboard/magalu/produtos' },
+          { label: 'Pedidos',    href: '/dashboard/magalu/pedidos' },
+          { label: 'SAC',        href: '/dashboard/magalu/sac' },
+          { label: 'Perguntas',  href: '/dashboard/magalu/perguntas' },
+          { label: 'Saúde',      href: '/dashboard/magalu/saude' },
+          { label: 'Expedição',  href: '/dashboard/magalu/expedicao' },
         ],
       },
       { title: 'Conectar canal', icon: 'Plus', href: '/dashboard/integracoes', isAction: true },

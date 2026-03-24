@@ -39,6 +39,23 @@ export const MAGALU_PATH_ORDER_DETAIL  = '/seller/v1/orders/{order_id}'
 export const MAGALU_PATH_ORDER_DELIVERIES = '/seller/v1/orders/{order_id}/deliveries'
 export const MAGALU_PATH_SANDBOX_ONBOARDING = '/v1/samples/onboarding'
 
+// ─── SAC / Tickets (v0) ───────────────────────────────────────────────────────
+export const MAGALU_PATH_TICKETS         = '/seller/v0/tickets'
+export const MAGALU_PATH_TICKET_DETAIL   = '/seller/v0/tickets/{ticket_id}'
+export const MAGALU_PATH_TICKET_MESSAGES = '/seller/v0/tickets/{ticket_id}/messages'
+export const MAGALU_PATH_TICKET_EVENTS   = '/seller/v0/tickets/{ticket_id}/events'
+
+// ─── Questions (P&R, v0) ─────────────────────────────────────────────────────
+export const MAGALU_PATH_QUESTIONS       = '/v0/questions'
+export const MAGALU_PATH_QUESTION_DETAIL = '/v0/questions/{question_id}'
+
+// ─── Scores ───────────────────────────────────────────────────────────────────
+export const MAGALU_PATH_SCORES          = '/seller/v1/portfolios/products/scores'
+
+// ─── Logistics ────────────────────────────────────────────────────────────────
+export const MAGALU_PATH_DELIVERIES      = '/seller/v1/deliveries'
+export const MAGALU_PATH_DELIVERY_DETAIL = '/seller/v1/deliveries/{delivery_id}'
+
 /** Retorna 'sandbox' ou 'prod' para UI */
 export function getMagaluEnvLabel(): 'sandbox' | 'prod' {
   return (process.env.MAGALU_ENV ?? 'prod') === 'sandbox' ? 'sandbox' : 'prod'
