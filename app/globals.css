@@ -411,11 +411,9 @@ h1, h2, h3 { font-family: 'Space Grotesk', 'Sora', sans-serif; }
 
 /* ─── Theme & Accent CSS Variable System ─────────────────────────────────── */
 .dash-root {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   /* Defaults (dark) */
-  --bg-main:   #0f1117;
+  --bg-main:   #0F0B1E;
   --bg-card:   #1c2233;
   --bg-surface:#161b27;
   --bg-input:  #0f1117;

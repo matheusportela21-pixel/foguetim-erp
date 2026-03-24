@@ -13,6 +13,7 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth-context'
 import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
 import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
@@ -325,15 +326,11 @@ export default function DashboardPage() {
   const reputaLvl = LEVEL_CFG[reputaLvlKey] ?? LEVEL_CFG.green
 
   return (
-    <div>
+    <div className="space-y-6">
       <DevBanner />
 
-      {/* ── Onboarding wizard (apenas para não-admins, não completados) ── */}
-      <div className="px-6 pt-6">
-        <OnboardingWizard isAdmin={profile?.role === 'super_admin'} />
-      </div>
-
-      <div className="p-6 space-y-6">
+      {/* ── Onboarding wizard ── */}
+      <OnboardingWizard isAdmin={profile?.role === 'super_admin'} />
 
         {/* ── Greeting ── */}
         <div className="animate-slide-up">
@@ -371,7 +368,7 @@ export default function DashboardPage() {
 
         {/* ── Urgent claims alert ── */}
         {hasML && urgentClaims > 0 && (
-          <div className="bg-red-950/40 border border-red-800 rounded-xl p-4 animate-slide-up">
+          <div className="glass-card border-l-4 border-l-red-500 rounded-xl p-4 animate-slide-up">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
               <div>
@@ -392,7 +389,7 @@ export default function DashboardPage() {
         {/* ── Perguntas pendentes ML alert ── */}
         {questions > 0 && ml?.connected && (
           <Link href="/dashboard/sac">
-            <div className="flex items-center gap-3 p-4 bg-amber-950/30 border border-amber-800/40 rounded-xl hover:bg-amber-900/30 transition-colors">
+            <div className="flex items-center gap-3 p-4 glass-card border-l-4 border-l-amber-500 rounded-xl hover:shadow-glow-sm transition-all">
               <MessageSquare className="w-5 h-5 text-amber-400 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-white">
@@ -408,7 +405,7 @@ export default function DashboardPage() {
         {/* ── Ruptura de estoque alert ── */}
         {hasML && rupturasCount > 0 && (
           <Link href="/dashboard/estoque?filter=ruptura">
-            <div className="flex items-center gap-3 p-4 bg-red-950/30 border border-red-800/40 rounded-xl hover:bg-red-900/30 transition-colors">
+            <div className="flex items-center gap-3 p-4 glass-card border-l-4 border-l-red-500 rounded-xl hover:shadow-glow-sm transition-all">
               <Archive className="w-5 h-5 text-red-400 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-white">
@@ -424,10 +421,8 @@ export default function DashboardPage() {
         {/* ── Health score alert ── */}
         {hasML && healthScore !== null && healthScore < 70 && (
           <Link href="/dashboard/saude">
-            <div className={`flex items-center gap-3 p-4 rounded-xl border hover:opacity-90 transition-opacity ${
-              healthScore < 50
-                ? 'bg-red-950/30 border-red-800/40'
-                : 'bg-yellow-950/20 border-yellow-800/40'
+            <div className={`flex items-center gap-3 p-4 glass-card rounded-xl border-l-4 hover:shadow-glow-sm transition-all ${
+              healthScore < 50 ? 'border-l-red-500' : 'border-l-yellow-500'
             }`}>
               <Activity className={`w-5 h-5 shrink-0 ${healthScore < 50 ? 'text-red-400' : 'text-yellow-400'}`} />
               <div className="flex-1">
@@ -467,7 +462,7 @@ export default function DashboardPage() {
           </div>
         ) : hasML && hasShopee ? (
           /* Both ML and Shopee connected — unified KPIs */
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               {
                 label: 'Faturamento 30d',
@@ -530,7 +525,7 @@ export default function DashboardPage() {
                 {[0,1,2,3].map(i => <KpiSkeleton key={i} />)}
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                   {
                     label: 'Pedidos 30d',
@@ -603,7 +598,7 @@ export default function DashboardPage() {
           )
         ) : (
           /* Only ML connected */
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-slide-up">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { label: 'Faturamento 30d',   value: revenue,   sub: 'Mercado Livre',       icon: DollarSign,   color: 'text-primary-400 bg-primary-400/10', href: '/dashboard/financeiro', tooltip: 'Receita bruta dos últimos 30 dias no Mercado Livre' },
               { label: 'Pedidos 30d',       value: orders,    sub: 'Mercado Livre',       icon: ShoppingCart, color: 'text-cyan-400 bg-cyan-400/10',        href: '/dashboard/pedidos',    tooltip: 'Total de pedidos recebidos nos últimos 30 dias' },
@@ -1403,7 +1398,6 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-      </div>
     </div>
   )
 }
