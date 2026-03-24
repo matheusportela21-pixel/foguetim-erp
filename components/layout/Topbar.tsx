@@ -13,7 +13,7 @@ import {
   Bell, Cpu, Settings, Users, HelpCircle, LogOut, Shield,
   Menu, X, ChevronDown, ChevronRight, Plus, ExternalLink,
   Eye, Megaphone, Scale, BarChart, Activity, Archive,
-  Search, Sun, Moon, Info, AlertTriangle, XCircle, CheckCircle2,
+  Search, Sun, Moon, Info, AlertTriangle, XCircle, CheckCircle2, Loader2,
   CheckCheck, Bug, Lightbulb,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
@@ -227,8 +227,12 @@ export default function Topbar() {
     setMarkingAll(false)
   }
 
-  // ── Keyboard shortcut ⌘K ──────────────────────────────────────────────
+  // ── Keyboard shortcut ⌘K + search ─────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<{ products: any[]; orders: any[]; pages: any[] }>({ products: [], orders: [], pages: [] })
+  const [searchLoading, setSearchLoading] = useState(false)
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -724,7 +728,7 @@ export default function Topbar() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]"
-            onClick={() => setSearchOpen(false)}
+            onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchResults({ products: [], orders: [], pages: [] }) }}
           >
             <motion.div
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -741,33 +745,119 @@ export default function Topbar() {
                   placeholder="Buscar pedidos, produtos, páginas..."
                   className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none"
                   autoFocus
+                  value={searchQuery}
+                  onChange={e => {
+                    const val = e.target.value
+                    setSearchQuery(val)
+                    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+                    if (val.trim().length < 2) {
+                      setSearchResults({ products: [], orders: [], pages: [] })
+                      return
+                    }
+                    setSearchLoading(true)
+                    searchTimerRef.current = setTimeout(() => {
+                      fetch(`/api/search?q=${encodeURIComponent(val.trim())}`)
+                        .then(r => r.json())
+                        .then(d => setSearchResults(d))
+                        .catch(() => {})
+                        .finally(() => setSearchLoading(false))
+                    }, 300)
+                  }}
                 />
+                {searchLoading && <Loader2 className="w-4 h-4 text-gray-500 animate-spin shrink-0" />}
                 <kbd className="text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500">ESC</kbd>
               </div>
-              <div className="p-4">
-                <p className="text-xs text-gray-500 mb-3">Páginas rápidas</p>
-                <div className="space-y-1">
-                  {[
-                    { label: 'Pedidos',       href: '/dashboard/pedidos',      icon: 'ShoppingBag' },
-                    { label: 'Produtos ML',   href: '/dashboard/produtos-ml',  icon: 'Package' },
-                    { label: 'Financeiro',    href: '/dashboard/financeiro',   icon: 'DollarSign' },
-                    { label: 'Integrações',   href: '/dashboard/integracoes',  icon: 'Link2' },
-                    { label: 'Configurações', href: '/dashboard/configuracoes', icon: 'Settings' },
-                  ].map(item => {
-                    const Icon = ICONS[item.icon]
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setSearchOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
-                      >
-                        {Icon && <Icon className="w-4 h-4" />}
-                        <span>{item.label}</span>
-                      </Link>
-                    )
-                  })}
-                </div>
+              <div className="max-h-80 overflow-y-auto">
+                {/* Pages */}
+                {searchResults.pages.length > 0 && (
+                  <div className="p-3">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">📄 Páginas</p>
+                    <div className="space-y-0.5">
+                      {searchResults.pages.map((page: any) => {
+                        const Icon = ICONS[page.icon] ?? Home
+                        return (
+                          <Link key={page.href} href={page.href}
+                            onClick={() => { setSearchOpen(false); setSearchQuery('') }}
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                            <Icon className="w-4 h-4" />
+                            <span>{page.label}</span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Products */}
+                {searchResults.products.length > 0 && (
+                  <div className="p-3 border-t border-space-600/50">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">📦 Produtos</p>
+                    <div className="space-y-0.5">
+                      {searchResults.products.map((p: any) => (
+                        <Link key={p.id} href={`/dashboard/armazem/produtos/${p.id}`}
+                          onClick={() => { setSearchOpen(false); setSearchQuery('') }}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                          <Package className="w-4 h-4" />
+                          <div className="flex-1 min-w-0">
+                            <span className="truncate block">{p.name}</span>
+                            {p.sku && <span className="text-[10px] text-gray-600">SKU: {p.sku}</span>}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Orders */}
+                {searchResults.orders.length > 0 && (
+                  <div className="p-3 border-t border-space-600/50">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">📋 Pedidos</p>
+                    <div className="space-y-0.5">
+                      {searchResults.orders.map((o: any) => (
+                        <Link key={o.id} href={`/dashboard/pedidos/${o.order_id}`}
+                          onClick={() => { setSearchOpen(false); setSearchQuery('') }}
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                          <ShoppingBag className="w-4 h-4" />
+                          <div className="flex-1 min-w-0">
+                            <span className="truncate block">#{o.order_id}</span>
+                            {o.buyer_name && <span className="text-[10px] text-gray-600">{o.buyer_name}</span>}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Empty state when searching */}
+                {searchQuery.length >= 2 && !searchLoading &&
+                  searchResults.pages.length === 0 && searchResults.products.length === 0 && searchResults.orders.length === 0 && (
+                  <div className="p-6 text-center">
+                    <p className="text-sm text-gray-500">Nenhum resultado para &ldquo;{searchQuery}&rdquo;</p>
+                  </div>
+                )}
+                {/* Default quick pages when no query */}
+                {searchQuery.length < 2 && (
+                  <div className="p-3">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">Páginas rápidas</p>
+                    <div className="space-y-0.5">
+                      {[
+                        { label: 'Pedidos',       href: '/dashboard/pedidos',      icon: 'ShoppingBag' },
+                        { label: 'Produtos ML',   href: '/dashboard/produtos-ml',  icon: 'Package' },
+                        { label: 'Financeiro',    href: '/dashboard/financeiro',   icon: 'DollarSign' },
+                        { label: 'Magalu',        href: '/dashboard/magalu/overview', icon: 'BarChart3' },
+                        { label: 'Integrações',   href: '/dashboard/integracoes',  icon: 'Link2' },
+                        { label: 'Configurações', href: '/dashboard/configuracoes', icon: 'Settings' },
+                      ].map(item => {
+                        const Icon = ICONS[item.icon]
+                        return (
+                          <Link key={item.href} href={item.href}
+                            onClick={() => { setSearchOpen(false); setSearchQuery('') }}
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                            {Icon && <Icon className="w-4 h-4" />}
+                            <span>{item.label}</span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
