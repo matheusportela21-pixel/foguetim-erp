@@ -1154,7 +1154,7 @@ export default function PromocoesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#03050f]">
+    <div className="flex flex-col">
       <PageHeader title="Promoções" />
 
       <div className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-5">

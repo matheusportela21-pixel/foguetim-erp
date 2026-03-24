@@ -225,7 +225,7 @@ export default function ArmazemPage() {
     : null
 
   return (
-    <div className="min-h-screen bg-[#03050f]">
+    <div>
       <PageHeader title="Armazém" description="Central de gestão do seu estoque interno" />
 
       <div className="p-6 space-y-6">

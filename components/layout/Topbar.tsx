@@ -246,10 +246,14 @@ export default function Topbar() {
   }, [])
 
   // ── Visibility helpers ─────────────────────────────────────────────────
-  // Always show all menu items — connected or not
-  const isVisible = useCallback((_key?: string) => {
+  // Show menu items based on marketplace connection status
+  const isVisible = useCallback((key?: string) => {
+    if (!key) return true
+    if (key === 'hasML') return hasML
+    if (key === 'hasShopee') return hasShopee
+    if (key === 'hasMagalu') return hasMagalu
     return true
-  }, [])
+  }, [hasML, hasShopee, hasMagalu])
 
   const handleMenuEnter = (label: string) => {
     if (closeTimeout.current) clearTimeout(closeTimeout.current)
@@ -399,6 +403,16 @@ export default function Topbar() {
                       )}
                       {menu.sections && (
                         <div className="flex divide-x divide-space-600">
+                          {/* Show message if Canais menu has no connected marketplaces */}
+                          {menu.label === 'Canais' && !hasML && !hasShopee && !hasMagalu && (
+                            <div className="p-4 text-center min-w-[200px]">
+                              <p className="text-sm text-gray-400 mb-2">Nenhum canal conectado</p>
+                              <Link href="/dashboard/integracoes" onClick={() => setOpenMenu(null)}
+                                className="text-sm text-primary-400 hover:text-primary-300 font-medium">
+                                Conectar marketplace →
+                              </Link>
+                            </div>
+                          )}
                           {menu.sections.filter(s => isVisible(s.visible)).map(section => (
                             <div key={section.title} className={`p-3 ${section.isAction ? 'flex items-center' : 'min-w-[160px]'}`}>
                               {section.isAction ? (

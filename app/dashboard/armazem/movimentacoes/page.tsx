@@ -355,7 +355,7 @@ export default function MovimentacoesPage() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#03050f]">
+    <div>
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl glass-card border text-sm font-medium shadow-xl
