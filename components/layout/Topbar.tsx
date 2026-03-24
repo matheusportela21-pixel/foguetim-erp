@@ -126,6 +126,7 @@ const TOPBAR_MENUS: TopMenu[] = [
           { label: 'Pedidos',    href: '/dashboard/magalu/pedidos' },
           { label: 'SAC',        href: '/dashboard/magalu/sac' },
           { label: 'Perguntas',  href: '/dashboard/magalu/perguntas' },
+          { label: 'Chat',       href: '/dashboard/magalu/chat' },
           { label: 'Saúde',      href: '/dashboard/magalu/saude' },
           { label: 'Expedição',  href: '/dashboard/magalu/expedicao' },
         ],
