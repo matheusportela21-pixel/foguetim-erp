@@ -156,7 +156,7 @@ export default function Topbar() {
   const { user } = useAuth()
   const { hasML, hasShopee, hasMagalu } = useConnectedMarketplaces()
   const { isOwner: isAdmin } = usePermissions()
-  const { theme } = useTheme()
+  const { theme, setTheme: applyTheme } = useTheme()
 
   // Menu state
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -292,11 +292,15 @@ export default function Topbar() {
     router.push('/login')
   }
 
-  // Theme toggle (light mode coming soon)
   const handleThemeToggle = () => {
-    // For now, just show that it's coming soon
-    // In the future: setTheme(theme === 'dark' ? 'light' : 'dark')
+    applyTheme(theme === 'dark' ? 'light' : 'dark')
   }
+
+  // Platform-aware shortcut label
+  const [isMac, setIsMac] = useState(false)
+  useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform))
+  }, [])
 
   return (
     <>
@@ -445,7 +449,7 @@ export default function Topbar() {
             >
               <Search className="w-3.5 h-3.5" />
               <span className="w-32 lg:w-40 text-left">Buscar...</span>
-              <kbd className="hidden lg:inline text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500">⌘K</kbd>
+              <kbd className="hidden lg:inline text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500 border border-space-600">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
             </button>
 
             {/* Search icon (mobile) */}
@@ -645,17 +649,30 @@ export default function Topbar() {
                         )
                       })}
 
-                      {/* Feedback (moved from floating button) */}
+                      {/* Feedback */}
                       <button
                         onClick={() => {
                           setProfileOpen(false)
-                          // Open feedback modal - dispatch custom event
                           window.dispatchEvent(new CustomEvent('open-feedback'))
                         }}
                         className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
                       >
                         <Bug className="w-4 h-4" />
                         <span>Enviar Feedback</span>
+                      </button>
+
+                      {/* Theme toggle inside menu */}
+                      <button
+                        onClick={handleThemeToggle}
+                        className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                          <span>{theme === 'dark' ? 'Modo escuro' : 'Modo claro'}</span>
+                        </div>
+                        <div className={`w-8 h-4 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-primary-500' : 'bg-gray-600'}`}>
+                          <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${theme === 'dark' ? 'left-4' : 'left-0.5'}`} />
+                        </div>
                       </button>
 
                       {isAdmin && (
