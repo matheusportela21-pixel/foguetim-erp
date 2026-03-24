@@ -242,13 +242,10 @@ export default function Topbar() {
   }, [])
 
   // ── Visibility helpers ─────────────────────────────────────────────────
-  const isVisible = useCallback((key?: string) => {
-    if (!key) return true
-    if (key === 'hasML') return hasML
-    if (key === 'hasShopee') return hasShopee
-    if (key === 'hasMagalu') return hasMagalu
+  // Always show all menu items — connected or not
+  const isVisible = useCallback((_key?: string) => {
     return true
-  }, [hasML, hasShopee, hasMagalu])
+  }, [])
 
   const handleMenuEnter = (label: string) => {
     if (closeTimeout.current) clearTimeout(closeTimeout.current)
@@ -599,7 +596,12 @@ export default function Topbar() {
             </div>
 
             {/* ── Profile dropdown ────────────────────────────────────────── */}
-            <div className="relative" ref={profileRef}>
+            <div
+              className="relative"
+              ref={profileRef}
+              onMouseEnter={() => { if (closeTimeout.current) clearTimeout(closeTimeout.current); setProfileOpen(true) }}
+              onMouseLeave={() => { closeTimeout.current = setTimeout(() => setProfileOpen(false), 250) }}
+            >
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-space-700/50 transition-all ml-1"

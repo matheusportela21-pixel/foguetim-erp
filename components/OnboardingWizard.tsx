@@ -594,6 +594,12 @@ export default function OnboardingWizard({ isAdmin = false }: OnboardingWizardPr
   useEffect(() => {
     if (isAdmin) { setLoading(false); return }
 
+    // Check localStorage first — if dismissed locally, skip API call
+    if (localStorage.getItem('fgt-onboarding-dismissed') === '1') {
+      setLoading(false)
+      return
+    }
+
     loadState().then(s => {
       if (!s) return
       // Dispara wizard automaticamente após 1s se não completou nem dispensou
@@ -608,11 +614,13 @@ export default function OnboardingWizard({ isAdmin = false }: OnboardingWizardPr
 
   async function handleDismiss() {
     setShowWizard(false)
+    localStorage.setItem('fgt-onboarding-dismissed', '1')
     await fetch('/api/onboarding/dismiss', { method: 'POST' })
     setState(prev => prev ? { ...prev, dismissed: true } : prev)
   }
 
   async function handleComplete() {
+    localStorage.setItem('fgt-onboarding-dismissed', '1')
     await fetch('/api/onboarding/complete', { method: 'POST' })
     setState(prev => prev ? { ...prev, completed: true } : prev)
   }
