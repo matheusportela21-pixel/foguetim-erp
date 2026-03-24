@@ -9,6 +9,7 @@ import {
   ChevronRight, ArrowLeft, Loader2, RefreshCw, Link2,
   Sparkles,
 } from 'lucide-react'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { SAC_ITEMS, SAC_TEMPLATES, type SACItem, type SACTipo, type SACStatus, type MKTPedido } from './_data'
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -283,10 +284,12 @@ function MLPerguntasTab({ templates }: { templates: ResponseTemplate[] }) {
           {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-purple-400 animate-spin" /></div>}
           {!loading && error && <div className="p-4 text-center text-xs text-red-400">{error}</div>}
           {!loading && !error && questions.length === 0 && (
-            <div className="py-12 text-center">
-              <CheckCircle2 className="w-8 h-8 text-green-400/30 mx-auto mb-2" />
-              <p className="text-slate-600 text-sm">{filter === 'UNANSWERED' ? 'Nenhuma pergunta pendente!' : 'Nenhuma respondida'}</p>
-            </div>
+            <EmptyState
+              image="celebrate"
+              title="Nenhuma mensagem pendente"
+              description="Quando compradores enviarem perguntas, elas aparecerão aqui."
+              compact
+            />
           )}
           {!loading && questions.map(q => (
             <button key={q.id} onClick={() => { setSelected(q); setReplyText('') }}
@@ -493,10 +496,12 @@ function MLMensagensTab({ templates }: { templates: ResponseTemplate[] }) {
           {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-purple-400 animate-spin" /></div>}
           {!loading && error && <div className="p-4 text-center text-xs text-red-400">{error}</div>}
           {!loading && !error && threads.length === 0 && (
-            <div className="py-12 text-center">
-              <MessageCircle className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-              <p className="text-slate-600 text-sm">Nenhuma mensagem não lida</p>
-            </div>
+            <EmptyState
+              image="celebrate"
+              title="Nenhuma mensagem pendente"
+              description="Quando compradores enviarem perguntas, elas aparecerão aqui."
+              compact
+            />
           )}
           {!loading && threads.map(t => (
             <button key={t.pack_id} onClick={() => { setSelected(t); setReplyText('') }}
@@ -673,10 +678,12 @@ function MLReclamacoesTab() {
           {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-purple-400 animate-spin" /></div>}
           {!loading && error && <div className="p-4 text-center text-xs text-red-400">{error}</div>}
           {!loading && !error && items.length === 0 && (
-            <div className="py-12 text-center">
-              <Shield className="w-8 h-8 text-green-400/30 mx-auto mb-2" />
-              <p className="text-slate-600 text-sm">{statusFilter === 'opened' ? 'Nenhuma reclamação aberta!' : 'Nenhuma fechada'}</p>
-            </div>
+            <EmptyState
+              image="celebrate"
+              title="Nenhuma mensagem pendente"
+              description="Quando compradores enviarem perguntas, elas aparecerão aqui."
+              compact
+            />
           )}
           {!loading && items.map(c => (
             <button key={c.claim_id} onClick={() => setSelected(c)}

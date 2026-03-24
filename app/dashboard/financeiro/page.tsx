@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
@@ -725,11 +726,12 @@ export default function FinanceiroPage() {
 
         {/* Empty state — nenhum período disponível */}
         {!periodsLoading && connected && periods.length === 0 && (
-          <div className="glass-card rounded-xl p-12 text-center">
-            <BarChart3 className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium">Nenhum período de faturamento disponível</p>
-            <p className="text-slate-600 text-sm mt-1">Os dados de billing aparecem após o primeiro mês completo de vendas.</p>
-          </div>
+          <EmptyState
+            image="calculator"
+            title="Sem dados financeiros"
+            description="Conecte seu marketplace para ver receitas, taxas e lucro."
+            action={{ label: "Conectar marketplace", href: "/dashboard/integracoes" }}
+          />
         )}
 
       </div>

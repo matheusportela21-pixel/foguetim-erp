@@ -177,11 +177,13 @@ export function ChatWidget() {
   /* ── Chat panel ──────────────────────────────────────────────── */
   return (
     <motion.div
-      className="fixed bottom-5 right-5 md:bottom-6 md:right-6 z-50
-                 w-[calc(100vw-2.5rem)] max-w-[380px]
-                 bg-space-800 border border-white/[0.08] rounded-2xl
-                 shadow-2xl flex flex-col overflow-hidden"
-      style={{ height: isMinimized ? 'auto' : '540px' }}
+      className={`fixed z-50
+                 inset-0 md:inset-auto
+                 md:bottom-6 md:right-6
+                 md:w-[400px] md:rounded-2xl
+                 bg-space-800 md:border md:border-white/[0.08]
+                 shadow-2xl flex flex-col overflow-hidden
+                 ${isMinimized ? '' : 'md:h-[550px]'}`}
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}

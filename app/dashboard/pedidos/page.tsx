@@ -13,6 +13,7 @@ import {
   PEDIDOS, STATUS_META, MKT_META,
   type Pedido, type PedidoStatus, type MKTPedido,
 } from './_data'
+import { EmptyState } from '@/components/shared/EmptyState'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import ExportPDFButton from '@/components/ExportPDFButton'
 import { generatePedidosPDF } from '@/lib/reports/pdf-generator'
@@ -220,11 +221,12 @@ function MLOrdersTab() {
 
       {/* Orders table */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-2">
-          <ShoppingCart className="w-8 h-8 text-slate-700" />
-          <p className="text-sm text-slate-500">Nenhum pedido encontrado</p>
-          <p className="text-xs text-slate-600">Tente ampliar o período ou remover filtros</p>
-        </div>
+        <EmptyState
+          image="box"
+          title="Nenhum pedido encontrado"
+          description="Os pedidos aparecerão aqui quando você vender pelo marketplace."
+          action={{ label: "Ver integrações", href: "/dashboard/integracoes" }}
+        />
       ) : (
         <>
           <div className="overflow-x-auto">

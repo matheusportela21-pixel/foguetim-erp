@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import {
   Package, Search, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, X, DollarSign, Box,
@@ -121,11 +122,13 @@ export default function MagaluProdutosPage() {
                 <tr key={i}>{Array.from({ length: 6 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-4 shimmer-load rounded" /></td>)}</tr>
               ))
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-12 text-center">
-                <Package className="w-8 h-8 text-slate-700 mx-auto mb-3" />
-                <p className="text-sm text-slate-600">
-                  {error ? 'Erro ao carregar produtos' : 'Nenhum produto encontrado'}
-                </p>
+              <tr><td colSpan={6}>
+                <EmptyState
+                  image="box"
+                  title="Nenhum produto Magalu"
+                  description="Seus produtos aparecerão aqui após conectar o Magalu."
+                  action={{ label: "Conectar Magalu", href: "/dashboard/integracoes" }}
+                />
               </td></tr>
             ) : filtered.map((p, i) => (
               <tr key={p.sku_id ?? i} className="hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setSelected(p)}>

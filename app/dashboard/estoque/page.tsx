@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import ExportPDFButton from '@/components/ExportPDFButton'
 import { generateEstoquePDF } from '@/lib/reports/pdf-generator'
@@ -255,23 +256,19 @@ export default function EstoquePage() {
               ))}
             </div>
           ) : visible.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              {items.length === 0 ? (
-                <>
-                  <Archive className="w-10 h-10 text-slate-700 mb-3" />
-                  <p className="text-slate-400 font-medium">Nenhum anúncio sincronizado</p>
-                  <p className="text-slate-600 text-sm mt-1">Vá em Listagens e sincronize seus anúncios do ML.</p>
-                  <Link href="/dashboard/listagens" className="mt-4 text-sm text-purple-400 hover:text-purple-300 underline">
-                    Ir para Listagens →
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-10 h-10 text-green-600 mb-3" />
-                  <p className="text-slate-400 font-medium">Nenhum anúncio neste filtro</p>
-                </>
-              )}
-            </div>
+            items.length === 0 ? (
+              <EmptyState
+                image="box"
+                title="Sem dados de estoque"
+                description="Os dados de estoque aparecerão aqui após conectar seu marketplace."
+                action={{ label: "Conectar marketplace", href: "/dashboard/integracoes" }}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <CheckCircle2 className="w-10 h-10 text-green-600 mb-3" />
+                <p className="text-slate-400 font-medium">Nenhum anúncio neste filtro</p>
+              </div>
+            )
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

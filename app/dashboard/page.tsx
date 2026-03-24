@@ -14,7 +14,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 import { useAuth } from '@/lib/auth-context'
-import { useSidebar } from '@/context/SidebarContext'
 import { getGreeting, formatBrasiliaDate, daysUntil } from '@/lib/utils/timezone'
 import { getUpcomingEvents } from '@/lib/data/datas-comemorativas'
 import { DevBanner } from '@/components/DevBanner'
@@ -170,7 +169,6 @@ export default function DashboardPage() {
   const { hasML, hasShopee, loading: mktLoading } = useConnectedMarketplaces()
   const anyMarketplace = hasML || hasShopee
 
-  const { toggle } = useSidebar()
   const firstName = (
     user?.user_metadata?.name?.split(' ')[0] ||
     profile?.name?.split(' ')[0] ||
@@ -336,18 +334,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="p-6 space-y-6">
-
-        {/* ── Mobile sticky nav strip ── */}
-        <div className="md:hidden sticky top-0 -mx-6 -mt-6 px-4 py-3 bg-dark-900/90 backdrop-blur border-b border-white/[0.06] flex items-center gap-3 z-20 mb-2">
-          <button
-            onClick={toggle}
-            aria-label="Abrir menu"
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] transition-all"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <span className="text-sm font-bold text-white">Dashboard</span>
-        </div>
 
         {/* ── Greeting ── */}
         <div className="animate-slide-up">

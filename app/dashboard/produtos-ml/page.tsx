@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import BulkActionModal, { type BulkAction, type BulkProgress } from '@/components/ml/BulkActionModal'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
 import {
@@ -1391,13 +1392,15 @@ function MLProductsTab() {
 
       {/* Table */}
       {!ls.is_loading && displayed.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-2">
-          <ShoppingBag className="w-8 h-8 text-slate-700" />
-          <p className="text-sm text-slate-500">
-            {ls.search_query ? `Nenhum anúncio encontrado para "${ls.search_query}"` : 'Nenhum anúncio encontrado'}
-          </p>
+        <div>
+          <EmptyState
+            image="box"
+            title="Nenhum produto encontrado"
+            description="Seus anúncios do Mercado Livre aparecerão aqui após conectar."
+            action={{ label: "Conectar ML", href: "/dashboard/integracoes" }}
+          />
           {!ls.has_local_data && (
-            <p className="text-xs text-amber-400">Sincronize seus anúncios para habilitar a busca completa</p>
+            <p className="text-xs text-amber-400 text-center -mt-4">Sincronize seus anúncios para habilitar a busca completa</p>
           )}
           {chips.length > 0 && (
             <button onClick={() => { setCatalogTab('user'); setListingFilter('all'); setStockFilter('all'); setFreeShippingF(false); setFlexF(false); setSortBy('default') }}

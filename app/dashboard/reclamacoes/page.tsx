@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { ClaimEvidenceChecklist } from '@/components/ml/ClaimEvidenceChecklist'
 import {
   AlertTriangle, Package, ShieldCheck, ExternalLink,
@@ -594,7 +595,13 @@ export default function ReclamacoesPage() {
                 </div>
               )}
 
-              {!loading && !error && filtered.length === 0 && statusToggle === 'opened' && <EmptyClean />}
+              {!loading && !error && filtered.length === 0 && statusToggle === 'opened' && (
+                <EmptyState
+                  image="celebrate"
+                  title="Nenhuma reclamação aberta"
+                  description="Tudo limpo! Continue mantendo sua reputação impecável."
+                />
+              )}
 
               {!loading && !error && filtered.length === 0 && statusToggle === 'closed' && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import ShopeeSandboxBanner from '@/components/ShopeeSandboxBanner'
 import {
@@ -1603,19 +1604,12 @@ export default function ShopeeProdutosPage() {
                     ? (
                       <tr>
                         <td colSpan={7}>
-                          <div className="flex flex-col items-center justify-center py-16 gap-3">
-                            <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center">
-                              <List className="w-7 h-7 text-slate-600" />
-                            </div>
-                            <p className="text-slate-500 text-sm font-medium">
-                              {search ? 'Nenhum produto encontrado para esta busca' : 'Nenhum produto encontrado na sua loja Shopee'}
-                            </p>
-                            {search && (
-                              <button onClick={() => setSearch('')} className="text-xs text-orange-400 hover:text-orange-300 transition-colors">
-                                Limpar busca
-                              </button>
-                            )}
-                          </div>
+                          <EmptyState
+                            image="box"
+                            title="Nenhum produto Shopee"
+                            description="Seus produtos aparecerão aqui após conectar a Shopee."
+                            action={{ label: "Conectar Shopee", href: "/dashboard/integracoes" }}
+                          />
                         </td>
                       </tr>
                     )

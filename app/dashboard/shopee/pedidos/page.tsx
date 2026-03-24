@@ -4,6 +4,7 @@ import React, {
   useState, useEffect, useCallback, useRef, useMemo,
 } from 'react'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import ShopeeSandboxBanner from '@/components/ShopeeSandboxBanner'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import {
@@ -1290,15 +1291,11 @@ export default function ShopeePedidosPage() {
 
             {/* Empty */}
             {!loading && displayOrders.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-                  <ShoppingBag className="w-6 h-6 text-slate-700" />
-                </div>
-                <p className="text-slate-500 text-sm font-medium">Nenhum pedido encontrado</p>
-                <p className="text-slate-700 text-xs">
-                  {search || statusFilter ? 'Tente ajustar os filtros' : `Nenhum pedido nos últimos ${days} dias`}
-                </p>
-              </div>
+              <EmptyState
+                image="box"
+                title="Nenhum pedido Shopee"
+                description="Os pedidos aparecerão aqui quando você vender pela Shopee."
+              />
             )}
 
             {/* Tabela */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
+import { EmptyState } from '@/components/shared/EmptyState'
 import {
   ShoppingBag, Search, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, X, Package,
@@ -113,11 +114,12 @@ export default function MagaluPedidosPage() {
                 <tr key={i}>{Array.from({ length: 5 }).map((_, j) => <td key={j} className="px-4 py-3"><div className="h-4 shimmer-load rounded" /></td>)}</tr>
               ))
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center">
-                <ShoppingBag className="w-8 h-8 text-slate-700 mx-auto mb-3" />
-                <p className="text-sm text-slate-600">
-                  {error ? 'Erro ao carregar pedidos' : 'Nenhum pedido encontrado'}
-                </p>
+              <tr><td colSpan={5}>
+                <EmptyState
+                  image="box"
+                  title="Nenhum pedido Magalu"
+                  description="Os pedidos aparecerão aqui quando você vender pelo Magalu."
+                />
               </td></tr>
             ) : filtered.map((o, i) => (
               <tr key={o.order_id ?? o.id ?? i} className="hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setSelected(o)}>

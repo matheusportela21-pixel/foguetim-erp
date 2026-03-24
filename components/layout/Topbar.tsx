@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -204,7 +205,8 @@ export default function Topbar() {
     ? user.user_metadata.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
     : user?.email?.[0]?.toUpperCase() ?? '?'
 
-  const userName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuário'
+  const fullName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuário'
+  const firstName = fullName.split(' ')[0]
 
   const handleLogout = async () => {
     if (isConfigured()) await supabase.auth.signOut()
@@ -217,9 +219,15 @@ export default function Topbar() {
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-space-900/90 backdrop-blur-xl border-b border-space-600/50">
         <div className="max-w-[1440px] mx-auto h-full px-6 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-            <span className="text-xl">🚀</span>
-            <span className="text-lg font-display font-bold bg-gradient-to-r from-primary-400 to-accent-500 bg-clip-text text-transparent">
+          <Link href="/dashboard" className="flex items-center gap-2 shrink-0 group">
+            <Image
+              src="/mascot/timm-standing.png"
+              alt="Timm"
+              width={32}
+              height={32}
+              className="object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-200"
+            />
+            <span className="hidden sm:inline text-lg font-display font-bold bg-gradient-to-r from-primary-400 to-accent-500 bg-clip-text text-transparent">
               Foguetim
             </span>
           </Link>
@@ -371,8 +379,8 @@ export default function Topbar() {
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs font-bold">
                   {userInitials}
                 </div>
-                <span className="hidden lg:block text-sm font-medium text-gray-300 max-w-[100px] truncate">
-                  {userName}
+                <span className="hidden lg:block text-sm font-medium text-gray-300">
+                  {firstName}
                 </span>
               </button>
 
@@ -387,7 +395,7 @@ export default function Topbar() {
                   >
                     {/* User info */}
                     <div className="px-4 py-3 border-b border-space-600">
-                      <p className="text-sm font-semibold text-white truncate">{userName}</p>
+                      <p className="text-sm font-semibold text-white truncate">{fullName}</p>
                       <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                     </div>
 
