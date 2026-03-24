@@ -5,14 +5,15 @@ import CookieBanner from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Foguetim ERP — Gestão completa para vendedores de marketplace',
+    default: 'Foguetim ERP — Gerencie Mercado Livre, Shopee e Magalu em um só lugar',
     template: '%s | Foguetim ERP',
   },
-  description: 'Controle estoque, anúncios, pedidos e financeiro do Mercado Livre e Shopee em um só lugar. ERP gratuito para vendedores brasileiros.',
+  description: 'ERP completo para vendedores de marketplace. Pedidos, produtos, financeiro e SAC do Mercado Livre, Shopee e Magalu unificados. 7 dias grátis.',
   keywords: [
     'ERP marketplace', 'gestão mercado livre', 'controle estoque shopee',
     'ERP vendedor online', 'sistema gestão ecommerce', 'ERP marketplace Brasil',
-    'gestão anúncios mercado livre', 'foguetim erp', 'ERP shopee',
+    'gestão anúncios mercado livre', 'foguetim erp', 'ERP shopee', 'ERP magalu',
+    'gestão magalu marketplace', 'gerenciar shopee e mercado livre',
   ],
   authors: [{ name: 'Foguetim ERP' }],
   creator: 'Foguetim ERP',
@@ -22,8 +23,8 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     url: 'https://www.foguetim.com.br',
     siteName: 'Foguetim ERP',
-    title: 'Foguetim ERP — O ERP do vendedor de marketplace',
-    description: 'Controle tudo num só lugar. Mercado Livre + Shopee. Comece grátis.',
+    title: 'Foguetim ERP — Gerencie Mercado Livre, Shopee e Magalu em um só lugar',
+    description: 'ERP completo para sellers de marketplace. Pedidos, produtos, financeiro e SAC unificados. 7 dias grátis.',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Foguetim ERP — ERP para vendedores de marketplace' }],
   },
   twitter: {

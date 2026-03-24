@@ -521,7 +521,7 @@ export default function ReclamacoesPage() {
         <div className="flex flex-1 overflow-hidden">
 
           {/* ── LEFT: list panel ─────────────────────────────────────────────── */}
-          <div className="w-[380px] shrink-0 border-r border-white/[0.06] flex flex-col overflow-hidden">
+          <div className="w-full md:w-[380px] shrink-0 border-r border-white/[0.06] flex flex-col overflow-hidden">
 
             {/* Filters bar */}
             <div className="px-3 pt-3 pb-2 space-y-2 border-b border-white/[0.06]">

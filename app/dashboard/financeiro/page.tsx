@@ -681,6 +681,7 @@ export default function FinanceiroPage() {
                         ]}
                       />
                     </div>
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-white/[0.06]">
@@ -712,6 +713,7 @@ export default function FinanceiroPage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                     {(billingData?.details ?? []).length > 200 && (
                       <p className="text-xs text-slate-600 text-center py-3">
                         Mostrando 200 de {billingData!.details.length} registros

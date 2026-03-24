@@ -591,7 +591,7 @@ export default function MonitoramentoPage() {
         description="Analise concorrentes e monitore a saúde dos seus anúncios"
       />
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {/* ── Tab bar ───────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-1 p-1 bg-dark-800/60 rounded-xl border border-white/[0.04] w-fit">

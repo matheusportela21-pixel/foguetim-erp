@@ -140,7 +140,7 @@ export default function NotasEntradaPage() {
     <div>
       <PageHeader title="Notas de Entrada" description="Upload e processamento de NF-e de compra" />
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
         {/* Beta warning */}
         <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />

@@ -195,7 +195,7 @@ export default function RelatoriosPage() {
     <div>
       <PageHeader title="Relatórios" description="Análises e insights do seu negócio" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
 
         {/* ── Painel de Dados Reais ML ─────────────────────────────────────── */}
         <div className="bg-[#111318] border border-white/[0.06] rounded-2xl overflow-hidden">

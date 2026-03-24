@@ -133,7 +133,7 @@ export default function DevolucoesPage() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.06]">
@@ -196,7 +196,7 @@ export default function DevolucoesPage() {
       {selected && (
         <div className="fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/40" onClick={() => setSelected(null)} />
-          <div className="w-[480px] bg-[#0f1117] border-l border-white/[0.08] flex flex-col h-full overflow-hidden">
+          <div className="w-full md:w-[480px] bg-[#0f1117] border-l border-white/[0.08] flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
               <p className="text-sm font-bold text-white">Devolução #{selected.id ?? selected.claim_id ?? '—'}</p>
               <button onClick={() => setSelected(null)} className="p-1.5 text-slate-500 hover:text-slate-200"><X className="w-4 h-4" /></button>

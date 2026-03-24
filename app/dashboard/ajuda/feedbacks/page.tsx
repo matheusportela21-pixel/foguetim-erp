@@ -76,7 +76,7 @@ export default function FeedbacksPage() {
     <div>
       <PageHeader title="Meus Feedbacks" description="Histórico dos seus tickets e sugestões enviadas" />
 
-      <div className="p-6 space-y-6 max-w-3xl">
+      <div className="p-4 md:p-6 space-y-6 max-w-3xl">
         {/* Back + refresh */}
         <div className="flex items-center justify-between">
           <Link href="/dashboard/ajuda"

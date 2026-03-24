@@ -204,7 +204,7 @@ export default function PedidoDetailPage({ params }: { params: { id: string } })
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
 
         {/* ── BREADCRUMB ── */}
         <div className="flex items-center gap-2 text-xs text-slate-600">

@@ -228,7 +228,7 @@ export default function MagaluSACPage() {
   /* Unavailable state */
   if (!loading && data && data.available === false) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <PageHeader
           title="SAC Magalu"
           breadcrumbs={[
@@ -269,7 +269,7 @@ export default function MagaluSACPage() {
     : `${stats.avg_time_hours.toFixed(1)}h`
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <PageHeader
         title="SAC Magalu"
         breadcrumbs={[

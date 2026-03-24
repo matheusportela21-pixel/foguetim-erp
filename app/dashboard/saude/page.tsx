@@ -252,7 +252,7 @@ function AlertCard({ alert }: { alert: Alert }) {
 
 function Skeleton() {
   return (
-    <div className="p-6 space-y-6 animate-pulse">
+    <div className="p-4 md:p-6 space-y-6 animate-pulse">
       <div className="h-8 w-56 bg-slate-800 rounded-lg" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="dash-card rounded-2xl p-6 flex items-center justify-center h-64 bg-slate-900" />
@@ -362,7 +362,7 @@ export default function SaudePage() {
   const criticalCount = alerts.filter(a => a.type === 'critical').length
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

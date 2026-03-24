@@ -109,7 +109,7 @@ export default function AjudaPage() {
     <div>
       <PageHeader title="Central de Ajuda" description="Tutoriais, FAQ e suporte" />
 
-      <div className="p-6 space-y-8">
+      <div className="p-4 md:p-6 space-y-8">
 
         {/* Link para a Central de Ajuda pública */}
         <Link

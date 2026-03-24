@@ -251,7 +251,7 @@ export default function MagaluProdutosPage() {
       )}
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-space-600">

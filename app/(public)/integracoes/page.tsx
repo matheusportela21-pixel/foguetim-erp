@@ -14,7 +14,7 @@ const integrations = [
     headline: 'Integração ativa',
     detail: 'Autenticação OAuth 2.0 via API oficial MLB',
     badge: 'Disponível',
-    badgeCls: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+    badgeCls: 'bg-green-500/10 text-green-400 ring-1 ring-green-500/20',
     features: [
       'Integração via API oficial MercadoLibre (MLB)',
       'Autenticação OAuth 2.0 padrão',
@@ -29,7 +29,7 @@ const integrations = [
     headline: 'Expandindo para novos marketplaces',
     detail: 'Estamos trabalhando em novas integrações',
     badge: 'Em breve',
-    badgeCls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    badgeCls: 'bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20',
     features: [
       'Novos marketplaces chegando em breve',
       'Acompanhe nossas atualizações',
@@ -39,32 +39,32 @@ const integrations = [
 
 export default function IntegracoesPage() {
   return (
-    <div className="landing-bg min-h-screen overflow-x-hidden">
+    <div className="bg-[#0A0718] stars-bg min-h-screen overflow-x-hidden">
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100">
+      <nav className="sticky top-0 z-50 bg-[#0A0718]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-navy-900 to-purple-700 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-sm">
               <Rocket className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-lg text-navy-900" style={{ fontFamily: 'Sora, sans-serif' }}>
+            <span className="font-bold text-lg text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
               Foguetim
             </span>
-            <span className="hidden sm:block text-xs font-medium text-slate-400 tracking-wider mt-0.5">ERP</span>
+            <span className="hidden sm:block text-xs font-medium text-slate-500 tracking-wider mt-0.5">ERP</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-            <Link href="/sobre" className="hover:text-navy-900 transition-colors">Sobre</Link>
-            <Link href="/integracoes" className="text-navy-900 font-semibold transition-colors">Integrações</Link>
-            <Link href="/contato" className="hover:text-navy-900 transition-colors">Contato</Link>
+          <div className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-400">
+            <Link href="/sobre" className="hover:text-violet-300 transition-colors">Sobre</Link>
+            <Link href="/integracoes" className="text-violet-400 font-semibold transition-colors">Integrações</Link>
+            <Link href="/contato" className="hover:text-violet-300 transition-colors">Contato</Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="https://app.foguetim.com.br/login" className="text-sm font-semibold text-slate-600 hover:text-navy-900 transition-colors px-4 py-2">
+            <Link href="https://app.foguetim.com.br/login" className="text-sm font-semibold text-slate-400 hover:text-violet-300 transition-colors px-4 py-2">
               Entrar
             </Link>
-            <Link href="https://app.foguetim.com.br/cadastro" className="btn-primary px-5 py-2.5 rounded-xl text-sm">
+            <Link href="https://app.foguetim.com.br/cadastro" className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
               Começar Grátis
             </Link>
           </div>
@@ -74,28 +74,28 @@ export default function IntegracoesPage() {
       {/* Hero */}
       <section className="relative z-10 pt-20 pb-16 px-6 text-center">
         <div className="max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-50 border border-purple-100 text-purple-700 text-xs font-semibold mb-6 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-violet-400 text-xs font-semibold mb-6 shadow-sm">
             <Zap className="w-3.5 h-3.5" />
             APIs oficiais
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-navy-900 leading-tight mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
+          <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
             Integrações
           </h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg text-slate-400 max-w-xl mx-auto leading-relaxed">
             Conecte seus marketplaces com segurança via APIs oficiais
           </p>
         </div>
       </section>
 
       {/* Integration cards */}
-      <section className="relative z-10 py-10 px-6 bg-slate-50">
+      <section className="relative z-10 py-10 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {integrations.map(int => (
-              <div key={int.name} className="landing-card p-7 flex flex-col">
+              <div key={int.name} className="glass-card p-7 flex flex-col">
                 <div className="flex items-center justify-between mb-5">
                   <span
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 font-bold text-sm"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 font-bold text-sm"
                     style={{ color: int.color }}
                   >
                     <span className={`w-2 h-2 rounded-full inline-block ${int.dot}`} />
@@ -106,13 +106,13 @@ export default function IntegracoesPage() {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-navy-900 text-base mb-1">{int.headline}</h3>
-                <p className="text-sm text-slate-500 mb-6">{int.detail}</p>
+                <h3 className="font-bold text-slate-100 text-base mb-1">{int.headline}</h3>
+                <p className="text-sm text-slate-400 mb-6">{int.detail}</p>
 
                 <ul className="space-y-2.5 mt-auto">
                   {int.features.map(f => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600">
-                      <CheckCircle2 className="w-4 h-4 shrink-0 text-slate-400 mt-0.5" />
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-slate-400">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-slate-500 mt-0.5" />
                       {f}
                     </li>
                   ))}
@@ -126,17 +126,17 @@ export default function IntegracoesPage() {
       {/* Technical section for API evaluators */}
       <section className="relative z-10 py-16 px-6">
         <div className="max-w-3xl mx-auto">
-          <div className="landing-card p-8 border-l-4 border-purple-400">
+          <div className="glass-card p-8 border-l-4 border-purple-500/60">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-purple-600" />
+              <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-violet-400" />
               </div>
-              <h2 className="text-base font-bold text-navy-900" style={{ fontFamily: 'Sora, sans-serif' }}>
+              <h2 className="text-base font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
                 For API Evaluators &amp; Partners
               </h2>
             </div>
 
-            <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
+            <div className="space-y-4 text-sm text-slate-400 leading-relaxed">
               <p>
                 Foguetim integrates with marketplaces via official OAuth 2.0 APIs:
               </p>
@@ -145,14 +145,14 @@ export default function IntegracoesPage() {
                 <li className="flex items-start gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-1.5" />
                   <span>
-                    <strong className="text-navy-900">Mercado Livre:</strong> Integrated via official MercadoLibre
+                    <strong className="text-slate-100">Mercado Livre:</strong> Integrated via official MercadoLibre
                     API (MLB). Uses standard OAuth 2.0.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0 mt-1.5" />
+                  <span className="w-2 h-2 rounded-full bg-slate-600 shrink-0 mt-1.5" />
                   <span>
-                    <strong className="text-navy-900">Other marketplaces:</strong> Coming soon.
+                    <strong className="text-slate-100">Other marketplaces:</strong> Coming soon.
                   </span>
                 </li>
               </ul>
@@ -161,9 +161,9 @@ export default function IntegracoesPage() {
                 All OAuth tokens are stored encrypted and can be revoked by the user at any time.
               </p>
 
-              <p className="font-semibold text-navy-900">
+              <p className="font-semibold text-slate-100">
                 Contact:{' '}
-                <a href="mailto:contato@foguetim.com.br" className="text-purple-600 hover:text-purple-700 transition-colors">
+                <a href="mailto:contato@foguetim.com.br" className="text-violet-400 hover:text-violet-300 transition-colors">
                   contato@foguetim.com.br
                 </a>
               </p>
@@ -173,23 +173,23 @@ export default function IntegracoesPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-100 py-10 px-6">
+      <footer className="relative z-10 border-t border-white/5 bg-[#060512] py-10 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500">
             <div className="text-center md:text-left space-y-1">
-              <p className="font-semibold text-navy-900">© 2026 Foguetim ERP — Todos os direitos reservados.</p>
+              <p className="font-semibold text-slate-300">© 2026 Foguetim ERP — Todos os direitos reservados.</p>
               <p>Operado por FIO CABANA INDUSTRIA E COMERCIO DE CONFECCOES LTDA</p>
               <p>CNPJ: 33.685.241/0001-70 | Fortaleza — CE — Brasil</p>
-              <a href="mailto:contato@foguetim.com.br" className="hover:text-navy-900 transition-colors">contato@foguetim.com.br</a>
+              <a href="mailto:contato@foguetim.com.br" className="hover:text-violet-300 transition-colors">contato@foguetim.com.br</a>
             </div>
             <div className="flex flex-wrap justify-center gap-5">
-              <Link href="/sobre" className="hover:text-navy-900 transition-colors">Sobre</Link>
-              <Link href="/termos" className="hover:text-navy-900 transition-colors">Termos de Uso</Link>
-              <Link href="/privacidade" className="hover:text-navy-900 transition-colors">Política de Privacidade</Link>
-              <Link href="/contato" className="hover:text-navy-900 transition-colors">Contato</Link>
+              <Link href="/sobre" className="hover:text-violet-300 transition-colors">Sobre</Link>
+              <Link href="/termos" className="hover:text-violet-300 transition-colors">Termos de Uso</Link>
+              <Link href="/privacidade" className="hover:text-violet-300 transition-colors">Política de Privacidade</Link>
+              <Link href="/contato" className="hover:text-violet-300 transition-colors">Contato</Link>
             </div>
           </div>
-          <p className="text-center text-xs text-slate-400 mt-6 pt-6 border-t border-slate-100">
+          <p className="text-center text-xs text-slate-600 mt-6 pt-6 border-t border-white/5">
             Foguetim é uma plataforma independente. As integrações são realizadas via APIs oficiais de cada marketplace.
           </p>
         </div>

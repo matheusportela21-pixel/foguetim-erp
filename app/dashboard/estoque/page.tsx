@@ -144,7 +144,7 @@ export default function EstoquePage() {
     <div className="flex-1 overflow-y-auto">
       <PageHeader title="Estoque" description="Monitoramento de estoque por anúncio" />
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {/* ── KPIs ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

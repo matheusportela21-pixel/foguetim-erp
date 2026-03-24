@@ -145,7 +145,7 @@ export default function ConciliacaoPage() {
     <div>
       <PageHeader title="Conciliação Financeira" description="Receita dos pedidos vs cobranças do Mercado Livre" />
 
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
 
         {/* ── Not connected ────────────────────────────────────────────── */}
         {connected === false && (
@@ -365,7 +365,7 @@ export default function ConciliacaoPage() {
 
                 {/* ── Taxas Detalhadas ─────────────────────────────────── */}
                 {tab === 'taxas' && (
-                  <div className="bg-[#111318] border border-white/[0.06] rounded-xl overflow-hidden">
+                  <div className="bg-[#111318] border border-white/[0.06] rounded-xl overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-white/[0.06]">
@@ -428,7 +428,7 @@ export default function ConciliacaoPage() {
                       </p>
                     </div>
 
-                    <div className="bg-[#111318] border border-white/[0.06] rounded-xl overflow-hidden">
+                    <div className="bg-[#111318] border border-white/[0.06] rounded-xl overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-white/[0.06]">

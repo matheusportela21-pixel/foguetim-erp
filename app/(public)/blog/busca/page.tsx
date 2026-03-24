@@ -41,16 +41,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'bg-amber-100 text-amber-700',
-  'mercado-livre':           'bg-yellow-100 text-yellow-700',
-  'gestao-empreendedorismo': 'bg-blue-100 text-blue-700',
-  'financas-economia':       'bg-green-100 text-green-700',
-  'fiscal-tributario':       'bg-red-100 text-red-700',
-  'estoque-logistica':       'bg-emerald-100 text-emerald-700',
-  'marketing-digital':       'bg-pink-100 text-pink-700',
-  'setores-nichos':          'bg-purple-100 text-purple-700',
-  'novidades-foguetim':      'bg-violet-100 text-violet-700',
-  'ferramentas-tecnologia':  'bg-cyan-100 text-cyan-700',
+  'ecommerce-marketplaces':  'bg-amber-500/10 text-amber-400',
+  'mercado-livre':           'bg-yellow-500/10 text-yellow-400',
+  'gestao-empreendedorismo': 'bg-blue-500/10 text-blue-400',
+  'financas-economia':       'bg-green-500/10 text-green-400',
+  'fiscal-tributario':       'bg-red-500/10 text-red-400',
+  'estoque-logistica':       'bg-emerald-500/10 text-emerald-400',
+  'marketing-digital':       'bg-pink-500/10 text-pink-400',
+  'setores-nichos':          'bg-purple-500/10 text-purple-400',
+  'novidades-foguetim':      'bg-violet-500/10 text-violet-400',
+  'ferramentas-tecnologia':  'bg-cyan-500/10 text-cyan-400',
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -67,7 +67,7 @@ function highlight(text: string, query: string): React.ReactNode {
   const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
   return parts.map((part, i) =>
     part.toLowerCase() === query.toLowerCase() ? (
-      <mark key={i} className="bg-violet-100 text-violet-800 rounded px-0.5 font-semibold not-italic">
+      <mark key={i} className="bg-violet-500/20 text-violet-300 rounded px-0.5 font-semibold not-italic">
         {part}
       </mark>
     ) : (
@@ -81,13 +81,13 @@ function Skeleton() {
   return (
     <div className="animate-pulse space-y-4">
       {[1, 2, 3, 4].map(i => (
-        <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 flex gap-4">
-          <div className="w-20 h-20 rounded-xl bg-gray-100 shrink-0" />
+        <div key={i} className="glass-card rounded-2xl border border-white/5 p-5 flex gap-4">
+          <div className="w-20 h-20 rounded-xl bg-white/5 shrink-0" />
           <div className="flex-1 space-y-2.5 pt-1">
-            <div className="h-3 bg-gray-100 rounded w-1/4" />
-            <div className="h-4 bg-gray-100 rounded w-3/4" />
-            <div className="h-3 bg-gray-100 rounded w-full" />
-            <div className="h-3 bg-gray-100 rounded w-1/3" />
+            <div className="h-3 bg-white/5 rounded w-1/4" />
+            <div className="h-4 bg-white/5 rounded w-3/4" />
+            <div className="h-3 bg-white/5 rounded w-full" />
+            <div className="h-3 bg-white/5 rounded w-1/3" />
           </div>
         </div>
       ))}
@@ -98,12 +98,12 @@ function Skeleton() {
 /* ── Result card ─────────────────────────────────────────────────────────── */
 function ResultCard({ post, query }: { post: BlogPost; query: string }) {
   const grad = CATEGORY_COLORS[post.category_slug ?? ''] ?? 'from-violet-400 to-violet-600'
-  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
+  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-500/10 text-violet-400'
 
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group bg-white rounded-2xl border border-gray-100 p-5 flex gap-4 hover:shadow-md hover:border-violet-200 transition-all"
+      className="group glass-card rounded-2xl border border-white/5 p-5 flex gap-4 hover:border-violet-500/20 transition-all"
     >
       {/* Mini cover */}
       <div className={`w-20 h-20 rounded-xl bg-gradient-to-br ${grad} shrink-0 overflow-hidden`}>
@@ -123,17 +123,17 @@ function ResultCard({ post, query }: { post: BlogPost; query: string }) {
           </span>
         </div>
 
-        <h3 className="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors leading-snug line-clamp-2 text-sm">
+        <h3 className="font-semibold text-slate-100 group-hover:text-violet-400 transition-colors leading-snug line-clamp-2 text-sm">
           {highlight(post.title, query)}
         </h3>
 
         {post.summary && (
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
             {highlight(post.summary, query)}
           </p>
         )}
 
-        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+        <div className="flex items-center gap-3 mt-2 text-xs text-slate-600">
           <span className="flex items-center gap-1">
             <User className="w-3 h-3" />
             {post.author}
@@ -221,39 +221,39 @@ function BlogSearchContent() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-gray-600 transition-colors">Início</Link>
+        <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8">
+          <Link href="/" className="hover:text-violet-400 transition-colors">Início</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
+          <Link href="/blog" className="hover:text-violet-400 transition-colors">Blog</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-600 font-medium">Busca</span>
+          <span className="text-slate-400 font-medium">Busca</span>
         </nav>
 
         {/* Search header */}
         <div className="mb-8">
           <h1
-            className="text-3xl font-bold text-gray-900 mb-6"
-            style={{ fontFamily: 'var(--font-playfair)' }}
+            className="text-3xl font-bold text-white mb-6"
+            style={{ fontFamily: 'Sora, sans-serif' }}
           >
             Buscar no blog
           </h1>
 
           <form onSubmit={handleSubmit} className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
             <input
               ref={inputRef}
               type="search"
               value={inputValue}
               onChange={handleChange}
               placeholder="Buscar artigos, categorias, dicas..."
-              className="w-full pl-12 pr-4 py-4 text-base bg-white border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all text-gray-900 placeholder-gray-400"
+              className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition-all text-slate-100 placeholder-slate-600"
               autoComplete="off"
             />
             {loading && (
-              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-violet-500 animate-spin" />
+              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-violet-400 animate-spin" />
             )}
           </form>
         </div>
@@ -263,9 +263,9 @@ function BlogSearchContent() {
 
         {!loading && searched && results.length > 0 && (
           <>
-            <p className="text-sm text-gray-500 mb-5">
+            <p className="text-sm text-slate-500 mb-5">
               {results.length} {results.length === 1 ? 'resultado' : 'resultados'} para{' '}
-              <span className="font-semibold text-gray-800">"{query}"</span>
+              <span className="font-semibold text-slate-300">"{query}"</span>
             </p>
             <div className="space-y-4">
               {results.map(post => (
@@ -277,17 +277,17 @@ function BlogSearchContent() {
 
         {!loading && searched && results.length === 0 && query.trim().length >= 2 && (
           <div className="text-center py-20">
-            <BookOpen className="w-14 h-14 mx-auto mb-4 text-gray-200" />
-            <p className="text-lg font-semibold text-gray-700 mb-1">
+            <BookOpen className="w-14 h-14 mx-auto mb-4 text-slate-700" />
+            <p className="text-lg font-semibold text-slate-300 mb-1">
               Nenhum resultado para{' '}
-              <span className="text-violet-600">"{query}"</span>
+              <span className="text-violet-400">"{query}"</span>
             </p>
-            <p className="text-sm text-gray-400 mb-6">
+            <p className="text-sm text-slate-500 mb-6">
               Tente outros termos ou navegue pelas categorias.
             </p>
             <Link
               href="/blog"
-              className="inline-block text-sm font-medium text-violet-600 hover:text-violet-700 px-5 py-2.5 rounded-xl border border-violet-200 hover:border-violet-300 transition-colors"
+              className="inline-block text-sm font-medium text-violet-400 hover:text-violet-300 px-5 py-2.5 rounded-xl border border-violet-500/20 hover:border-violet-500/40 transition-colors"
             >
               ← Ver todos os artigos
             </Link>
@@ -295,7 +295,7 @@ function BlogSearchContent() {
         )}
 
         {!loading && !searched && !inputValue && (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-slate-600">
             <Search className="w-14 h-14 mx-auto mb-4 opacity-20" />
             <p className="text-base font-medium">Digite para buscar artigos no blog.</p>
             <p className="text-sm mt-1">Mínimo 2 caracteres.</p>
@@ -308,7 +308,7 @@ function BlogSearchContent() {
 
 export default function BlogSearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-gray-400">Carregando...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0718] flex items-center justify-center text-slate-500">Carregando...</div>}>
       <BlogSearchContent />
     </Suspense>
   )

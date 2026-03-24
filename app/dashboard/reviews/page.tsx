@@ -122,7 +122,7 @@ function RatingBar({ label, count, total, color }: { label: string; count: numbe
 function SummarySkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="glass-card rounded-xl p-4 h-24 bg-dark-800/40" />
         ))}
@@ -426,7 +426,7 @@ export default function ReviewsPage() {
         description="Acompanhe o que os compradores estão falando dos seus produtos"
       />
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {notConnected && <NotConnected />}
         {loading && <SummarySkeleton />}
@@ -444,7 +444,7 @@ export default function ReviewsPage() {
             {!error && totals && (
               <>
                 {/* ── Summary cards ─────────────────────────────────────── */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Produtos avaliados */}
                   <div className="glass-card rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">

@@ -362,7 +362,7 @@ export default function DREPage() {
             </button>
 
             {showProducts && (
-              <div className="border-t border-white/[0.06]">
+              <div className="border-t border-white/[0.06] overflow-x-auto">
                 {dre.productProfitability.length === 0 ? (
                   <p className="px-4 py-6 text-center text-xs text-slate-600">Sem dados de lucratividade</p>
                 ) : (

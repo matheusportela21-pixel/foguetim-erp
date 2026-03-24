@@ -49,16 +49,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'bg-amber-100 text-amber-700',
-  'mercado-livre':           'bg-yellow-100 text-yellow-700',
-  'gestao-empreendedorismo': 'bg-blue-100 text-blue-700',
-  'financas-economia':       'bg-green-100 text-green-700',
-  'fiscal-tributario':       'bg-red-100 text-red-700',
-  'estoque-logistica':       'bg-emerald-100 text-emerald-700',
-  'marketing-digital':       'bg-pink-100 text-pink-700',
-  'setores-nichos':          'bg-purple-100 text-purple-700',
-  'novidades-foguetim':      'bg-violet-100 text-violet-700',
-  'ferramentas-tecnologia':  'bg-cyan-100 text-cyan-700',
+  'ecommerce-marketplaces':  'bg-amber-500/10 text-amber-400',
+  'mercado-livre':           'bg-yellow-500/10 text-yellow-400',
+  'gestao-empreendedorismo': 'bg-blue-500/10 text-blue-400',
+  'financas-economia':       'bg-green-500/10 text-green-400',
+  'fiscal-tributario':       'bg-red-500/10 text-red-400',
+  'estoque-logistica':       'bg-emerald-500/10 text-emerald-400',
+  'marketing-digital':       'bg-pink-500/10 text-pink-400',
+  'setores-nichos':          'bg-purple-500/10 text-purple-400',
+  'novidades-foguetim':      'bg-violet-500/10 text-violet-400',
+  'ferramentas-tecnologia':  'bg-cyan-500/10 text-cyan-400',
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -93,11 +93,11 @@ function CoverImage({ post, className }: { post: BlogPost; className?: string })
 
 /* ── PostCard ───────────────────────────────────────────────────────────── */
 function PostCard({ post }: { post: BlogPost }) {
-  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
+  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-500/10 text-violet-400'
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden flex flex-col"
+      className="group glass-card rounded-2xl hover:border-violet-500/20 transition-all duration-200 border border-white/5 overflow-hidden flex flex-col"
     >
       <div className="relative overflow-hidden h-48">
         <CoverImage
@@ -110,14 +110,14 @@ function PostCard({ post }: { post: BlogPost }) {
           {post.category}
         </span>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-violet-600 transition-colors text-base">
+          <h3 className="font-semibold text-slate-100 leading-snug line-clamp-2 group-hover:text-violet-400 transition-colors text-base">
             {post.title}
           </h3>
           {post.summary && (
-            <p className="text-sm text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{post.summary}</p>
+            <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">{post.summary}</p>
           )}
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-3 text-xs text-slate-600 pt-3 border-t border-white/5">
           <span className="flex items-center gap-1">
             <User className="w-3 h-3" />
             {post.author}
@@ -177,30 +177,30 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
   const posts = await getData(tag)
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-gray-600 transition-colors">Início</Link>
+        <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8">
+          <Link href="/" className="hover:text-violet-400 transition-colors">Início</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
+          <Link href="/blog" className="hover:text-violet-400 transition-colors">Blog</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-600 font-medium">#{tag}</span>
+          <span className="text-slate-400 font-medium">#{tag}</span>
         </nav>
 
         {/* Tag header */}
         <div className="mb-10 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-            <Hash className="w-6 h-6 text-violet-600" />
+          <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+            <Hash className="w-6 h-6 text-violet-400" />
           </div>
           <div>
             <h1
-              className="text-3xl font-bold text-gray-900"
-              style={{ fontFamily: 'var(--font-playfair)' }}
+              className="text-3xl font-bold text-white"
+              style={{ fontFamily: 'Sora, sans-serif' }}
             >
               #{tag}
             </h1>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               {posts.length} {posts.length === 1 ? 'artigo' : 'artigos'} com esta tag
             </p>
           </div>
@@ -215,14 +215,14 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
           </div>
         ) : (
           <div className="text-center py-20">
-            <BookOpen className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-            <p className="font-semibold text-gray-600 mb-1">
-              Nenhum artigo com a tag <span className="text-violet-600">#{tag}</span>.
+            <BookOpen className="w-12 h-12 mx-auto mb-3 text-slate-700" />
+            <p className="font-semibold text-slate-400 mb-1">
+              Nenhum artigo com a tag <span className="text-violet-400">#{tag}</span>.
             </p>
-            <p className="text-sm text-gray-400 mb-6">Tente explorar outras tags ou categorias.</p>
+            <p className="text-sm text-slate-500 mb-6">Tente explorar outras tags ou categorias.</p>
             <Link
               href="/blog"
-              className="inline-block text-sm font-medium text-violet-600 hover:text-violet-700 px-5 py-2.5 rounded-xl border border-violet-200 hover:border-violet-300 transition-colors"
+              className="inline-block text-sm font-medium text-violet-400 hover:text-violet-300 px-5 py-2.5 rounded-xl border border-violet-500/20 hover:border-violet-500/40 transition-colors"
             >
               ← Voltar ao blog
             </Link>
@@ -231,8 +231,8 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
 
         {/* Related tags from posts */}
         {posts.length > 0 && (
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+          <div className="mt-12 pt-8 border-t border-white/5">
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
               Tags relacionadas
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -240,7 +240,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
                 new Set(
                   posts
                     .flatMap(p => p.tags ?? [])
-                    .filter(t => t.toLowerCase() !== tag.toLowerCase())
+                    .filter(t => t.toLowerCase() !== tag.toLowerCase()),
                 ),
               )
                 .slice(0, 20)
@@ -248,7 +248,7 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
                   <Link
                     key={t}
                     href={`/blog/tag/${encodeURIComponent(t)}`}
-                    className="text-sm text-gray-600 hover:text-violet-600 bg-white hover:bg-violet-50 border border-gray-200 hover:border-violet-200 px-3 py-1.5 rounded-full transition-colors"
+                    className="text-sm text-slate-400 hover:text-violet-400 bg-white/5 hover:bg-violet-500/10 border border-white/5 hover:border-violet-500/20 px-3 py-1.5 rounded-full transition-colors"
                   >
                     #{t}
                   </Link>

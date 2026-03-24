@@ -204,7 +204,7 @@ export default function PacksPage() {
     <div>
       <PageHeader title="Packs" description="Pedidos agrupados do Mercado Livre" />
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

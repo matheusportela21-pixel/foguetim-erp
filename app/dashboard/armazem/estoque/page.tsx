@@ -266,7 +266,7 @@ export default function EstoquePage() {
         </div>
       )}
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
         {/* KPI Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="glass-card p-4">

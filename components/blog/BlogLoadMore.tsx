@@ -41,16 +41,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'bg-amber-100 text-amber-700',
-  'mercado-livre':           'bg-yellow-100 text-yellow-700',
-  'gestao-empreendedorismo': 'bg-blue-100 text-blue-700',
-  'financas-economia':       'bg-green-100 text-green-700',
-  'fiscal-tributario':       'bg-red-100 text-red-700',
-  'estoque-logistica':       'bg-emerald-100 text-emerald-700',
-  'marketing-digital':       'bg-pink-100 text-pink-700',
-  'setores-nichos':          'bg-purple-100 text-purple-700',
-  'novidades-foguetim':      'bg-violet-100 text-violet-700',
-  'ferramentas-tecnologia':  'bg-cyan-100 text-cyan-700',
+  'ecommerce-marketplaces':  'bg-amber-500/10 text-amber-400',
+  'mercado-livre':           'bg-yellow-500/10 text-yellow-400',
+  'gestao-empreendedorismo': 'bg-blue-500/10 text-blue-400',
+  'financas-economia':       'bg-green-500/10 text-green-400',
+  'fiscal-tributario':       'bg-red-500/10 text-red-400',
+  'estoque-logistica':       'bg-emerald-500/10 text-emerald-400',
+  'marketing-digital':       'bg-pink-500/10 text-pink-400',
+  'setores-nichos':          'bg-purple-500/10 text-purple-400',
+  'novidades-foguetim':      'bg-violet-500/10 text-violet-400',
+  'ferramentas-tecnologia':  'bg-cyan-500/10 text-cyan-400',
 }
 
 function fmtDateShort(iso: string) {
@@ -82,11 +82,11 @@ function CoverImage({ post, className }: { post: BlogPost; className?: string })
 }
 
 function PostCard({ post }: { post: BlogPost }) {
-  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
+  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-500/10 text-violet-400'
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden flex flex-col"
+      className="group glass-card rounded-2xl hover:border-violet-500/20 transition-all duration-200 border border-white/5 overflow-hidden flex flex-col"
     >
       <div className="relative overflow-hidden h-48">
         <CoverImage
@@ -99,14 +99,14 @@ function PostCard({ post }: { post: BlogPost }) {
           {post.category}
         </span>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-violet-600 transition-colors text-base">
+          <h3 className="font-semibold text-slate-100 leading-snug line-clamp-2 group-hover:text-violet-400 transition-colors text-base">
             {post.title}
           </h3>
           {post.summary && (
-            <p className="text-sm text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{post.summary}</p>
+            <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">{post.summary}</p>
           )}
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-3 text-xs text-slate-600 pt-3 border-t border-white/5">
           <span className="flex items-center gap-1">
             <User className="w-3 h-3" />
             {post.author}
@@ -167,7 +167,7 @@ export default function BlogLoadMore({ initialPosts, categorySlug, sort }: BlogL
           <button
             onClick={loadMore}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-violet-300 hover:text-violet-600 transition-colors disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-medium text-slate-400 hover:border-violet-500/30 hover:text-violet-400 transition-colors disabled:opacity-60"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? 'Carregando...' : 'Carregar mais artigos'}

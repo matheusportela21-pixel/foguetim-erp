@@ -64,16 +64,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'bg-amber-100 text-amber-700',
-  'mercado-livre':           'bg-yellow-100 text-yellow-700',
-  'gestao-empreendedorismo': 'bg-blue-100 text-blue-700',
-  'financas-economia':       'bg-green-100 text-green-700',
-  'fiscal-tributario':       'bg-red-100 text-red-700',
-  'estoque-logistica':       'bg-emerald-100 text-emerald-700',
-  'marketing-digital':       'bg-pink-100 text-pink-700',
-  'setores-nichos':          'bg-purple-100 text-purple-700',
-  'novidades-foguetim':      'bg-violet-100 text-violet-700',
-  'ferramentas-tecnologia':  'bg-cyan-100 text-cyan-700',
+  'ecommerce-marketplaces':  'bg-amber-500/10 text-amber-400',
+  'mercado-livre':           'bg-yellow-500/10 text-yellow-400',
+  'gestao-empreendedorismo': 'bg-blue-500/10 text-blue-400',
+  'financas-economia':       'bg-green-500/10 text-green-400',
+  'fiscal-tributario':       'bg-red-500/10 text-red-400',
+  'estoque-logistica':       'bg-emerald-500/10 text-emerald-400',
+  'marketing-digital':       'bg-pink-500/10 text-pink-400',
+  'setores-nichos':          'bg-purple-500/10 text-purple-400',
+  'novidades-foguetim':      'bg-violet-500/10 text-violet-400',
+  'ferramentas-tecnologia':  'bg-cyan-500/10 text-cyan-400',
 }
 
 const CATEGORY_DOT_COLORS: Record<string, string> = {
@@ -129,7 +129,7 @@ function CoverImage({ post, className }: { post: BlogPost; className?: string })
 
 /* ── CategoryBadge ──────────────────────────────────────────────────────── */
 function CategoryBadge({ post }: { post: BlogPost }) {
-  const cls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
+  const cls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-500/10 text-violet-400'
   return (
     <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${cls}`}>
       {post.category}
@@ -142,7 +142,7 @@ function PostCard({ post }: { post: BlogPost }) {
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden flex flex-col"
+      className="group glass-card rounded-2xl hover:border-violet-500/20 transition-all duration-200 border border-white/5 overflow-hidden flex flex-col"
     >
       {/* Cover */}
       <div className="relative overflow-hidden h-48">
@@ -157,18 +157,18 @@ function PostCard({ post }: { post: BlogPost }) {
         <CategoryBadge post={post} />
 
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-violet-600 transition-colors text-base">
+          <h3 className="font-semibold text-slate-100 leading-snug line-clamp-2 group-hover:text-violet-400 transition-colors text-base">
             {post.title}
           </h3>
           {post.summary && (
-            <p className="text-sm text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">
+            <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
               {post.summary}
             </p>
           )}
         </div>
 
         {/* Meta */}
-        <div className="flex items-center gap-3 text-xs text-gray-400 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-3 text-xs text-slate-600 pt-3 border-t border-white/5">
           <span className="flex items-center gap-1">
             <User className="w-3 h-3" />
             {post.author}
@@ -269,13 +269,13 @@ export default async function BlogPage() {
     : posts
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-        <nav className="flex items-center gap-2 text-sm text-gray-400">
-          <Link href="/" className="hover:text-gray-600 transition-colors">Início</Link>
+        <nav className="flex items-center gap-2 text-sm text-slate-500">
+          <Link href="/" className="hover:text-violet-400 transition-colors">Início</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-600 font-medium">Blog</span>
+          <span className="text-slate-400 font-medium">Blog</span>
         </nav>
       </div>
 
@@ -288,39 +288,39 @@ export default async function BlogPage() {
             {featured && (
               <section className="mb-10">
                 <Link href={`/blog/${featured.slug}`} className="group block">
-                  <div className="relative rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col md:flex-row h-auto md:h-80">
+                  <div className="relative rounded-2xl overflow-hidden glass-card border border-white/5 hover:border-violet-500/20 transition-all duration-300 flex flex-col md:flex-row h-auto md:h-80">
                     {/* Cover — left 55% */}
                     <div className="relative md:w-[55%] h-56 md:h-full overflow-hidden">
                       <CoverImage
                         post={featured}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/10" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#0A0718]/20" />
                     </div>
 
                     {/* Content — right 45% */}
                     <div className="flex flex-col justify-center p-7 md:w-[45%] gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="inline-block text-xs font-bold uppercase tracking-wider text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full">
+                        <span className="inline-block text-xs font-bold uppercase tracking-wider text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-full">
                           Destaque
                         </span>
                         <CategoryBadge post={featured} />
                       </div>
 
                       <h2
-                        className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight group-hover:text-violet-600 transition-colors"
-                        style={{ fontFamily: 'var(--font-playfair)' }}
+                        className="text-2xl md:text-3xl font-bold text-white leading-tight group-hover:text-violet-400 transition-colors"
+                        style={{ fontFamily: 'Sora, sans-serif' }}
                       >
                         {featured.title}
                       </h2>
 
                       {featured.summary && (
-                        <p className="text-gray-500 text-sm leading-relaxed line-clamp-2">
+                        <p className="text-slate-400 text-sm leading-relaxed line-clamp-2">
                           {featured.summary}
                         </p>
                       )}
 
-                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                      <div className="flex items-center gap-3 text-xs text-slate-600 mt-1">
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
                           {featured.author}
@@ -334,7 +334,7 @@ export default async function BlogPage() {
                         )}
                       </div>
 
-                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-600 group-hover:gap-2.5 transition-all">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-400 group-hover:gap-2.5 transition-all">
                         Ler artigo
                         <ArrowRight className="w-4 h-4" />
                       </span>
@@ -347,10 +347,10 @@ export default async function BlogPage() {
             {/* Posts grid */}
             <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'var(--font-playfair)' }}>
+                <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
                   Posts Recentes
                 </h2>
-                <Link href="/blog/busca" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
+                <Link href="/blog/busca" className="text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors">
                   Ver todos →
                 </Link>
               </div>
@@ -367,7 +367,7 @@ export default async function BlogPage() {
                 ))}
 
                 {gridPosts.length === 0 && (
-                  <div className="col-span-full text-center py-16 text-gray-400">
+                  <div className="col-span-full text-center py-16 text-slate-600">
                     <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
                     <p className="font-medium">Nenhum post publicado ainda.</p>
                   </div>
@@ -381,20 +381,20 @@ export default async function BlogPage() {
             <div className="sticky top-24 flex flex-col gap-6">
 
               {/* Categories */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Categorias</h3>
+              <div className="glass-card rounded-2xl border border-white/5 p-5">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Categorias</h3>
                 <ul className="space-y-2.5">
                   {categories.map(cat => (
                     <li key={cat.id}>
                       <Link
                         href={`/blog/categoria/${cat.slug}`}
-                        className="flex items-center gap-2.5 text-sm text-gray-700 hover:text-violet-600 transition-colors group"
+                        className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-violet-400 transition-colors group"
                       >
                         <span
                           className={`w-2 h-2 rounded-full shrink-0 ${CATEGORY_DOT_COLORS[cat.slug] ?? 'bg-violet-400'}`}
                         />
                         <span className="flex-1 group-hover:translate-x-0.5 transition-transform">{cat.name}</span>
-                        <span className="text-xs text-gray-400 tabular-nums">{cat.post_count}</span>
+                        <span className="text-xs text-slate-600 tabular-nums">{cat.post_count}</span>
                       </Link>
                     </li>
                   ))}
@@ -403,22 +403,22 @@ export default async function BlogPage() {
 
               {/* Popular posts */}
               {popular.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Mais lidos</h3>
+                <div className="glass-card rounded-2xl border border-white/5 p-5">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Mais lidos</h3>
                   <ol className="space-y-4">
                     {popular.map((post, i) => (
                       <li key={post.id} className="flex gap-3">
-                        <span className="text-2xl font-black text-gray-100 tabular-nums leading-none w-6 shrink-0 select-none">
+                        <span className="text-2xl font-black text-white/10 tabular-nums leading-none w-6 shrink-0 select-none">
                           {i + 1}
                         </span>
                         <div className="flex-1 min-w-0">
                           <Link
                             href={`/blog/${post.slug}`}
-                            className="text-sm font-medium text-gray-800 hover:text-violet-600 transition-colors leading-snug line-clamp-2"
+                            className="text-sm font-medium text-slate-300 hover:text-violet-400 transition-colors leading-snug line-clamp-2"
                           >
                             {post.title}
                           </Link>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                          <div className="flex items-center gap-2 mt-1 text-xs text-slate-600">
                             <Eye className="w-3 h-3" />
                             <span>{post.views_count.toLocaleString('pt-BR')} views</span>
                             {post.reading_time_min && (

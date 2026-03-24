@@ -62,29 +62,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'bg-amber-100 text-amber-700',
-  'mercado-livre':           'bg-yellow-100 text-yellow-700',
-  'gestao-empreendedorismo': 'bg-blue-100 text-blue-700',
-  'financas-economia':       'bg-green-100 text-green-700',
-  'fiscal-tributario':       'bg-red-100 text-red-700',
-  'estoque-logistica':       'bg-emerald-100 text-emerald-700',
-  'marketing-digital':       'bg-pink-100 text-pink-700',
-  'setores-nichos':          'bg-purple-100 text-purple-700',
-  'novidades-foguetim':      'bg-violet-100 text-violet-700',
-  'ferramentas-tecnologia':  'bg-cyan-100 text-cyan-700',
-}
-
-const CATEGORY_HEADER_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'from-amber-50 to-amber-100 border-amber-200',
-  'mercado-livre':           'from-yellow-50 to-yellow-100 border-yellow-200',
-  'gestao-empreendedorismo': 'from-blue-50 to-blue-100 border-blue-200',
-  'financas-economia':       'from-green-50 to-green-100 border-green-200',
-  'fiscal-tributario':       'from-red-50 to-red-100 border-red-200',
-  'estoque-logistica':       'from-emerald-50 to-emerald-100 border-emerald-200',
-  'marketing-digital':       'from-pink-50 to-pink-100 border-pink-200',
-  'setores-nichos':          'from-purple-50 to-purple-100 border-purple-200',
-  'novidades-foguetim':      'from-violet-50 to-violet-100 border-violet-200',
-  'ferramentas-tecnologia':  'from-cyan-50 to-cyan-100 border-cyan-200',
+  'ecommerce-marketplaces':  'bg-amber-500/10 text-amber-400',
+  'mercado-livre':           'bg-yellow-500/10 text-yellow-400',
+  'gestao-empreendedorismo': 'bg-blue-500/10 text-blue-400',
+  'financas-economia':       'bg-green-500/10 text-green-400',
+  'fiscal-tributario':       'bg-red-500/10 text-red-400',
+  'estoque-logistica':       'bg-emerald-500/10 text-emerald-400',
+  'marketing-digital':       'bg-pink-500/10 text-pink-400',
+  'setores-nichos':          'bg-purple-500/10 text-purple-400',
+  'novidades-foguetim':      'bg-violet-500/10 text-violet-400',
+  'ferramentas-tecnologia':  'bg-cyan-500/10 text-cyan-400',
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -119,11 +106,11 @@ function CoverImage({ post, className }: { post: BlogPost; className?: string })
 
 /* ── PostCard ───────────────────────────────────────────────────────────── */
 function PostCard({ post }: { post: BlogPost }) {
-  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
+  const catCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-500/10 text-violet-400'
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden flex flex-col"
+      className="group glass-card rounded-2xl hover:border-violet-500/20 transition-all duration-200 border border-white/5 overflow-hidden flex flex-col"
     >
       <div className="relative overflow-hidden h-48">
         <CoverImage
@@ -136,14 +123,14 @@ function PostCard({ post }: { post: BlogPost }) {
           {post.category}
         </span>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-violet-600 transition-colors text-base">
+          <h3 className="font-semibold text-slate-100 leading-snug line-clamp-2 group-hover:text-violet-400 transition-colors text-base">
             {post.title}
           </h3>
           {post.summary && (
-            <p className="text-sm text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{post.summary}</p>
+            <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">{post.summary}</p>
           )}
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-3 text-xs text-slate-600 pt-3 border-t border-white/5">
           <span className="flex items-center gap-1">
             <User className="w-3 h-3" />
             {post.author}
@@ -250,23 +237,22 @@ export default async function CategoryPage({
 
   if (!category) notFound()
 
-  const headerCls = CATEGORY_HEADER_COLORS[params.slug] ?? 'from-violet-50 to-violet-100 border-violet-200'
   const gradCls = CATEGORY_COLORS[params.slug] ?? 'from-violet-400 to-violet-600'
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-gray-600 transition-colors">Início</Link>
+        <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8">
+          <Link href="/" className="hover:text-violet-400 transition-colors">Início</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
+          <Link href="/blog" className="hover:text-violet-400 transition-colors">Blog</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-600 font-medium">{category.name}</span>
+          <span className="text-slate-400 font-medium">{category.name}</span>
         </nav>
 
         {/* Category header */}
-        <div className={`rounded-2xl border bg-gradient-to-br ${headerCls} p-8 mb-10 flex items-start gap-5`}>
+        <div className="glass-card rounded-2xl border border-white/10 p-8 mb-10 flex items-start gap-5">
           {category.icon ? (
             <span className="text-4xl shrink-0">{category.icon}</span>
           ) : (
@@ -278,15 +264,15 @@ export default async function CategoryPage({
           )}
           <div>
             <h1
-              className="text-3xl font-bold text-gray-900 mb-2"
-              style={{ fontFamily: 'var(--font-playfair)' }}
+              className="text-3xl font-bold text-white mb-2"
+              style={{ fontFamily: 'Sora, sans-serif' }}
             >
               {category.name}
             </h1>
             {category.description && (
-              <p className="text-gray-600 leading-relaxed max-w-2xl">{category.description}</p>
+              <p className="text-slate-400 leading-relaxed max-w-2xl">{category.description}</p>
             )}
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-sm text-slate-600 mt-2">
               {category.post_count} {category.post_count === 1 ? 'artigo' : 'artigos'}
             </p>
           </div>
@@ -294,13 +280,13 @@ export default async function CategoryPage({
 
         {/* Filter bar */}
         <div className="flex items-center gap-3 mb-7">
-          <span className="text-sm text-gray-500 font-medium">Ordenar por:</span>
+          <span className="text-sm text-slate-500 font-medium">Ordenar por:</span>
           <Link
             href={`/blog/categoria/${params.slug}`}
             className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${
               sort === 'recent'
                 ? 'bg-violet-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                : 'bg-white/5 text-slate-400 border border-white/10 hover:border-violet-500/30 hover:text-violet-400'
             }`}
           >
             Mais recentes
@@ -310,7 +296,7 @@ export default async function CategoryPage({
             className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${
               sort === 'popular'
                 ? 'bg-violet-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                : 'bg-white/5 text-slate-400 border border-white/10 hover:border-violet-500/30 hover:text-violet-400'
             }`}
           >
             Mais lidos
@@ -325,10 +311,10 @@ export default async function CategoryPage({
             sort={sort}
           />
         ) : (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-slate-600">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
             <p className="font-medium">Nenhum artigo nesta categoria ainda.</p>
-            <Link href="/blog" className="mt-4 inline-block text-sm text-violet-600 hover:text-violet-700">
+            <Link href="/blog" className="mt-4 inline-block text-sm text-violet-400 hover:text-violet-300 transition-colors">
               ← Voltar ao blog
             </Link>
           </div>

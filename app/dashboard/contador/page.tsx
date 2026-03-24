@@ -926,7 +926,7 @@ function AcessoTab({ userId }: { userId: string }) {
             <p className="text-sm text-slate-500">Nenhum contador convidado ainda.</p>
           </div>
         ) : (
-          <div className="dash-card rounded-2xl overflow-hidden">
+          <div className="dash-card rounded-2xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/[0.06] text-left">

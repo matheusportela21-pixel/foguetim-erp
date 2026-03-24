@@ -74,7 +74,7 @@ export default function ShopeeOverviewPage() {
         description={status?.shop_name ? `Loja: ${status.shop_name}` : 'Painel da sua loja Shopee'}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
 
         {/* Não conectado */}
         {!loading && !connected && (

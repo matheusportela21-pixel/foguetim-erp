@@ -184,7 +184,7 @@ export default function EquipePage() {
       </div>
 
       {/* Members Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.06]">
@@ -337,7 +337,7 @@ function PermissionsModal({ member, onClose, onSave }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-6 w-[440px] max-h-[80vh] overflow-y-auto space-y-4">
+      <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-6 w-full md:w-[440px] max-h-[80vh] overflow-y-auto space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-white">Permissões de {member.name}</h3>

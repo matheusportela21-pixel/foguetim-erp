@@ -164,7 +164,7 @@ export default function MagaluExpedicaoPage() {
   /* Unavailable guard */
   if (!loading && data && !data.available) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <PageHeader title="Expedição Magalu" description="Logística e envios Magazine Luiza" />
         <EmptyState
           image="box"
@@ -203,7 +203,7 @@ export default function MagaluExpedicaoPage() {
     <div>
       <PageHeader title="Expedição Magalu" description="Logística e envios Magazine Luiza" />
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 md:p-6 space-y-5">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {KPI_CARDS.map(kpi => (

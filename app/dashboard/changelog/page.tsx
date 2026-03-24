@@ -76,7 +76,7 @@ export default function ChangelogPage() {
   const versions = Object.keys(grouped).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6">
 
       {/* Header */}
       <div className="flex items-center gap-4">

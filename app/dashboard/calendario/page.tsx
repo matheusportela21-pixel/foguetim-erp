@@ -385,7 +385,7 @@ export default function CalendarioPage() {
   const totalPlanned = plans.filter(p => p.status !== 'sem_planejamento').length
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

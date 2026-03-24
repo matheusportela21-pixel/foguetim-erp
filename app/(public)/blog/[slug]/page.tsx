@@ -56,16 +56,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_TEXT_COLORS: Record<string, string> = {
-  'ecommerce-marketplaces':  'bg-amber-100 text-amber-700',
-  'mercado-livre':           'bg-yellow-100 text-yellow-700',
-  'gestao-empreendedorismo': 'bg-blue-100 text-blue-700',
-  'financas-economia':       'bg-green-100 text-green-700',
-  'fiscal-tributario':       'bg-red-100 text-red-700',
-  'estoque-logistica':       'bg-emerald-100 text-emerald-700',
-  'marketing-digital':       'bg-pink-100 text-pink-700',
-  'setores-nichos':          'bg-purple-100 text-purple-700',
-  'novidades-foguetim':      'bg-violet-100 text-violet-700',
-  'ferramentas-tecnologia':  'bg-cyan-100 text-cyan-700',
+  'ecommerce-marketplaces':  'bg-amber-500/10 text-amber-400',
+  'mercado-livre':           'bg-yellow-500/10 text-yellow-400',
+  'gestao-empreendedorismo': 'bg-blue-500/10 text-blue-400',
+  'financas-economia':       'bg-green-500/10 text-green-400',
+  'fiscal-tributario':       'bg-red-500/10 text-red-400',
+  'estoque-logistica':       'bg-emerald-500/10 text-emerald-400',
+  'marketing-digital':       'bg-pink-500/10 text-pink-400',
+  'setores-nichos':          'bg-purple-500/10 text-purple-400',
+  'novidades-foguetim':      'bg-violet-500/10 text-violet-400',
+  'ferramentas-tecnologia':  'bg-cyan-500/10 text-cyan-400',
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -127,7 +127,7 @@ function RelatedCard({ post }: { post: BlogPost }) {
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="flex gap-3 group hover:bg-gray-50 rounded-xl p-2 -mx-2 transition-colors"
+      className="flex gap-3 group hover:bg-white/5 rounded-xl p-2 -mx-2 transition-colors"
     >
       <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${grad} shrink-0 overflow-hidden`}>
         {post.cover_image_url && (
@@ -139,11 +139,11 @@ function RelatedCard({ post }: { post: BlogPost }) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 group-hover:text-violet-600 transition-colors line-clamp-2 leading-snug">
+        <p className="text-sm font-medium text-slate-300 group-hover:text-violet-400 transition-colors line-clamp-2 leading-snug">
           {post.title}
         </p>
         {post.reading_time_min && (
-          <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+          <p className="text-xs text-slate-600 mt-1 flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {post.reading_time_min} min
           </p>
@@ -294,7 +294,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   if (!post) notFound()
 
   const headings = post.content ? extractHeadings(post.content) : []
-  const catBadgeCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-100 text-violet-700'
+  const catBadgeCls = CATEGORY_TEXT_COLORS[post.category_slug ?? ''] ?? 'bg-violet-500/10 text-violet-400'
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -322,26 +322,26 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="bg-gray-50 min-h-screen">
+      <div className="min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-            <Link href="/" className="hover:text-gray-600 transition-colors">Início</Link>
+          <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8">
+            <Link href="/" className="hover:text-violet-400 transition-colors">Início</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/blog" className="hover:text-gray-600 transition-colors">Blog</Link>
+            <Link href="/blog" className="hover:text-violet-400 transition-colors">Blog</Link>
             {post.category_slug && (
               <>
                 <ChevronRight className="w-3 h-3" />
                 <Link
                   href={`/blog/categoria/${post.category_slug}`}
-                  className="hover:text-gray-600 transition-colors"
+                  className="hover:text-violet-400 transition-colors"
                 >
                   {post.category}
                 </Link>
               </>
             )}
             <ChevronRight className="w-3 h-3" />
-            <span className="text-gray-600 font-medium truncate max-w-[200px]">{post.title}</span>
+            <span className="text-slate-400 font-medium truncate max-w-[200px]">{post.title}</span>
           </nav>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-10">
@@ -360,14 +360,14 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
               {/* Title */}
               <h1
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-5"
-                style={{ fontFamily: 'var(--font-playfair)' }}
+                className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-5"
+                style={{ fontFamily: 'Sora, sans-serif' }}
               >
                 {post.title}
               </h1>
 
               {/* Meta row */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-400 pb-6 border-b border-gray-200 mb-8">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 pb-6 border-b border-white/5 mb-8">
                 <span className="flex items-center gap-1.5">
                   <User className="w-4 h-4" />
                   {post.author}
@@ -393,8 +393,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                     components={{
                       h1: ({ children }) => (
                         <h1
-                          className="text-3xl font-bold text-gray-900 mt-8 mb-4"
-                          style={{ fontFamily: 'var(--font-playfair)' }}
+                          className="text-3xl font-bold text-white mt-8 mb-4"
+                          style={{ fontFamily: 'Sora, sans-serif' }}
                         >
                           {children}
                         </h1>
@@ -404,8 +404,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                         return (
                           <h2
                             id={id}
-                            className="text-2xl font-bold text-gray-900 mt-10 mb-4 pt-4 border-t border-gray-100"
-                            style={{ fontFamily: 'var(--font-playfair)' }}
+                            className="text-2xl font-bold text-white mt-10 mb-4 pt-4 border-t border-white/5"
+                            style={{ fontFamily: 'Sora, sans-serif' }}
                           >
                             {children}
                           </h2>
@@ -416,37 +416,37 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                         return (
                           <h3
                             id={id}
-                            className="text-xl font-semibold text-gray-800 mt-6 mb-3"
+                            className="text-xl font-semibold text-slate-100 mt-6 mb-3"
                           >
                             {children}
                           </h3>
                         )
                       },
                       p: ({ children }) => (
-                        <p className="text-gray-700 leading-relaxed mb-4 text-base">{children}</p>
+                        <p className="text-slate-400 leading-relaxed mb-4 text-base">{children}</p>
                       ),
                       ul: ({ children }) => (
-                        <ul className="list-disc list-inside space-y-1 mb-4 text-gray-700 pl-4">{children}</ul>
+                        <ul className="list-disc list-inside space-y-1 mb-4 text-slate-400 pl-4">{children}</ul>
                       ),
                       ol: ({ children }) => (
-                        <ol className="list-decimal list-inside space-y-1 mb-4 text-gray-700 pl-4">{children}</ol>
+                        <ol className="list-decimal list-inside space-y-1 mb-4 text-slate-400 pl-4">{children}</ol>
                       ),
                       li: ({ children }) => (
                         <li className="leading-relaxed">{children}</li>
                       ),
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-violet-400 pl-4 italic text-gray-600 my-6 bg-violet-50 py-3 rounded-r-lg">
+                        <blockquote className="border-l-4 border-violet-500 pl-4 italic text-slate-400 my-6 bg-violet-500/5 py-3 rounded-r-lg">
                           {children}
                         </blockquote>
                       ),
                       code: ({ children, className }) => {
                         const isBlock = className?.includes('language-')
                         return isBlock ? (
-                          <code className="block bg-gray-900 text-green-400 p-4 rounded-xl text-sm font-mono mb-4 overflow-x-auto">
+                          <code className="block bg-[#060512] text-green-400 p-4 rounded-xl text-sm font-mono mb-4 overflow-x-auto border border-white/5">
                             {children}
                           </code>
                         ) : (
-                          <code className="bg-gray-100 text-violet-700 px-1.5 py-0.5 rounded text-sm font-mono">
+                          <code className="bg-white/5 text-violet-400 px-1.5 py-0.5 rounded text-sm font-mono">
                             {children}
                           </code>
                         )
@@ -455,7 +455,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                       a: ({ children, href }) => (
                         <a
                           href={href}
-                          className="text-violet-600 hover:text-violet-700 underline"
+                          className="text-violet-400 hover:text-violet-300 underline"
                           target={href?.startsWith('http') ? '_blank' : undefined}
                           rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
                         >
@@ -463,23 +463,23 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                         </a>
                       ),
                       strong: ({ children }) => (
-                        <strong className="font-semibold text-gray-900">{children}</strong>
+                        <strong className="font-semibold text-slate-100">{children}</strong>
                       ),
-                      em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
+                      em: ({ children }) => <em className="italic text-slate-400">{children}</em>,
                       table: ({ children }) => (
                         <div className="overflow-x-auto mb-4">
                           <table className="w-full border-collapse text-sm">{children}</table>
                         </div>
                       ),
                       th: ({ children }) => (
-                        <th className="border border-gray-200 bg-gray-50 px-4 py-2 text-left font-semibold text-gray-700">
+                        <th className="border border-white/10 bg-white/5 px-4 py-2 text-left font-semibold text-slate-300">
                           {children}
                         </th>
                       ),
                       td: ({ children }) => (
-                        <td className="border border-gray-200 px-4 py-2 text-gray-700">{children}</td>
+                        <td className="border border-white/10 px-4 py-2 text-slate-400">{children}</td>
                       ),
-                      hr: () => <hr className="my-8 border-gray-200" />,
+                      hr: () => <hr className="my-8 border-white/10" />,
                       img: ({ src, alt }) => (
                         <img
                           src={src}
@@ -516,12 +516,12 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
               {/* Tags */}
               {post.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <Tag className="w-4 h-4 text-gray-400 mt-0.5" />
+                  <Tag className="w-4 h-4 text-slate-500 mt-0.5" />
                   {post.tags.map(tag => (
                     <Link
                       key={tag}
                       href={`/blog/tag/${encodeURIComponent(tag)}`}
-                      className="text-sm text-gray-600 hover:text-violet-600 bg-gray-100 hover:bg-violet-50 px-3 py-1 rounded-full transition-colors"
+                      className="text-sm text-slate-400 hover:text-violet-400 bg-white/5 hover:bg-violet-500/10 px-3 py-1 rounded-full transition-colors border border-white/5 hover:border-violet-500/20"
                     >
                       #{tag}
                     </Link>
@@ -530,7 +530,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
               )}
 
               {/* Feedback */}
-              <div className="border-t border-b border-gray-200 py-2 my-6">
+              <div className="border-t border-b border-white/5 py-2 my-6">
                 <BlogFeedback slug={post.slug} />
               </div>
 
@@ -545,12 +545,12 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                   {prevPost ? (
                     <Link
                       href={`/blog/${prevPost.slug}`}
-                      className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 hover:border-violet-200 hover:bg-violet-50/50 transition-all"
+                      className="group flex items-start gap-3 p-4 rounded-2xl border border-white/5 hover:border-violet-500/20 hover:bg-violet-500/5 transition-all"
                     >
-                      <ArrowLeft className="w-4 h-4 text-gray-400 group-hover:text-violet-600 shrink-0 mt-0.5 transition-colors" />
+                      <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-violet-400 shrink-0 mt-0.5 transition-colors" />
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">Anterior</p>
-                        <p className="text-sm font-medium text-gray-800 group-hover:text-violet-600 transition-colors line-clamp-2">
+                        <p className="text-xs text-slate-600 mb-1">Anterior</p>
+                        <p className="text-sm font-medium text-slate-300 group-hover:text-violet-400 transition-colors line-clamp-2">
                           {prevPost.title}
                         </p>
                       </div>
@@ -562,15 +562,15 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                   {nextPost ? (
                     <Link
                       href={`/blog/${nextPost.slug}`}
-                      className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 hover:border-violet-200 hover:bg-violet-50/50 transition-all text-right justify-end"
+                      className="group flex items-start gap-3 p-4 rounded-2xl border border-white/5 hover:border-violet-500/20 hover:bg-violet-500/5 transition-all text-right justify-end"
                     >
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">Próximo</p>
-                        <p className="text-sm font-medium text-gray-800 group-hover:text-violet-600 transition-colors line-clamp-2">
+                        <p className="text-xs text-slate-600 mb-1">Próximo</p>
+                        <p className="text-sm font-medium text-slate-300 group-hover:text-violet-400 transition-colors line-clamp-2">
                           {nextPost.title}
                         </p>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-violet-600 shrink-0 mt-0.5 transition-colors" />
+                      <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-violet-400 shrink-0 mt-0.5 transition-colors" />
                     </Link>
                   ) : (
                     <div />
@@ -585,8 +585,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
                 {/* Table of Contents */}
                 {headings.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+                  <div className="glass-card rounded-2xl border border-white/5 p-5">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
                       Neste artigo
                     </h3>
                     <nav>
@@ -595,7 +595,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                           <li key={i} className={h.level === 3 ? 'pl-4' : ''}>
                             <a
                               href={`#${h.id}`}
-                              className="text-sm text-gray-600 hover:text-violet-600 transition-colors block py-0.5 leading-snug"
+                              className="text-sm text-slate-400 hover:text-violet-400 transition-colors block py-0.5 leading-snug"
                             >
                               {h.text}
                             </a>
@@ -623,8 +623,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
                 {/* Related posts */}
                 {related.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+                  <div className="glass-card rounded-2xl border border-white/5 p-5">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
                       Artigos relacionados
                     </h3>
                     <div className="flex flex-col gap-3">

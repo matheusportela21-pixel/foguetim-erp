@@ -280,7 +280,7 @@ function EditDrawer({
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/40" onClick={onClose} />
-      <div className="w-[500px] bg-[#080b10] border-l border-white/[0.08] flex flex-col h-full overflow-hidden">
+      <div className="w-full md:w-[500px] bg-[#080b10] border-l border-white/[0.08] flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
           <div>

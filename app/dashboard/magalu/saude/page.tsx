@@ -39,7 +39,7 @@ function scoreBadge(score: number) {
 
 function Skeleton() {
   return (
-    <div className="p-6 space-y-6 animate-pulse">
+    <div className="p-4 md:p-6 space-y-6 animate-pulse">
       <div className="h-8 w-64 bg-slate-800 rounded-lg" />
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {[0, 1, 2, 3].map(i => (
@@ -69,7 +69,7 @@ export default function MagaluSaudePage() {
 
   if (!data?.available) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <PageHeader
           title="Saúde dos Anúncios"
           breadcrumbs={[
@@ -102,7 +102,7 @@ export default function MagaluSaudePage() {
   ]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <PageHeader
         title="Saúde dos Anúncios"
         breadcrumbs={[

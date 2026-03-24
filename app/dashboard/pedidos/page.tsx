@@ -575,7 +575,7 @@ export default function PedidosPage() {
         </div>
       )}
 
-      {view === 'local' && <div className="p-6 space-y-5">
+      {view === 'local' && <div className="p-4 md:p-6 space-y-5">
 
         {/* ── KPI CARDS ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">

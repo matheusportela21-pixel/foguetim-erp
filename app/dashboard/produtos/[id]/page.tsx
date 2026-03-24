@@ -509,7 +509,7 @@ function TabPrecificacao({ p, onChange }: { p: Produto; onChange: (patch: Partia
             {' '}(peso cobrado: <span className="text-white">{pesoCobrado.toFixed(3)} kg</span>)
           </p>
         )}
-        <div className="dash-card rounded-xl overflow-hidden border border-white/[0.06]">
+        <div className="dash-card rounded-xl overflow-x-auto border border-white/[0.06]">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-white/[0.04]">
@@ -661,7 +661,7 @@ function TabEstoque({ p, onChange, productId, userId, userName }: {
       {/* Histórico */}
       <div>
         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Histórico de Movimentações</p>
-        <div className="dash-card rounded-xl overflow-hidden border border-white/[0.06]">
+        <div className="dash-card rounded-xl overflow-x-auto border border-white/[0.06]">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-white/[0.04]">
@@ -1484,7 +1484,7 @@ function TabVariacoes() {
             <button className="text-[10px] font-semibold px-2.5 py-1 bg-dark-700 text-slate-500 rounded-full border border-white/[0.06]">+ Adicionar valor</button>
           </div>
         </div>
-        <div className="dash-card rounded-xl overflow-hidden border border-white/[0.06]">
+        <div className="dash-card rounded-xl overflow-x-auto border border-white/[0.06]">
           <table className="w-full text-xs">
             <thead><tr className="border-b border-white/[0.04]">
               {['Variação','SKU Filho','Preço','Estoque','Status'].map(h => (
@@ -1626,7 +1626,7 @@ export default function ProdutoEditPage({ params }: { params: { id: string } }) 
         description={isNew ? 'Cadastro de produto' : `SKU ${produto.sku} · ${produto.marca}`}
       />
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-slate-600">

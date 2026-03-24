@@ -146,7 +146,7 @@ export default function ArmazensPage() {
         </div>
       )}
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
         {/* Toolbar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>

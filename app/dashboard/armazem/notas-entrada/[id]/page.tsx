@@ -326,7 +326,7 @@ export default function InvoiceDetailPage() {
     return (
       <div>
         <PageHeader title="Nota de Entrada" description="Carregando..." />
-        <div className="p-6 space-y-4">
+        <div className="p-4 md:p-6 space-y-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="animate-pulse h-16 bg-white/[0.04] rounded-xl" />
           ))}
@@ -362,7 +362,7 @@ export default function InvoiceDetailPage() {
     <div>
       <PageHeader title={`NF-e #${invoice.invoice_number}`} description="Resolução de itens e entrada no estoque" />
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
         {/* Back */}
         <button
           onClick={() => router.push('/dashboard/armazem/notas-entrada')}
