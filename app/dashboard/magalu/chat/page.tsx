@@ -204,10 +204,10 @@ export default function MagaluChatPage() {
           description="Conversas com clientes via Magalu"
         />
         <EmptyState
-          image="connect"
-          title="Chat Magalu — em breve"
-          description="O módulo de chat com clientes Magalu estará disponível quando o escopo de mensagens for habilitado na sua conta. Abaixo você pode ver uma prévia do layout."
-          action={{ label: 'Ver documentação Magalu', href: 'https://developers.magalu.com' }}
+          image="standing"
+          title="Chat Magalu — endpoint indisponível"
+          description="O endpoint de Chat não está disponível na API Magalu atual. Utilize o Portal do Seller para gerenciar conversas com clientes."
+          action={{ label: 'Abrir Portal Magalu', href: 'https://seller.magalu.com' }}
         />
       </div>
     )

@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeSku(raw: any) {
   return {
-    sku_id:    raw.sku_id ?? raw.id ?? raw.code ?? null,
+    sku_id:    raw.sku ?? raw.sku_id ?? raw.id ?? raw.code ?? null,
     title:     raw.title ?? raw.name ?? raw.product_title ?? null,
     status:    raw.status ?? raw.situation ?? null,
     price:     raw.price?.list_price ?? raw.price?.sell_price ?? raw.sale_price ?? raw.price ?? null,
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   const status = sp.get('status')
 
   try {
-    const params: Record<string, string> = { offset, limit }
+    const params: Record<string, string> = { _offset: offset, _limit: limit }
     if (status) params.status = status
 
     const data = await magaluGet(

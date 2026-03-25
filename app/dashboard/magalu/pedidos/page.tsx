@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import {
   ShoppingBag, Search, RefreshCw, Loader2,
-  ChevronLeft, ChevronRight, X, Package,
+  ChevronLeft, ChevronRight, ChevronDown, X, Package,
   User, Mail, Phone, FileText, Truck,
   CreditCard, MapPin, Clock, Hash,
   CheckCircle2, XCircle, Snowflake, ArrowRight,
@@ -99,7 +99,7 @@ const TABS: TabDef[] = [
 function fmtDate(iso?: string) {
   if (!iso) return '\u2014'
   return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
+    day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
   })
 }
@@ -171,6 +171,7 @@ export default function MagaluPedidosPage() {
   const [total, setTotal]       = useState(0)
   const [selected, setSelected] = useState<MagaluOrder | null>(null)
   const [activeTab, setActiveTab] = useState('all')
+  const [jsonOpen, setJsonOpen] = useState(false)
   const LIMIT = 50
 
   /* ---- fetch ---- */
@@ -365,7 +366,7 @@ export default function MagaluPedidosPage() {
               <tr
                 key={o.order_id ?? o.id ?? i}
                 className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                onClick={() => setSelected(o)}
+                onClick={() => { setSelected(o); setJsonOpen(false) }}
               >
                 <td className="px-4 py-3">
                   <p className="text-xs font-semibold text-[#0086FF] font-mono">#{o.order_id ?? o.id ?? '\u2014'}</p>
@@ -543,12 +544,21 @@ export default function MagaluPedidosPage() {
                 </div>
               </DrawerSection>
 
-              {/* Raw JSON */}
-              <DrawerSection title="Dados brutos">
-                <pre className="text-[10px] text-slate-500 bg-white/[0.02] rounded-lg p-3 overflow-x-auto max-h-40">
-                  {JSON.stringify(selected, null, 2)}
-                </pre>
-              </DrawerSection>
+              {/* Raw JSON collapsible */}
+              <div className="rounded-xl border border-space-600 overflow-hidden">
+                <button
+                  onClick={() => setJsonOpen(!jsonOpen)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs text-slate-500 hover:text-slate-300 bg-space-700/30 transition-colors"
+                >
+                  <span className="font-medium">Dados brutos (JSON)</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${jsonOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {jsonOpen && (
+                  <pre className="text-[10px] text-slate-500 bg-space-800/80 p-4 overflow-x-auto max-h-60 border-t border-space-600">
+                    {JSON.stringify(selected, null, 2)}
+                  </pre>
+                )}
+              </div>
             </div>
           </div>
         </div>

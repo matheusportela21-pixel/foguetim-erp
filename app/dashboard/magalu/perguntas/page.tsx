@@ -103,9 +103,10 @@ export default function MagaluPerguntasPage() {
           ]}
         />
         <EmptyState
-          image="maintenance"
-          title="Perguntas Magalu"
-          description="Perguntas Magalu — disponível em breve"
+          image="standing"
+          title="Perguntas Magalu — recurso indisponível"
+          description="O endpoint de Perguntas & Respostas não está disponível na API Magalu atual. Gerencie perguntas diretamente pelo Portal do Seller."
+          action={{ label: 'Abrir Portal Magalu', href: 'https://seller.magalu.com' }}
         />
       </div>
     )

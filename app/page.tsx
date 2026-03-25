@@ -711,15 +711,12 @@ export default function LandingPage() {
             {/* Brand */}
             <div className="col-span-2 sm:col-span-3 md:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
-                <Image src="/logo.png" alt="Foguetim" width={32} height={32} className="rounded-lg" />
+                <Image src="/mascot/timm-standing.png" alt="Timm — Mascote Foguetim" width={40} height={40} />
                 <span className="font-bold text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Foguetim ERP</span>
               </div>
               <p className="text-sm text-slate-500 leading-relaxed mb-4">
                 O ERP do marketplace brasileiro. Do armazém ao cliente, tudo num só lugar.
               </p>
-              <div className="flex items-center gap-3 mb-4">
-                <Image src="/mascot/timm-standing.png" alt="Timm" width={40} height={40} />
-              </div>
               <div className="text-xs text-slate-600 space-y-1">
                 <p>FIO CABANA IND. E COM. DE CONF. LTDA</p>
                 <p>CNPJ: 33.685.241/0001-70</p>

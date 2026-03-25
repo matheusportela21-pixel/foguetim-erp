@@ -238,9 +238,10 @@ export default function MagaluSACPage() {
           ]}
         />
         <EmptyState
-          image="maintenance"
-          title="SAC Magalu — disponível em breve"
-          description="Estamos integrando o módulo de SAC com a API do Magalu."
+          image="standing"
+          title="SAC Magalu — aguardando aprovação"
+          description="Este recurso precisa de permissões adicionais da Magalu (scope de tickets). Já solicitamos — deve ser liberado em breve."
+          action={{ label: 'Voltar ao overview', href: '/dashboard/magalu/overview' }}
         />
       </div>
     )

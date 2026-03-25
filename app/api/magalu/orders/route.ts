@@ -19,28 +19,54 @@ export const dynamic = 'force-dynamic'
 function normalizeOrder(raw: any) {
   // Tentar extrair itens/produtos do pedido
   const rawItems = raw.items ?? raw.products ?? raw.order_items ?? []
-  const items = Array.isArray(rawItems) ? rawItems.map((item: Record<string, unknown>) => ({
-    title:    item.title ?? item.name ?? item.product_name ?? item.description ?? 'Produto',
-    quantity: item.quantity ?? item.qty ?? 1,
-    price:    item.price ?? item.unit_price ?? item.sale_price ?? null,
-    sku_id:   item.sku_id ?? item.sku ?? item.id ?? null,
-  })) : []
+  const normalizer = raw.amounts?.normalizer || 100
 
-  // Calcular total: do campo direto ou somando itens
+  const items = Array.isArray(rawItems) ? rawItems.map((item: any) => {
+    // Magalu API: item.info.name, item.info.sku, item.amounts.total
+    const itemNormalizer = item.amounts?.normalizer || normalizer
+    const price = item.amounts?.total != null
+      ? item.amounts.total / itemNormalizer
+      : (item.price ?? item.unit_price ?? item.sale_price ?? null)
+
+    return {
+      title:    item.info?.name ?? item.title ?? item.name ?? item.product_name ?? item.description ?? 'Produto',
+      quantity: item.quantity ?? item.qty ?? 1,
+      price,
+      sku_id:   item.info?.sku ?? item.sku_id ?? item.sku ?? item.id ?? null,
+      image_url: item.info?.images?.[0]?.url ?? item.image_url ?? null,
+    }
+  }) : []
+
+  // Calcular total: Magalu usa amounts.total em centavos (dividir por normalizer)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const totalAmount = raw.total_amount ?? raw.total ?? raw.order_total ??
-    (items.length > 0
-      ? items.reduce((acc: number, i: any) =>
-          acc + (Number(i.price ?? 0) * Number(i.quantity ?? 1)), 0 as number)
-      : null)
+  const totalAmount = raw.amounts?.total != null
+    ? raw.amounts.total / normalizer
+    : (raw.total_amount ?? raw.total ?? raw.order_total ??
+      (items.length > 0
+        ? items.reduce((acc: number, i: any) =>
+            acc + (Number(i.price ?? 0) * Number(i.quantity ?? 1)), 0 as number)
+        : null))
+
+  // Frete: amounts.freight.total em centavos
+  const shippingCost = raw.amounts?.freight?.total != null
+    ? raw.amounts.freight.total / (raw.amounts.freight.normalizer || normalizer)
+    : (raw.shipping_cost ?? null)
+
+  // Desconto
+  const discount = raw.amounts?.discount?.total != null
+    ? raw.amounts.discount.total / (raw.amounts.discount.normalizer || normalizer)
+    : (raw.discount ?? null)
 
   return {
-    order_id:     raw.order_id ?? raw.id ?? raw.code ?? null,
+    order_id:     raw.order_id ?? raw.code ?? raw.id ?? null,
     created_at:   raw.created_at ?? raw.date_created ?? raw.order_date ?? null,
     status:       raw.status ?? raw.order_status ?? null,
     total_amount: totalAmount,
-    buyer_name:   raw.buyer?.name ?? raw.customer?.name ?? raw.buyer_name ?? null,
+    buyer_name:   raw.shipping_address?.name ?? raw.buyer?.name ?? raw.customer?.name ?? raw.buyer_name ?? null,
     buyer_email:  raw.buyer?.email ?? raw.customer?.email ?? raw.buyer_email ?? null,
+    shipping_cost: shippingCost,
+    discount,
+    shipping_address: raw.shipping_address ?? null,
     items,
     _raw:         raw,
   }
@@ -59,7 +85,7 @@ export async function GET(req: NextRequest) {
   const status = sp.get('status')
 
   try {
-    const params: Record<string, string> = { offset, limit }
+    const params: Record<string, string> = { _offset: offset, _limit: limit }
     if (status) params.status = status
 
     const data = await magaluGet(

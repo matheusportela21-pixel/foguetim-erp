@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const status = sp.get('status')
 
   try {
-    const params: Record<string, string> = { offset, limit }
+    const params: Record<string, string> = { _offset: offset, _limit: limit }
     if (status) params.status = status
 
     const data = await magaluGet(
@@ -35,13 +35,73 @@ export async function GET(req: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = data as any
-    const items = Array.isArray(raw) ? raw
+    const deliveries: any[] = Array.isArray(raw) ? raw
       : raw?.items ?? raw?.results ?? raw?.data ?? []
-    const total = raw?.meta?.total ?? raw?.total ?? items.length
 
-    return NextResponse.json({ items, total, available: true })
+    // Compute KPIs from delivery data
+    let toShip = 0, inTransit = 0, delivered = 0, late = 0
+
+    const orders = deliveries.map((d: any) => {
+      const rawStatus = (d.status ?? '').toLowerCase()
+      let mappedStatus: string
+
+      if (['delivered', 'entregue'].includes(rawStatus)) {
+        mappedStatus = 'delivered'
+        delivered++
+      } else if (['shipped', 'in_transit', 'em_transito', 'transporting'].includes(rawStatus)) {
+        mappedStatus = 'in_transit'
+        inTransit++
+      } else if (['new', 'processing', 'approved', 'ready_to_ship', 'created'].includes(rawStatus)) {
+        mappedStatus = 'to_ship'
+        toShip++
+      } else if (['late', 'delayed', 'overdue'].includes(rawStatus)) {
+        mappedStatus = 'late'
+        late++
+      } else {
+        mappedStatus = 'to_ship'
+        toShip++
+      }
+
+      // Extract amount in BRL (normalizer is typically 100)
+      const normalizer = d.amounts?.normalizer ?? 100
+      const totalAmount = (d.amounts?.total ?? 0) / normalizer
+
+      // Get first item info
+      const firstItem = d.items?.[0]
+      const productName = firstItem?.info?.name ?? '—'
+
+      // Shipping address as buyer display
+      const city = d.shipping_address?.city ?? ''
+      const state = d.shipping_address?.state ?? ''
+      const buyer = city && state ? `${city}, ${state}` : city || state || '—'
+
+      return {
+        id: d.code ?? d.id ?? '',
+        buyer,
+        carrier: d.carrier ?? d.logistics_provider ?? '—',
+        tracking_code: d.tracking?.code ?? d.tracking_code ?? null,
+        tracking_url: d.tracking?.url ?? d.tracking_url ?? null,
+        status: mappedStatus,
+        deadline: d.estimated_delivery_date ?? d.deadline ?? new Date().toISOString(),
+        created_at: d.created_at ?? d.date_created ?? new Date().toISOString(),
+        product_name: productName,
+        total: totalAmount,
+        quantity: firstItem?.quantity ?? 1,
+      }
+    })
+
+    return NextResponse.json({
+      available: true,
+      kpis: { to_ship: toShip, in_transit: inTransit, delivered_30d: delivered, late },
+      orders,
+    })
   } catch (err) {
     console.warn('[Magalu Logistics] endpoint error:', err)
-    return NextResponse.json({ items: [], total: 0, available: false, message: 'Logistics endpoint não disponível neste escopo' })
+    return NextResponse.json({
+      available: false,
+      kpis: { to_ship: 0, in_transit: 0, delivered_30d: 0, late: 0 },
+      orders: [],
+      message: 'Logistics endpoint não disponível neste escopo',
+    })
   }
 }

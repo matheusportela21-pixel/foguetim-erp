@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import {
   ShoppingBag, Package, TrendingUp, AlertCircle,
   RefreshCw, ExternalLink, Loader2, CheckCircle2,
+  Truck, Headphones, Activity, MessageCircle, HelpCircle, XCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -105,6 +106,57 @@ export default function MagaluOverviewPage() {
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* Módulos */}
+          <div className="glass-card p-5">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-4 font-semibold">Módulos</p>
+            <div className="space-y-2">
+              {[
+                { icon: Package,       label: 'Produtos',  status: 'ok'   as const, detail: 'Funcionando',                      href: '/dashboard/magalu/produtos' },
+                { icon: ShoppingBag,   label: 'Pedidos',   status: 'ok'   as const, detail: 'Funcionando',                      href: '/dashboard/magalu/pedidos' },
+                { icon: Truck,         label: 'Expedição', status: 'ok'   as const, detail: 'Funcionando',                      href: '/dashboard/magalu/expedicao' },
+                { icon: Headphones,    label: 'SAC',       status: 'warn' as const, detail: 'Aguardando aprovação de escopo',   href: '/dashboard/magalu/sac' },
+                { icon: Activity,      label: 'Saúde',     status: 'warn' as const, detail: 'Aguardando aprovação de escopo',   href: '/dashboard/magalu/saude' },
+                { icon: HelpCircle,    label: 'Perguntas', status: 'off'  as const, detail: 'Endpoint indisponível',            href: '/dashboard/magalu/perguntas' },
+                { icon: MessageCircle, label: 'Chat',      status: 'off'  as const, detail: 'Endpoint indisponível',            href: '/dashboard/magalu/chat' },
+              ].map(mod => {
+                const statusStyles = {
+                  ok:   { badge: 'bg-green-500/10 text-green-400', dot: 'bg-green-400', icon: CheckCircle2 },
+                  warn: { badge: 'bg-amber-500/10 text-amber-400', dot: 'bg-amber-400', icon: AlertCircle },
+                  off:  { badge: 'bg-red-500/10 text-red-400',     dot: 'bg-red-400',   icon: XCircle },
+                }
+                const s = statusStyles[mod.status]
+                return (
+                  <Link
+                    key={mod.label}
+                    href={mod.href}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#0086ff]/10 flex items-center justify-center shrink-0">
+                      <mod.icon className="w-4 h-4 text-[#0086ff]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{mod.label}</p>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                      {mod.detail}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+            <div className="mt-4 pt-3 border-t border-white/[0.06]">
+              <a
+                href="https://seller.magalu.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-[#0086ff] hover:underline"
+              >
+                Solicitar escopos adicionais <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
 
           {/* Quick links */}

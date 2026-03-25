@@ -79,9 +79,10 @@ export default function MagaluSaudePage() {
           ]}
         />
         <EmptyState
-          image="maintenance"
-          title="Saúde dos anúncios Magalu — disponível em breve"
-          description="O módulo de scores será habilitado quando o escopo for aprovado pela Magalu."
+          image="standing"
+          title="Score de Saúde — aguardando aprovação"
+          description="O Score de Saúde precisa da aprovação do scope portfolio-scores pela Magalu. Já solicitamos — deve ser liberado em breve."
+          action={{ label: 'Voltar ao overview', href: '/dashboard/magalu/overview' }}
         />
       </div>
     )
