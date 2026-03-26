@@ -30,6 +30,7 @@ interface Draft {
   status: string
   created_at: string
   updated_at: string | null
+  created_by?: string
 }
 
 // ─── Marketplace colors ──────────────────────────────────────────────────────
@@ -70,6 +71,8 @@ export default function RascunhosPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<TabKey>('all')
   const [search, setSearch] = useState('')
+  const [channelFilter, setChannelFilter] = useState<string>('all')
+  const [originFilter, setOriginFilter] = useState<string>('all')
 
   // Edit drawer
   const [editing, setEditing] = useState<Draft | null>(null)
@@ -100,11 +103,26 @@ export default function RascunhosPage() {
   // ─── Filtered list ──────────────────────────────────────────────────────────
 
   const filtered = drafts.filter(d => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return d.title.toLowerCase().includes(q) ||
-      d.sku?.toLowerCase().includes(q) ||
-      d.brand?.toLowerCase().includes(q)
+    // Text search
+    if (search) {
+      const q = search.toLowerCase()
+      const matchesSearch = d.title.toLowerCase().includes(q) ||
+        d.sku?.toLowerCase().includes(q) ||
+        d.brand?.toLowerCase().includes(q)
+      if (!matchesSearch) return false
+    }
+    // Channel filter
+    if (channelFilter !== 'all') {
+      if (!(d.target_channels ?? []).includes(channelFilter)) return false
+    }
+    // Origin filter
+    if (originFilter !== 'all') {
+      const createdBy = d.created_by ?? 'copy'
+      if (originFilter === 'copy' && createdBy !== 'copy') return false
+      if (originFilter === 'migrate' && createdBy !== 'migrate') return false
+      if (originFilter === 'manual' && createdBy !== 'manual') return false
+    }
+    return true
   })
 
   // ─── KPIs ───────────────────────────────────────────────────────────────────
@@ -241,6 +259,56 @@ export default function RascunhosPage() {
                        text-white text-sm placeholder-slate-500
                        focus:outline-none focus:ring-2 focus:ring-primary-500/40"
           />
+        </div>
+      </div>
+
+      {/* Channel filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="space-y-1.5 w-full sm:w-auto">
+          <label className="text-xs font-medium text-slate-500 block">Canal</label>
+          <div className="flex items-center gap-1 flex-wrap">
+            {[
+              { key: 'all', label: 'Todos' },
+              { key: 'ml', label: '\uD83D\uDFE1 ML' },
+              { key: 'shopee', label: '\uD83D\uDFE0 Shopee' },
+              { key: 'magalu', label: '\uD83D\uDD35 Magalu' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setChannelFilter(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                  ${channelFilter === f.key
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03] bg-white/[0.02]'
+                  }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5 w-full sm:w-auto">
+          <label className="text-xs font-medium text-slate-500 block">Origem</label>
+          <div className="flex items-center gap-1 flex-wrap">
+            {[
+              { key: 'all', label: 'Todas' },
+              { key: 'copy', label: 'Copiador' },
+              { key: 'migrate', label: 'Migracao' },
+              { key: 'manual', label: 'Manual' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setOriginFilter(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                  ${originFilter === f.key
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.03] bg-white/[0.02]'
+                  }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
