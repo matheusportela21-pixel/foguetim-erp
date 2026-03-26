@@ -468,3 +468,116 @@ export async function generateFinanceiroPDF(data: FinanceiroReportData) {
   addFooter(doc, doc.getNumberOfPages())
   doc.save(`Financeiro_${new Date().toISOString().slice(0, 10)}.pdf`)
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 5. Conciliacao Report
+// ══════════════════════════════════════════════════════════════════════════════
+
+export interface ConciliacaoReportData {
+  period: string
+  receita_bruta: number
+  total_taxas_ml: number
+  total_bonus: number
+  receita_liquida: number
+  total_pedidos: number
+  ticket_medio: number
+  comissao_percentual: number
+  divergencias: { tipo: string; esperado: number; cobrado: number; diferenca: number; pct: number }[]
+  total_divergencias: number
+  total_divergencia_valor: number
+  orders: { id: string | number; buyer: string; total: number; comissao: number; divergente: boolean; divergencia_valor: number }[]
+}
+
+export async function generateConciliacaoPDF(data: ConciliacaoReportData) {
+  const doc = await buildBase(`Conciliacao Financeira — ${data.period}`)
+  const autoTable = (await import('jspdf-autotable')).default
+
+  // Section title
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(200, 180, 255)
+  doc.text('Resumo da Conciliacao', 14, 29)
+
+  // KPIs
+  const kpis = [
+    { label: 'Receita Bruta',    value: fmtBRL(data.receita_bruta),    color: [80, 200, 120]  as [number, number, number] },
+    { label: 'Taxas ML',         value: fmtBRL(-data.total_taxas_ml),  color: [255, 100, 100] as [number, number, number] },
+    { label: 'Bonus/Creditos',   value: fmtBRL(data.total_bonus),      color: [150, 100, 255] as [number, number, number] },
+    { label: 'Receita Liquida',  value: fmtBRL(data.receita_liquida),  color: [100, 160, 255] as [number, number, number] },
+    { label: 'Pedidos',          value: String(data.total_pedidos),     color: [150, 150, 200] as [number, number, number] },
+    { label: 'Divergencias',     value: `${data.total_divergencias} (${fmtBRL(data.total_divergencia_valor)})`, color: [255, 180, 50] as [number, number, number] },
+  ]
+  const startY = 33
+  kpis.forEach((k, i) => {
+    const col = i % 3
+    const row = Math.floor(i / 3)
+    const x = 14 + col * 62
+    const y = startY + row * 20
+    doc.setFillColor(20, 18, 40)
+    doc.roundedRect(x, y, 59, 16, 2, 2, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(140, 140, 180)
+    doc.text(k.label, x + 3, y + 6)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...k.color)
+    doc.text(k.value, x + 3, y + 13)
+  })
+
+  let tableY = startY + 44
+
+  // Divergence summary table
+  if (data.divergencias.length > 0) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(255, 180, 50)
+    doc.text('Divergencias por Tipo', 14, tableY)
+    tableY += 4
+
+    autoTable(doc, {
+      startY: tableY,
+      head: [['Tipo', 'Esperado', 'Cobrado', 'Diferenca', '%']],
+      body: data.divergencias.map(d => [
+        d.tipo,
+        fmtBRL(d.esperado),
+        fmtBRL(d.cobrado),
+        fmtBRL(d.diferenca),
+        `${d.pct.toFixed(1)}%`,
+      ]),
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+      ...tableStyles(),
+    })
+    tableY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+  }
+
+  // Orders table
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(200, 180, 255)
+  doc.text('Pedidos', 14, tableY)
+  tableY += 4
+
+  autoTable(doc, {
+    startY: tableY,
+    head: [['Pedido', 'Comprador', 'Valor', 'Comissao Est.', 'Status']],
+    body: data.orders.slice(0, 50).map(o => [
+      `#${String(o.id).slice(-8)}`,
+      o.buyer,
+      fmtBRL(o.total),
+      fmtBRL(-o.comissao),
+      o.divergente ? `Divergente (${fmtBRL(o.divergencia_valor)})` : 'OK',
+    ]),
+    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } },
+    didParseCell: (cellData) => {
+      const content = String(cellData.cell.raw ?? '')
+      if (content.startsWith('Divergente')) {
+        cellData.cell.styles.textColor = [255, 180, 50]
+      }
+    },
+    ...tableStyles(),
+  })
+
+  addFooter(doc, doc.getNumberOfPages())
+  doc.save(`Conciliacao_${new Date().toISOString().slice(0, 10)}.pdf`)
+}

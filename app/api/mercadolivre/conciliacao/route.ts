@@ -23,6 +23,23 @@ export interface ConciliacaoOrder {
   items:                { title: string; quantity: number; unit_price: number }[]
   comissao_estimada:    number
   liquido_estimado:     number
+  divergente:           boolean
+  divergencia_valor:    number   // diferença absoluta entre comissão real e estimada
+}
+
+export interface DivergenciaSummaryItem {
+  tipo:       string            // 'Comissões', 'Fretes', 'Taxas fixas', etc.
+  esperado:   number
+  cobrado:    number
+  diferenca:  number
+  pct:        number            // percentual de diferença
+  severity:   'ok' | 'warn' | 'danger'  // <2% ok, 2-5% warn, >5% danger
+}
+
+export interface DivergenciaSummary {
+  total_divergencias:   number  // qtd de pedidos divergentes
+  total_valor:          number  // soma das divergências em R$
+  items:                DivergenciaSummaryItem[]
 }
 
 export interface ConciliacaoResult {
@@ -46,14 +63,14 @@ export interface ConciliacaoResult {
   bonuses:              ConciliacaoCharge[]
 
   // Conciliação
-  // divergencia: diferença entre a taxa de comissão efetiva e o intervalo esperado (5–22%).
-  // Valor positivo = excesso cobrado acima do limite; negativo = abaixo do mínimo esperado.
-  // Zero = dentro do intervalo normal. null = sem dados de billing para comparar.
   divergencia:          number
-  divergencia_pct:      number   // taxa efetiva − 13.5% (ponto médio referência ML)
-  deducao_liquida:      number   // total_taxas_ml − total_bonus (impacto real no caixa)
-  billing_disponivel:   boolean  // true = billing carregado com sucesso para o período
+  divergencia_pct:      number
+  deducao_liquida:      number
+  billing_disponivel:   boolean
   status:               'ok' | 'divergente' | 'pendente'
+
+  // Divergência detalhada
+  divergencia_summary:  DivergenciaSummary
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -224,7 +241,12 @@ export async function GET(req: NextRequest) {
       divergencia = (comissao_percentual - ML_FEE_REF_PCT) / 100 * receita_bruta
     }
 
-    // ── Montar pedidos com comissão estimada ──────────────────────────────
+    // ── Montar pedidos com comissão estimada + divergência ──────────────
+    // Referência: comissão média do período. Divergente se diff > 5%.
+    const ML_CATEGORY_REF_PCT = comissao_percentual > 0 ? comissao_percentual : ML_FEE_REF_PCT
+    let totalDivergencias = 0
+    let totalDivergenciaValor = 0
+
     const orders: ConciliacaoOrder[] = activeOrders.slice(0, 100).map(o => {
       const buyer = (o.buyer as Record<string, unknown>) ?? {}
       const items = ((o.order_items as unknown[]) ?? []).map((it: unknown) => {
@@ -237,7 +259,25 @@ export async function GET(req: NextRequest) {
         }
       })
       const total            = Number(o.total_amount ?? 0)
-      const comissao_est     = total * (comissao_percentual / 100)
+      const comissao_est     = total * (ML_CATEGORY_REF_PCT / 100)
+
+      // Check for sale_fee or fee_amount from ML order data
+      const saleFee = Math.abs(Number(
+        (o as Record<string, unknown>).sale_fee ??
+        (o as Record<string, unknown>).fee_amount ??
+        0
+      ))
+      // If ML provided actual fee, compare; otherwise use estimate
+      const comissaoReal = saleFee > 0 ? saleFee : comissao_est
+      const diffValor    = comissaoReal - comissao_est
+      const diffPct      = comissao_est > 0 ? (diffValor / comissao_est) * 100 : 0
+      const isDivergente = Math.abs(diffPct) > 5
+
+      if (isDivergente) {
+        totalDivergencias++
+        totalDivergenciaValor += Math.abs(diffValor)
+      }
+
       return {
         id:                o.id as string | number,
         status:            o.status as string,
@@ -245,9 +285,59 @@ export async function GET(req: NextRequest) {
         buyer_nickname:    String(buyer.nickname ?? buyer.first_name ?? '—'),
         items,
         comissao_estimada: comissao_est,
-        liquido_estimado:  total - comissao_est,
+        liquido_estimado:  total - comissaoReal,
+        divergente:        isDivergente,
+        divergencia_valor: diffValor,
       }
     })
+
+    // ── Divergência summary por tipo ────────────────────────────────────
+    const severityOf = (pct: number): 'ok' | 'warn' | 'danger' => {
+      const absPct = Math.abs(pct)
+      if (absPct < 2) return 'ok'
+      if (absPct <= 5) return 'warn'
+      return 'danger'
+    }
+
+    const divergenciaItems: DivergenciaSummaryItem[] = []
+    if (billing_disponivel && receita_bruta > 0) {
+      // Comissões: esperado (ref%) vs cobrado (real billing)
+      const comissaoEsperada = receita_bruta * (ML_FEE_REF_PCT / 100)
+      const comissaoCobrada  = total_taxas_ml
+      const comDiff          = comissaoCobrada - comissaoEsperada
+      const comPct           = comissaoEsperada > 0 ? (comDiff / comissaoEsperada) * 100 : 0
+      divergenciaItems.push({
+        tipo: 'Comissoes',
+        esperado: comissaoEsperada,
+        cobrado: comissaoCobrada,
+        diferenca: comDiff,
+        pct: comPct,
+        severity: severityOf(comPct),
+      })
+
+      // Taxas fixas: itens de charges que não são comissão
+      const taxasFixas = charges.filter(c =>
+        !c.label.toLowerCase().includes('comis') &&
+        !c.label.toLowerCase().includes('commission')
+      )
+      if (taxasFixas.length > 0) {
+        const taxaTotal = taxasFixas.reduce((s, c) => s + c.amount, 0)
+        divergenciaItems.push({
+          tipo: 'Taxas fixas',
+          esperado: 0,
+          cobrado: taxaTotal,
+          diferenca: taxaTotal,
+          pct: taxaTotal > 0 ? 100 : 0,
+          severity: taxaTotal > 0 ? 'warn' : 'ok',
+        })
+      }
+    }
+
+    const divergencia_summary: DivergenciaSummary = {
+      total_divergencias: totalDivergencias,
+      total_valor: totalDivergenciaValor,
+      items: divergenciaItems,
+    }
 
     // Status: pendente (sem billing), divergente (taxa fora do intervalo esperado), ok
     const statusResult: 'ok' | 'divergente' | 'pendente' = !billing_disponivel
@@ -274,6 +364,7 @@ export async function GET(req: NextRequest) {
       deducao_liquida,
       billing_disponivel,
       status: statusResult,
+      divergencia_summary,
     }
 
     return NextResponse.json(

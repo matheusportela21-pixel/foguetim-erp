@@ -7,6 +7,7 @@ import {
   CheckCircle2, XCircle, Minus, ArrowUpRight, ArrowDownRight,
   ToggleLeft, ToggleRight, Layers, Lock, Unlock, Settings2,
   CircleDollarSign, Scale, BarChart3, Loader2, FlaskConical,
+  Download, Globe,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
@@ -15,6 +16,10 @@ import {
   type PricingInput, type PricingResult, type ListingType, type ShippingMode, type ReputationLevel,
 } from '@/lib/pricing/pricing-engine'
 import { ML_CATEGORY_COMMISSIONS, ML_REPUTATION_SHIPPING } from '@/lib/pricing/ml-tariffs'
+import {
+  calculateMultiChannel, getBestChannel, CHANNEL_DEFAULTS,
+  type MultiChannelInput, type ChannelResult,
+} from '@/lib/pricing/multi-channel-calculator'
 
 // ─── Presets de imposto ───────────────────────────────────────────────────────
 const TAX_PRESETS = [
@@ -275,6 +280,347 @@ function SimulationTab({ base }: { base: PricingInput }) {
   )
 }
 
+// ─── Aba Multi-Canal ────────────────────────────────────────────────────────
+function MultiChannelTab({ base }: { base: PricingInput }) {
+  const [shopeeComm, setShopeeComm] = useState<number>(CHANNEL_DEFAULTS.shopee.commissionPct)
+  const [magaluComm, setMagaluComm] = useState<number>(CHANNEL_DEFAULTS.magalu.commissionPct)
+  const [simItems,   setSimItems]   = useState<SimItem[]>([])
+  const [simLoading, setSimLoading] = useState(false)
+  const [simLoaded,  setSimLoaded]  = useState(false)
+
+  const mcInput: MultiChannelInput = useMemo(() => ({
+    productCost:          base.productCost,
+    packagingCost:        base.packagingCost,
+    otherCosts:           base.otherCosts,
+    taxPct:               base.taxPct,
+    targetMarginPct:      base.targetMarginPct,
+    productWeightG:       base.productWeightG ?? 0,
+    freeShipping:         base.shippingMode === 'free_shipping',
+    listingType:          base.listingType,
+    categoryCommissionPct: base.categoryCommissionPct,
+    sellerReputation:     base.sellerReputation,
+    shopeeCommissionPct:  shopeeComm,
+    magaluCommissionPct:  magaluComm,
+    marketingPct:         base.marketingPct,
+    affiliatePct:         base.affiliatePct,
+  }), [base, shopeeComm, magaluComm])
+
+  const results = useMemo(() => calculateMultiChannel(mcInput), [mcInput])
+  const best    = useMemo(() => getBestChannel(results), [results])
+
+  // Carregar produtos para simulacao em massa
+  useEffect(() => {
+    setSimLoading(true)
+    fetch('/api/precificacao/simulacao')
+      .then(r => r.json())
+      .then(d => { setSimItems(d.items ?? []); setSimLoaded(true) })
+      .catch(() => setSimLoaded(true))
+      .finally(() => setSimLoading(false))
+  }, [])
+
+  // CSV export
+  function exportCSV() {
+    if (!simItems.length) return
+    const header = 'Produto,Custo,ML Sugerido,ML Margem,Shopee Sugerido,Shopee Margem,Magalu Sugerido,Magalu Margem,Melhor Canal\n'
+    const rows = simItems.map(item => {
+      const itemInput: MultiChannelInput = {
+        ...mcInput,
+        productCost: item.costPrice,
+        productWeightG: item.weightG ?? mcInput.productWeightG,
+      }
+      const r = calculateMultiChannel(itemInput)
+      const b = getBestChannel(r)
+      const ml = r.find(c => c.channel === 'ml')!
+      const sh = r.find(c => c.channel === 'shopee')!
+      const mg = r.find(c => c.channel === 'magalu')!
+      return `"${item.name.replace(/"/g, '""')}",${item.costPrice.toFixed(2)},${ml.suggestedPrice.toFixed(2)},${ml.margin.toFixed(1)}%,${sh.suggestedPrice.toFixed(2)},${sh.margin.toFixed(1)}%,${mg.suggestedPrice.toFixed(2)},${mg.margin.toFixed(1)}%,${b?.channelName ?? '-'}`
+    }).join('\n')
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `multi-canal-simulacao-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const channelBorder: Record<string, string> = {
+    ml:     'border-yellow-500/30',
+    shopee: 'border-orange-500/30',
+    magalu: 'border-blue-500/30',
+  }
+  const channelBg: Record<string, string> = {
+    ml:     'bg-yellow-500/[0.04]',
+    shopee: 'bg-orange-500/[0.04]',
+    magalu: 'bg-blue-500/[0.04]',
+  }
+  const channelText: Record<string, string> = {
+    ml:     'text-yellow-400',
+    shopee: 'text-orange-400',
+    magalu: 'text-blue-400',
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sliders de comissao */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">
+              Shopee comissao
+            </label>
+            <span className="text-sm font-mono font-bold text-orange-400">{shopeeComm}%</span>
+          </div>
+          <input
+            type="range"
+            min={CHANNEL_DEFAULTS.shopee.commissionMin}
+            max={CHANNEL_DEFAULTS.shopee.commissionMax}
+            step={0.5}
+            value={shopeeComm}
+            onChange={e => setShopeeComm(+e.target.value)}
+            className="w-full h-1 accent-orange-500"
+          />
+          <div className="flex justify-between text-[9px] text-slate-700 mt-1">
+            <span>{CHANNEL_DEFAULTS.shopee.commissionMin}%</span>
+            <span>{CHANNEL_DEFAULTS.shopee.commissionMax}%</span>
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">
+              Magalu comissao
+            </label>
+            <span className="text-sm font-mono font-bold text-blue-400">{magaluComm}%</span>
+          </div>
+          <input
+            type="range"
+            min={CHANNEL_DEFAULTS.magalu.commissionMin}
+            max={CHANNEL_DEFAULTS.magalu.commissionMax}
+            step={0.5}
+            value={magaluComm}
+            onChange={e => setMagaluComm(+e.target.value)}
+            className="w-full h-1 accent-blue-500"
+          />
+          <div className="flex justify-between text-[9px] text-slate-700 mt-1">
+            <span>{CHANNEL_DEFAULTS.magalu.commissionMin}%</span>
+            <span>{CHANNEL_DEFAULTS.magalu.commissionMax}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Cards de canal */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {results.map(r => {
+          const isBest = best?.channel === r.channel
+          return (
+            <div
+              key={r.channel}
+              className={`dash-card rounded-xl overflow-hidden border ${channelBorder[r.channel]} ${isBest ? 'ring-1 ring-emerald-500/30' : ''}`}
+            >
+              {/* Header */}
+              <div className={`px-4 py-3 flex items-center justify-between ${channelBg[r.channel]}`}>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: r.channelColor }} />
+                  <span className={`text-sm font-bold ${channelText[r.channel]}`}>{r.channelName}</span>
+                </div>
+                {isBest && (
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    MELHOR
+                  </span>
+                )}
+              </div>
+
+              {/* Preco sugerido */}
+              <div className="p-4 border-b border-white/[0.05]">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">Preco sugerido</p>
+                <p className="text-2xl font-black text-white font-mono">
+                  {r.suggestedPrice > 0 ? fmtBRL(r.suggestedPrice) : '--'}
+                </p>
+              </div>
+
+              {/* Detalhes */}
+              <div className="p-4 space-y-2.5">
+                {[
+                  { label: 'Comissao',  value: fmtBRL(r.commission),  sub: `${r.commissionRate}%`, color: channelText[r.channel] },
+                  { label: 'Frete',     value: fmtBRL(r.shippingCost), sub: r.channel === 'magalu' ? 'incluso' : '', color: 'text-purple-400' },
+                  { label: 'Imposto',   value: fmtBRL(r.taxes),        sub: `${base.taxPct}%`, color: 'text-red-400' },
+                  { label: 'Custo',     value: fmtBRL(r.totalCost),    sub: '', color: 'text-slate-400' },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between">
+                    <span className="text-[11px] text-slate-600">{row.label}</span>
+                    <div className="flex items-center gap-2">
+                      {row.sub && <span className="text-[9px] text-slate-700">{row.sub}</span>}
+                      <span className={`text-xs font-mono font-semibold ${row.color}`}>{row.value}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Divider */}
+                <div className="border-t border-white/[0.06] pt-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500 font-semibold">Lucro</span>
+                    <span className={`text-sm font-mono font-black ${r.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {fmtBRL(r.profit)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[11px] text-slate-500 font-semibold">Margem</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-mono font-black ${r.margin >= base.targetMarginPct ? 'text-emerald-400' : r.margin >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                        {r.margin.toFixed(1)}%
+                      </span>
+                      {r.isViable
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        : r.margin >= 0
+                          ? <Minus className="w-3.5 h-3.5 text-amber-400" />
+                          : <XCircle className="w-3.5 h-3.5 text-red-400" />
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning de margem negativa */}
+              {r.margin < 0 && (
+                <div className="px-4 pb-3">
+                  <div className="flex items-start gap-1.5 p-2 rounded-lg bg-red-500/[0.07] border border-red-500/20">
+                    <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-red-400">Margem negativa neste canal</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Insight */}
+      {best && best.margin > 0 && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20">
+          <span className="text-sm">&#128161;</span>
+          <p className="text-xs text-emerald-300">
+            <span className="font-bold">{best.channelName}</span> tem a melhor margem pra este produto
+            (<span className="font-mono font-bold">{best.margin.toFixed(1)}%</span>)
+          </p>
+        </div>
+      )}
+
+      {/* Simulacao em massa */}
+      <div className="dash-card rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.05] flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Globe className="w-4 h-4 text-violet-400" />
+            Simulacao Multi-Canal em Massa
+          </h4>
+          {simItems.length > 0 && (
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-lg hover:bg-violet-500/20 transition-all"
+            >
+              <Download className="w-3 h-3" /> Exportar CSV
+            </button>
+          )}
+        </div>
+
+        <div className="p-4">
+          {simLoading && (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
+              <p className="text-xs text-slate-500">Carregando produtos...</p>
+            </div>
+          )}
+
+          {simLoaded && !simItems.length && (
+            <div className="text-center py-6 space-y-2">
+              <FlaskConical className="w-6 h-6 text-slate-700 mx-auto" />
+              <p className="text-xs text-slate-500">Nenhum produto com custo cadastrado encontrado.</p>
+            </div>
+          )}
+
+          {simItems.length > 0 && (
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-white/[0.05]">
+                    {['Produto', 'Custo', 'ML Sugerido', 'ML Margem', 'Shopee Sugerido', 'Shopee Margem', 'Magalu Sugerido', 'Magalu Margem', 'Melhor Canal'].map(h => (
+                      <th key={h} className="text-left py-2 pr-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {simItems.map(item => {
+                    if (item.costPrice <= 0) {
+                      return (
+                        <tr key={item.id} className="border-b border-white/[0.03]">
+                          <td className="py-2.5 pr-3">
+                            <p className="text-slate-300 font-medium truncate max-w-[120px]">{item.name}</p>
+                          </td>
+                          <td colSpan={8} className="py-2.5 text-red-400 text-[10px] font-semibold">Sem custo</td>
+                        </tr>
+                      )
+                    }
+
+                    const itemInput: MultiChannelInput = {
+                      ...mcInput,
+                      productCost: item.costPrice,
+                      productWeightG: item.weightG ?? mcInput.productWeightG,
+                    }
+                    const r = calculateMultiChannel(itemInput)
+                    const b = getBestChannel(r)
+                    const ml = r.find(c => c.channel === 'ml')!
+                    const sh = r.find(c => c.channel === 'shopee')!
+                    const mg = r.find(c => c.channel === 'magalu')!
+
+                    const marginCls = (m: number) =>
+                      m >= base.targetMarginPct ? 'text-emerald-400'
+                        : m >= 0 ? 'text-amber-400'
+                          : 'text-red-400'
+
+                    return (
+                      <tr key={item.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                        <td className="py-2.5 pr-3">
+                          <p className="text-slate-300 font-medium truncate max-w-[120px]">{item.name}</p>
+                          <p className="text-[9px] text-slate-700 font-mono">{item.mlItemId}</p>
+                        </td>
+                        <td className="py-2.5 pr-3 font-mono text-slate-400">{fmtBRL(item.costPrice)}</td>
+                        <td className="py-2.5 pr-3 font-mono text-yellow-300">{fmtBRL(ml.suggestedPrice)}</td>
+                        <td className={`py-2.5 pr-3 font-mono font-semibold ${marginCls(ml.margin)}`}>{ml.margin.toFixed(1)}%</td>
+                        <td className="py-2.5 pr-3 font-mono text-orange-300">{fmtBRL(sh.suggestedPrice)}</td>
+                        <td className={`py-2.5 pr-3 font-mono font-semibold ${marginCls(sh.margin)}`}>{sh.margin.toFixed(1)}%</td>
+                        <td className="py-2.5 pr-3 font-mono text-blue-300">{fmtBRL(mg.suggestedPrice)}</td>
+                        <td className={`py-2.5 pr-3 font-mono font-semibold ${marginCls(mg.margin)}`}>{mg.margin.toFixed(1)}%</td>
+                        <td className="py-2.5">
+                          {b && (
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                              style={{
+                                color: b.channelColor,
+                                borderColor: b.channelColor + '40',
+                                background: b.channelColor + '12',
+                              }}
+                            >
+                              {b.channelName}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="text-[9px] text-slate-700 leading-relaxed mt-3">
+            Simulacao com parametros atuais. Shopee: {shopeeComm}% comissao + R$ {CHANNEL_DEFAULTS.shopee.shippingCost} frete.
+            Magalu: {magaluComm}% comissao + R$ {CHANNEL_DEFAULTS.magalu.shippingCost} frete. Valores indicativos.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function PrecificacaoPage() {
   useEffect(() => { document.title = 'Precificação — Foguetim ERP' }, [])
@@ -323,7 +669,7 @@ export default function PrecificacaoPage() {
   const [catSearch, setCatSearch] = useState('')
 
   // Aba resultado (agora inclui simulação real — PASSO 8)
-  const [resultTab, setResultTab] = useState<'result' | 'breakdown' | 'simulator' | 'simulation'>('result')
+  const [resultTab, setResultTab] = useState<'result' | 'breakdown' | 'simulator' | 'simulation' | 'multichannel'>('result')
 
   // ── Aplicar preço ao ML — PASSO 7 ───────────────────────────────────────────
   const [showApplyConfirm, setShowApplyConfirm] = useState(false)
@@ -822,10 +1168,11 @@ export default function PrecificacaoPage() {
               {/* Tabs */}
               <div className="flex border-b border-white/[0.05]">
                 {([
-                  ['result',     Scale,        'Resumo'],
-                  ['breakdown',  BarChart3,    'Breakdown'],
-                  ['simulator',  TrendingUp,   'Simulador'],
-                  ['simulation', FlaskConical, 'Simulação Real'],
+                  ['result',       Scale,        'Resumo'],
+                  ['breakdown',    BarChart3,    'Breakdown'],
+                  ['simulator',    TrendingUp,   'Simulador'],
+                  ['simulation',   FlaskConical, 'Simulacao Real'],
+                  ['multichannel', Globe,        'Multi-Canal'],
                 ] as [typeof resultTab, React.ElementType, string][]).map(([tab, Icon, lbl]) => (
                   <button key={tab} onClick={() => setResultTab(tab)}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-all ${
@@ -901,9 +1248,14 @@ export default function PrecificacaoPage() {
                   />
                 )}
 
-                {/* PASSO 8 — Simulação com produtos reais */}
+                {/* PASSO 8 — Simulacao com produtos reais */}
                 {resultTab === 'simulation' && (
                   <SimulationTab base={engineInput} />
+                )}
+
+                {/* Multi-Canal */}
+                {resultTab === 'multichannel' && (
+                  <MultiChannelTab base={engineInput} />
                 )}
               </div>
             </div>

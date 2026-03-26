@@ -8,10 +8,12 @@ import {
 } from 'recharts'
 import {
   Scale, DollarSign, TrendingDown, Gift, ChevronDown,
-  CheckCircle, AlertTriangle, RefreshCw, Link2, Loader2,
+  CheckCircle, AlertTriangle, RefreshCw, Link2, Loader2, ShieldAlert,
 } from 'lucide-react'
-import type { ConciliacaoResult, ConciliacaoOrder } from '@/app/api/mercadolivre/conciliacao/route'
+import type { ConciliacaoResult, ConciliacaoOrder, DivergenciaSummary } from '@/app/api/mercadolivre/conciliacao/route'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import ExportPDFButton from '@/components/ExportPDFButton'
+import { generateConciliacaoPDF } from '@/lib/reports/pdf-generator'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface BillingPeriod {
@@ -73,6 +75,72 @@ function CompositionBar({ label, value, max, color }: {
       </div>
       <div className={`text-xs font-mono font-semibold shrink-0 w-28 text-right ${value < 0 ? 'text-red-400' : value > 0 ? 'text-green-400' : 'text-white'}`}>
         {value >= 0 ? '+' : ''}{fmtBRL(value)}
+      </div>
+    </div>
+  )
+}
+
+/* ── Divergence Summary ──────────────────────────────────────────────────── */
+function DivergenceSummarySection({ summary }: { summary: DivergenciaSummary }) {
+  if (summary.items.length === 0 && summary.total_divergencias === 0) return null
+
+  const barColor = (severity: 'ok' | 'warn' | 'danger') => {
+    if (severity === 'ok')     return 'bg-green-500'
+    if (severity === 'warn')   return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
+  const borderColor = (severity: 'ok' | 'warn' | 'danger') => {
+    if (severity === 'ok')     return 'border-green-500/30'
+    if (severity === 'warn')   return 'border-yellow-500/30'
+    return 'border-red-500/30'
+  }
+
+  return (
+    <div className="glass-card rounded-xl p-5 border border-white/[0.06]">
+      <div className="flex items-center gap-2 mb-4">
+        <ShieldAlert className="w-4 h-4 text-amber-400" />
+        <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          Resumo de Divergencias
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {summary.items.map((item, i) => {
+          const absPct = Math.abs(item.pct)
+          return (
+            <div key={i} className={`rounded-lg p-3 border ${borderColor(item.severity)} bg-white/[0.02]`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-300">{item.tipo}</span>
+                {item.severity !== 'ok' && (
+                  <AlertTriangle className={`w-3.5 h-3.5 ${item.severity === 'danger' ? 'text-red-400' : 'text-yellow-400'}`} />
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-slate-400">
+                  Esperado <span className="font-mono text-slate-300">{fmtBRL(item.esperado)}</span>
+                </span>
+                <span className="text-slate-600">vs</span>
+                <span className="text-slate-400">
+                  Cobrado <span className="font-mono text-slate-300">{fmtBRL(item.cobrado)}</span>
+                </span>
+              </div>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${barColor(item.severity)} transition-all`}
+                    style={{ width: `${Math.min(100, absPct * 5)}%` }}
+                  />
+                </div>
+                <span className={`text-xs font-mono font-semibold ${
+                  item.severity === 'ok' ? 'text-green-400' :
+                  item.severity === 'warn' ? 'text-yellow-400' : 'text-red-400'
+                }`}>
+                  {item.diferenca >= 0 ? '+' : ''}{fmtBRL(item.diferenca)} ({absPct.toFixed(1)}%)
+                </span>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -208,6 +276,8 @@ export default function ConciliacaoPage() {
                       comissao_estimada:  o.comissao_estimada,
                       liquido_estimado:   o.liquido_estimado,
                       status:             o.status,
+                      divergente:         o.divergente ? 'Sim' : 'Nao',
+                      divergencia_valor:  o.divergencia_valor,
                     }))}
                     filename={`conciliacao-${data.period_key}`}
                     columns={[
@@ -217,8 +287,31 @@ export default function ConciliacaoPage() {
                       { key: 'comissao_estimada',  label: 'Comissão Est.'      },
                       { key: 'liquido_estimado',   label: 'Líquido Est.'       },
                       { key: 'status',             label: 'Status'             },
+                      { key: 'divergente',         label: 'Divergente'         },
+                      { key: 'divergencia_valor',  label: 'Divergência R$'     },
                     ]}
                   />
+                  <ExportPDFButton onExport={() => generateConciliacaoPDF({
+                    period: data.period_label,
+                    receita_bruta: data.receita_bruta,
+                    total_taxas_ml: data.total_taxas_ml,
+                    total_bonus: data.total_bonus,
+                    receita_liquida: data.receita_liquida,
+                    total_pedidos: data.total_pedidos,
+                    ticket_medio: data.ticket_medio,
+                    comissao_percentual: data.comissao_percentual,
+                    divergencias: data.divergencia_summary?.items?.map(d => ({
+                      tipo: d.tipo, esperado: d.esperado, cobrado: d.cobrado,
+                      diferenca: d.diferenca, pct: d.pct,
+                    })) ?? [],
+                    total_divergencias: data.divergencia_summary?.total_divergencias ?? 0,
+                    total_divergencia_valor: data.divergencia_summary?.total_valor ?? 0,
+                    orders: data.orders.map(o => ({
+                      id: o.id, buyer: o.buyer_nickname, total: o.total_amount,
+                      comissao: o.comissao_estimada, divergente: o.divergente,
+                      divergencia_valor: o.divergencia_valor,
+                    })),
+                  })} />
                   <span className="text-xs text-slate-600 ml-auto">
                     {data.period_label}
                   </span>
@@ -234,7 +327,10 @@ export default function ConciliacaoPage() {
             )}
 
             {/* ── KPIs ───────────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-2 gap-4 ${
+              data && data.divergencia_summary && data.divergencia_summary.total_divergencias > 0
+                ? 'md:grid-cols-5' : 'md:grid-cols-4'
+            }`}>
               <KpiCard
                 title="Receita Bruta"
                 value={data ? fmtBRL(data.receita_bruta) : '—'}
@@ -267,7 +363,21 @@ export default function ConciliacaoPage() {
                 color="from-blue-500/10 to-transparent border-blue-500/20 text-blue-400"
                 loading={loadingD}
               />
+              {data && data.divergencia_summary && data.divergencia_summary.total_divergencias > 0 && (
+                <KpiCard
+                  title="Divergencias"
+                  value={String(data.divergencia_summary.total_divergencias)}
+                  sub={fmtBRL(data.divergencia_summary.total_valor)}
+                  icon={ShieldAlert}
+                  color="from-amber-500/10 to-transparent border-amber-500/20 text-amber-400"
+                />
+              )}
             </div>
+
+            {/* ── Divergence Summary ──────────────────────────────── */}
+            {data && data.divergencia_summary && (
+              <DivergenceSummarySection summary={data.divergencia_summary} />
+            )}
 
             {/* ── Status card ──────────────────────────────────────────── */}
             {data && (
@@ -432,7 +542,7 @@ export default function ConciliacaoPage() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-white/[0.06]">
-                            {['Pedido', 'Comprador', 'Produto(s)', 'Valor', 'Comissão*', '% Comiss.', 'Líquido*'].map(h => (
+                            {['Pedido', 'Comprador', 'Produto(s)', 'Valor', 'Comissao*', '% Comiss.', 'Liquido*', 'Status'].map(h => (
                               <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                             ))}
                           </tr>
@@ -441,7 +551,14 @@ export default function ConciliacaoPage() {
                           {data.orders.map((order: ConciliacaoOrder) => {
                             const stCfg = STATUS_ORDER[order.status] ?? { label: order.status, cls: 'bg-slate-500/10 text-slate-400' }
                             return (
-                              <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
+                              <tr
+                                key={order.id}
+                                className={`transition-colors ${
+                                  order.divergente
+                                    ? 'bg-red-500/[0.04] hover:bg-red-500/[0.08] border-l-2 border-l-red-500/40'
+                                    : 'hover:bg-white/[0.02]'
+                                }`}
+                              >
                                 <td className="px-4 py-3 font-mono text-slate-400">
                                   <div>#{String(order.id).slice(-8)}</div>
                                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${stCfg.cls}`}>{stCfg.label}</span>
@@ -449,7 +566,7 @@ export default function ConciliacaoPage() {
                                 <td className="px-4 py-3 text-slate-300 max-w-[100px] truncate">{order.buyer_nickname}</td>
                                 <td className="px-4 py-3 max-w-[180px]">
                                   {order.items.slice(0, 2).map((it, i) => (
-                                    <p key={i} className="text-slate-400 truncate">{it.quantity}× {it.title}</p>
+                                    <p key={i} className="text-slate-400 truncate">{it.quantity}x {it.title}</p>
                                   ))}
                                   {order.items.length > 2 && (
                                     <p className="text-slate-600">+{order.items.length - 2} mais</p>
@@ -466,6 +583,19 @@ export default function ConciliacaoPage() {
                                 </td>
                                 <td className="px-4 py-3 font-mono font-semibold text-blue-400 whitespace-nowrap">
                                   {fmtBRL(order.liquido_estimado)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  {order.divergente ? (
+                                    <span className="inline-flex items-center gap-1 text-amber-400 font-semibold">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      <span>{fmtBRL(Math.abs(order.divergencia_valor))}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-green-400">
+                                      <CheckCircle className="w-3 h-3" />
+                                      <span>OK</span>
+                                    </span>
+                                  )}
                                 </td>
                               </tr>
                             )
