@@ -15,6 +15,7 @@ import {
   Eye, Megaphone, Scale, BarChart, Activity, Archive,
   Search, Sun, Moon, Info, AlertTriangle, XCircle, CheckCircle2, Loader2,
   CheckCheck, Bug, Lightbulb, BookOpen, Copy, FileEdit, Repeat2,
+  PlusCircle, Sparkles,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -31,6 +32,7 @@ const ICONS: Record<string, React.ElementType> = {
   Settings, Users, HelpCircle, LogOut, Shield, Plus, ExternalLink,
   Eye, Megaphone, Scale, BarChart, Activity, Archive, Menu, X, ChevronDown,
   Search, Bug, Lightbulb, BookOpen, Copy, FileEdit, Repeat2,
+  PlusCircle, Sparkles,
 }
 
 // ─── Notification types ─────────────────────────────────────────────────────
@@ -92,6 +94,7 @@ const TOPBAR_MENUS: TopMenu[] = [
       { label: 'Copiador',       href: '/dashboard/copiador',              icon: 'Copy' },
       { label: 'Migrador',       href: '/dashboard/migrador',              icon: 'Repeat2' },
       { label: 'Rascunhos',      href: '/dashboard/rascunhos',             icon: 'FileEdit' },
+      { label: 'Novo Anúncio',   href: '/dashboard/anuncios/novo',         icon: 'PlusCircle' },
     ],
   },
   {
@@ -155,6 +158,7 @@ const TOPBAR_MENUS: TopMenu[] = [
       { label: 'Foguetim AI', href: '/dashboard/ai',            icon: 'MessageSquare' },
       { label: 'Agentes',     href: '/dashboard/agentes',       icon: 'Cpu' },
       { label: 'Alertas',     href: '/dashboard/notificacoes',  icon: 'Bell' },
+      { label: 'Créditos IA', href: '/dashboard/ia/creditos',   icon: 'Sparkles' },
     ],
   },
   {
