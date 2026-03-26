@@ -21,6 +21,9 @@ interface Metrics {
 }
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
+const APP_VERSION = '0.9.0-beta'
+const COMMIT_SHA = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null
+
 const PLAN_COLORS: Record<string, string> = {
   explorador:  '#64748b',
   piloto:      '#3b82f6',
@@ -269,14 +272,14 @@ export default function MetricasPage() {
             <Activity className="w-4 h-4 text-slate-500" />
             <div>
               <p className="text-sm text-slate-300">Ultimo deploy</p>
-              <p className="text-xs text-slate-600">{new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="text-xs text-slate-600">{COMMIT_SHA ? `Commit ${COMMIT_SHA}` : 'Local dev'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Activity className="w-4 h-4 text-slate-500" />
             <div>
               <p className="text-sm text-slate-300">Versao</p>
-              <p className="text-xs text-slate-600">1.0.0-beta</p>
+              <p className="text-xs text-slate-600">{APP_VERSION}</p>
             </div>
           </div>
         </div>

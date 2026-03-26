@@ -141,8 +141,25 @@ export default async function ArticlePage(
     cache: 'no-store',
   }).catch(() => {})
 
+  // BreadcrumbList JSON-LD for SEO
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://www.foguetim.com.br' },
+      { '@type': 'ListItem', position: 2, name: 'Ajuda', item: 'https://www.foguetim.com.br/ajuda' },
+      ...(cat
+        ? [{ '@type': 'ListItem', position: 3, name: cat.name, item: `https://www.foguetim.com.br/ajuda/${cat.slug}` },
+           { '@type': 'ListItem', position: 4, name: article.title }]
+        : [{ '@type': 'ListItem', position: 3, name: article.title }]
+      ),
+    ],
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8 flex-wrap">
         <Link href="/ajuda" className="hover:text-gray-900 transition-colors">Central de Ajuda</Link>

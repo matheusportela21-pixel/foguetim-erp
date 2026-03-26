@@ -426,9 +426,11 @@ export default function ExpedicaoPage() {
   })
 
   /* KPIs */
-  const kpiDespacho  = items.filter(i => i.shipment?.status === 'handling' || i.shipment?.status === 'ready_to_ship').length
-  const kpiTransito  = items.filter(i => i.shipment?.status === 'shipped').length
-  const kpiUrgentes  = items.filter(i => getUrgency(i)).length
+  const kpiTotal       = items.length
+  const kpiUrgentes    = items.filter(i => getUrgency(i)).length
+  const kpiPronto      = items.filter(i => i.shipment?.status === 'ready_to_ship').length
+  const kpiTransito    = items.filter(i => i.shipment?.status === 'shipped').length
+  const kpiEntregues   = items.filter(i => i.shipment?.status === 'delivered').length
 
   /* Tab counts */
   function tabCount(key: string) {
@@ -445,19 +447,20 @@ export default function ExpedicaoPage() {
       <div className="p-4 md:p-6 space-y-5">
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[
-            { label: 'Ag. despacho',  val: kpiDespacho, color: 'text-amber-400',  icon: Package },
-            { label: 'Em trânsito',   val: kpiTransito, color: 'text-indigo-400', icon: Truck },
-            { label: 'Urgentes',      val: kpiUrgentes, color: 'text-red-400',    icon: AlertTriangle },
-            { label: 'Total',         val: items.length, color: 'text-slate-300', icon: CheckCircle },
+            { label: 'Total pedidos',     val: kpiTotal,     color: 'text-slate-300',  icon: Package },
+            { label: 'Urgentes',          val: kpiUrgentes,  color: 'text-red-400',    icon: AlertTriangle },
+            { label: 'Pronto p/ enviar',  val: kpiPronto,    color: 'text-blue-400',   icon: CheckCircle },
+            { label: 'Em trânsito',       val: kpiTransito,  color: 'text-indigo-400', icon: Truck },
+            { label: 'Entregues hoje',    val: kpiEntregues, color: 'text-green-400',  icon: CheckCircle },
           ].map(kpi => (
-            <div key={kpi.label} className="bg-[#111318] border border-white/[0.06] rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <kpi.icon className="w-4 h-4 text-slate-500" />
-                <p className="text-[11px] text-slate-500">{kpi.label}</p>
+            <div key={kpi.label} className="bg-[#111318] border border-white/[0.06] rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <kpi.icon className={`w-4 h-4 ${kpi.color} opacity-60`} />
+                <p className="text-[10px] text-slate-500">{kpi.label}</p>
               </div>
-              <p className={`text-2xl font-bold ${kpi.color}`} style={{ fontFamily: 'Sora, sans-serif' }}>
+              <p className={`text-xl font-bold ${kpi.color}`} style={{ fontFamily: 'Sora, sans-serif' }}>
                 {loading ? <span className="inline-block w-6 h-6 bg-white/[0.06] rounded animate-pulse" /> : kpi.val}
               </p>
             </div>

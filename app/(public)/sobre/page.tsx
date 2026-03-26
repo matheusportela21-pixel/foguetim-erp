@@ -5,6 +5,14 @@ import { Building2, MapPin, Mail, Package, Shield, BarChart2, Star, Zap, Globe, 
 export const metadata = {
   title: 'Sobre o Foguetim — Foguetim ERP',
   description: 'Conheça a empresa por trás do Foguetim ERP, nossa missão e nossas integrações com marketplaces.',
+  alternates: {
+    canonical: 'https://www.foguetim.com.br/sobre',
+  },
+  openGraph: {
+    title: 'Sobre o Foguetim | Foguetim ERP',
+    description: 'Conheça a empresa por trás do Foguetim ERP, nossa missão e nossas integrações com marketplaces.',
+    url: 'https://www.foguetim.com.br/sobre',
+  },
 }
 
 const whatWeDo = [

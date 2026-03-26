@@ -303,7 +303,7 @@ function UserCard({ user }: { user: UserResult }) {
           Ver no Admin
         </Link>
         <button
-          onClick={() => alert('Reset de senha ainda nao implementado')}
+          onClick={() => alert('Funcionalidade de reset de senha sera implementada em breve. Por enquanto, o usuario pode redefinir via "Esqueci minha senha" na tela de login.')}
           className="px-3 py-1.5 rounded-lg bg-white/[0.06] text-xs text-slate-400 hover:bg-white/[0.1] transition-colors"
         >
           Reset Senha

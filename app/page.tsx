@@ -45,6 +45,10 @@ const orgJsonLd = {
   description: 'ERP para vendedores de marketplace no Brasil. Mercado Livre, Shopee e Magalu em um só lugar.',
   address: { '@type': 'PostalAddress', addressLocality: 'Fortaleza', addressRegion: 'CE', addressCountry: 'BR' },
   contactPoint: { '@type': 'ContactPoint', email: 'contato@foguetim.com.br', contactType: 'customer support' },
+  sameAs: [
+    'https://instagram.com/foguetim.erp',
+    'https://linkedin.com/company/foguetim',
+  ],
 }
 
 const softwareJsonLd = {
@@ -56,9 +60,14 @@ const softwareJsonLd = {
   description: 'ERP completo para vendedores de marketplace. Pedidos, produtos, financeiro e SAC do Mercado Livre, Shopee e Magalu unificados.',
   url: 'https://www.foguetim.com.br',
   inLanguage: 'pt-BR',
-  offers: { '@type': 'Offer', price: '19.90', priceCurrency: 'BRL', description: '7 dias grátis' },
+  offers: [
+    { '@type': 'Offer', price: '0', priceCurrency: 'BRL', name: 'Explorador (Grátis)', description: 'Até 100 produtos, 1 canal' },
+    { '@type': 'Offer', price: '19.90', priceCurrency: 'BRL', name: 'Desbravador', description: 'Até 1.000 produtos, 2 canais' },
+    { '@type': 'Offer', price: '49.90', priceCurrency: 'BRL', name: 'Comandante', description: 'Até 5.000 produtos, 3 canais' },
+    { '@type': 'Offer', price: '99.90', priceCurrency: 'BRL', name: 'Almirante', description: 'Produtos ilimitados, todos os canais, API + IA' },
+  ],
   provider: { '@type': 'Organization', name: 'Foguetim ERP', url: 'https://www.foguetim.com.br' },
-  aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.9', reviewCount: '52' },
+  /* aggregateRating removed: add back only when real user reviews exist. Fake ratings risk Google penalty. */
 }
 
 /* ─── Hooks ──────────────────────────────────────────────────────────────── */

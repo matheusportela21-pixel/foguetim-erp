@@ -245,9 +245,9 @@ function MLPerguntasTab({ templates }: { templates: ResponseTemplate[] }) {
         setReplyText(''); setSelected(null); setRefreshKey(k => k + 1)
       } else {
         const d = await res.json() as { error?: string }
-        alert(`Erro: ${d.error ?? 'Falha ao enviar'}`)
+        setError(`Erro ao enviar: ${d.error ?? 'Falha ao enviar'}`)
       }
-    } catch { alert('Erro de rede') }
+    } catch { setError('Erro de rede ao enviar resposta') }
     finally { setSending(false) }
   }
 
@@ -385,6 +385,13 @@ function MLPerguntasTab({ templates }: { templates: ResponseTemplate[] }) {
                   <span className="text-[11px] font-semibold text-slate-300">Responder via Mercado Livre</span>
                   <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">API oficial</span>
                 </div>
+                {error && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <p className="text-xs text-red-400 flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-red-400/60 hover:text-red-400"><X className="w-3 h-3" /></button>
+                  </div>
+                )}
                 {showTemplates && <TemplatesDropdown templates={templates} onSelect={setReplyText} onClose={() => setShowTemplates(false)} />}
                 <div className="flex gap-2 items-end">
                   <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
@@ -467,14 +474,14 @@ function MLMensagensTab({ templates }: { templates: ResponseTemplate[] }) {
         body: JSON.stringify({ text: replyText.trim(), buyer_id: String(selected.buyer_id) }),
       })
       if (res.ok) {
-        setReplyText('')
+        setReplyText(''); setError(null)
         const dr = await fetch(`/api/mercadolivre/messages/${selected.pack_id}`)
         if (dr.ok) setThreadDetail(await dr.json())
       } else {
         const d = await res.json() as { error?: string }
-        alert(`Erro: ${d.error ?? 'Falha ao enviar'}`)
+        setError(`Erro ao enviar: ${d.error ?? 'Falha ao enviar'}`)
       }
-    } catch { alert('Erro de rede') }
+    } catch { setError('Erro de rede ao enviar mensagem') }
     finally { setSending(false) }
   }
 
@@ -581,6 +588,13 @@ function MLMensagensTab({ templates }: { templates: ResponseTemplate[] }) {
 
             {!selected.blocked && selected.buyer_id && (
               <div className="p-4 border-t border-white/[0.06] space-y-2">
+                {error && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <p className="text-xs text-red-400 flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-red-400/60 hover:text-red-400"><X className="w-3 h-3" /></button>
+                  </div>
+                )}
                 {showTemplates && <TemplatesDropdown templates={templates} onSelect={setReplyText} onClose={() => setShowTemplates(false)} />}
                 <div className="flex gap-2 items-end">
                   <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
@@ -799,6 +813,419 @@ function MLReclamacoesTab() {
   )
 }
 
+// ─── ML AVALIACOES TAB (used in SAC Local) ──────────────────────────────────
+
+interface ReviewSummaryItem {
+  item_id:        string
+  title:          string
+  thumbnail:      string
+  rating_average: number
+  total_reviews:  number
+  rating_levels:  { one_star: number; two_stars: number; three_stars: number; four_stars: number; five_stars: number }
+  last_review_date: string
+  has_negative:   boolean
+}
+
+interface ReviewItemData {
+  id:            string
+  date_created:  string
+  rating:        number
+  title:         string
+  content:       string
+  likes:         number
+  dislikes:      number
+  reviewer_name: string
+  fulfilled:     boolean
+}
+
+interface ItemReviewsData {
+  item_id:        string
+  title:          string
+  thumbnail:      string
+  rating_average: number
+  total:          number
+  rating_levels:  { one_star: number; two_stars: number; three_stars: number; four_stars: number; five_stars: number }
+  reviews:        ReviewItemData[]
+}
+
+function MLAvaliacoesTab() {
+  const [summaryItems, setSummaryItems] = useState<ReviewSummaryItem[]>([])
+  const [totals, setTotals]             = useState<{ total_reviews: number; overall_average: number; items_with_negative: number } | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [itemReviews, setItemReviews]   = useState<ItemReviewsData | null>(null)
+  const [itemLoading, setItemLoading]   = useState(false)
+  const [refreshKey, setRefreshKey]     = useState(0)
+
+  useEffect(() => {
+    setLoading(true); setError(null)
+    fetch('/api/mercadolivre/reviews?summary=true')
+      .then(r => r.json())
+      .then((d: { items?: ReviewSummaryItem[]; totals?: typeof totals; error?: string; code?: string }) => {
+        if (d.code === 'NOT_CONNECTED') { setError('not_connected'); return }
+        if (d.error) { setError(d.error); return }
+        setSummaryItems(d.items ?? [])
+        setTotals(d.totals ?? null)
+      })
+      .catch(() => setError('Erro de rede'))
+      .finally(() => setLoading(false))
+  }, [refreshKey])
+
+  useEffect(() => {
+    if (!selectedItemId) { setItemReviews(null); return }
+    setItemLoading(true)
+    fetch(`/api/mercadolivre/reviews?item_id=${selectedItemId}`)
+      .then(r => r.json())
+      .then((d: ItemReviewsData & { error?: string }) => {
+        if (d.error) return
+        setItemReviews(d)
+      })
+      .catch(() => {})
+      .finally(() => setItemLoading(false))
+  }, [selectedItemId])
+
+  if (error === 'not_connected') return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="text-center">
+        <Link2 className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+        <p className="text-slate-400 font-medium mb-1">Mercado Livre nao conectado</p>
+        <Link href="/dashboard/integracoes" className="text-xs text-purple-400 hover:text-purple-300">Conectar conta</Link>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex-1 flex overflow-hidden">
+      {/* List */}
+      <div className="w-80 xl:w-96 flex-shrink-0 border-r border-white/[0.06] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+          <span className="text-xs font-semibold text-slate-400">
+            {totals ? `${totals.total_reviews} avaliacoes` : 'Avaliacoes'}
+          </span>
+          <button onClick={() => setRefreshKey(k => k + 1)} className="p-1.5 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.04]">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-yellow-400 animate-spin" /></div>}
+          {!loading && error && <div className="p-4 text-center text-xs text-red-400">{error}</div>}
+          {!loading && !error && summaryItems.length === 0 && (
+            <EmptyState image="celebrate" title="Nenhuma avaliacao encontrada" description="Avaliacoes dos seus produtos aparecerao aqui." compact />
+          )}
+          {!loading && summaryItems.map(item => (
+            <button key={item.item_id} onClick={() => setSelectedItemId(item.item_id)}
+              className={`w-full text-left p-3 border-b border-white/[0.04] hover:bg-white/[0.03] transition-all ${
+                selectedItemId === item.item_id ? 'bg-purple-500/[0.07] border-l-2 border-l-purple-500' : 'border-l-2 border-l-transparent'
+              }`}>
+              <div className="flex items-start gap-2.5">
+                {item.thumbnail
+                  ? <img src={item.thumbnail} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 opacity-80" />
+                  : <div className="w-9 h-9 rounded-lg bg-dark-700 flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-slate-600" /></div>
+                }
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-300 truncate mb-0.5">{item.title}</p>
+                  <div className="flex items-center gap-2">
+                    <Stars count={Math.round(item.rating_average)} />
+                    <span className="text-[10px] text-slate-500">{item.rating_average.toFixed(1)}</span>
+                    <span className="text-[10px] text-slate-600">({item.total_reviews})</span>
+                  </div>
+                  {item.has_negative && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-400/10 text-red-400 mt-1 inline-block">Tem negativas</span>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {!selectedItemId && totals && (
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="dash-card rounded-2xl p-5 mb-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-base font-bold text-white">Resumo de Avaliacoes</h2>
+                  <p className="text-xs text-slate-600">Total: {totals.total_reviews} avaliacoes recebidas</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-yellow-400">{totals.overall_average.toFixed(1)}</div>
+                  <Stars count={Math.round(totals.overall_average)} size="md" />
+                  <p className="text-xs text-slate-600 mt-1">media geral</p>
+                </div>
+              </div>
+              {totals.items_with_negative > 0 && (
+                <p className="text-xs text-red-400 mt-2">{totals.items_with_negative} produto(s) com avaliacoes negativas</p>
+              )}
+            </div>
+            <p className="text-xs text-slate-700 text-center">Selecione um produto para ver as avaliacoes</p>
+          </div>
+        )}
+        {!selectedItemId && !totals && !loading && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <Star className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">Selecione um produto</p>
+            </div>
+          </div>
+        )}
+        {selectedItemId && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-white truncate">{itemReviews?.title ?? selectedItemId}</h3>
+                {itemReviews && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Stars count={Math.round(itemReviews.rating_average)} />
+                    <span className="text-xs text-slate-400">{itemReviews.rating_average.toFixed(1)} ({itemReviews.total} avaliacoes)</span>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setSelectedItemId(null)} className="p-1.5 rounded-lg text-slate-600 hover:text-slate-400"><X className="w-4 h-4" /></button>
+            </div>
+
+            {itemReviews && (
+              <div className="dash-card rounded-xl p-4 space-y-2">
+                {[
+                  { stars: 5, count: itemReviews.rating_levels.five_stars },
+                  { stars: 4, count: itemReviews.rating_levels.four_stars },
+                  { stars: 3, count: itemReviews.rating_levels.three_stars },
+                  { stars: 2, count: itemReviews.rating_levels.two_stars },
+                  { stars: 1, count: itemReviews.rating_levels.one_star },
+                ].map(row => {
+                  const pct = itemReviews.total > 0 ? Math.round((row.count / itemReviews.total) * 100) : 0
+                  return (
+                    <div key={row.stars} className="flex items-center gap-3">
+                      <span className="text-xs text-slate-400 w-4 text-right">{row.stars}</span>
+                      <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                      <div className="flex-1 h-2 bg-dark-700 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-yellow-400/60" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-slate-600 w-8">{pct}%</span>
+                      <span className="text-[10px] text-slate-700 w-8">{row.count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {itemLoading && <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 text-yellow-400 animate-spin" /></div>}
+
+            {!itemLoading && itemReviews?.reviews?.map(rev => (
+              <div key={rev.id} className="dash-card rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{rev.reviewer_name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Stars count={rev.rating} />
+                      <span className="text-[10px] text-slate-600">{timeAgo(rev.date_created)}</span>
+                    </div>
+                  </div>
+                  {rev.fulfilled && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-400/10 text-green-400">Compra confirmada</span>}
+                </div>
+                {rev.title && <p className="text-xs font-semibold text-slate-300 mb-1">{rev.title}</p>}
+                {rev.content && <p className="text-sm text-slate-400 leading-relaxed">{rev.content}</p>}
+                {(rev.likes > 0 || rev.dislikes > 0) && (
+                  <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-600">
+                    {rev.likes > 0 && <span>+{rev.likes} util</span>}
+                    {rev.dislikes > 0 && <span>-{rev.dislikes}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {!itemLoading && itemReviews && itemReviews.reviews.length === 0 && (
+              <p className="text-xs text-slate-600 text-center py-4">Nenhuma avaliacao com comentario</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── ML DEVOLUCOES TAB (used in SAC Local) ──────────────────────────────────
+
+function MLDevolucoesTab() {
+  const [items, setItems]               = useState<ClaimItem[]>([])
+  const [summary, setSummary]           = useState<ClaimsSummary | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
+  const [selected, setSelected]         = useState<ClaimItem | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'opened' | 'closed'>('opened')
+  const [refreshKey, setRefreshKey]     = useState(0)
+
+  useEffect(() => {
+    setLoading(true); setError(null); setSelected(null)
+    fetch(`/api/mercadolivre/reclamacoes?status=${statusFilter}&type=returns`)
+      .then(r => r.json())
+      .then((d: { items?: ClaimItem[]; summary?: ClaimsSummary; error?: string; code?: string }) => {
+        if (d.code === 'NOT_CONNECTED') { setError('not_connected'); return }
+        if (d.error) { setError(d.error); return }
+        setItems(d.items ?? []); setSummary(d.summary ?? null)
+      })
+      .catch(() => setError('Erro de rede'))
+      .finally(() => setLoading(false))
+  }, [statusFilter, refreshKey])
+
+  const urgencyColor = (u: string) =>
+    u === 'urgent'  ? 'text-red-400 bg-red-400/10' :
+    u === 'warning' ? 'text-amber-400 bg-amber-400/10' : 'text-slate-500 bg-dark-700'
+
+  const stageColor = (s: string) =>
+    s === 'waiting_seller' ? 'text-red-400 bg-red-400/10' :
+    s === 'dispute'        ? 'text-orange-400 bg-orange-400/10' :
+    s === 'waiting_buyer'  ? 'text-blue-400 bg-blue-400/10' : 'text-slate-400 bg-dark-700'
+
+  if (error === 'not_connected') return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="text-center">
+        <Link2 className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+        <p className="text-slate-400 font-medium mb-1">Mercado Livre nao conectado</p>
+        <Link href="/dashboard/integracoes" className="text-xs text-purple-400 hover:text-purple-300">Conectar conta</Link>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex-1 flex overflow-hidden">
+      {/* List */}
+      <div className="w-80 xl:w-96 flex-shrink-0 border-r border-white/[0.06] flex flex-col overflow-hidden">
+        <div className="flex items-center gap-1 p-3 border-b border-white/[0.06]">
+          {(['opened', 'closed'] as const).map(f => (
+            <button key={f} onClick={() => setStatusFilter(f)}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                statusFilter === f ? 'bg-purple-600 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]'
+              }`}>
+              {f === 'opened' ? 'Abertas' : 'Fechadas'}
+            </button>
+          ))}
+          <button onClick={() => setRefreshKey(k => k + 1)} className="p-1.5 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.04]">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-purple-400 animate-spin" /></div>}
+          {!loading && error && <div className="p-4 text-center text-xs text-red-400">{error}</div>}
+          {!loading && !error && items.length === 0 && (
+            <EmptyState image="celebrate" title="Nenhuma devolucao" description="Devolucoes aparecerao aqui quando houver." compact />
+          )}
+          {!loading && items.map(c => (
+            <button key={c.claim_id} onClick={() => setSelected(c)}
+              className={`w-full text-left p-3 border-b border-white/[0.04] hover:bg-white/[0.03] transition-all ${
+                selected?.claim_id === c.claim_id ? 'bg-purple-500/[0.07] border-l-2 border-l-purple-500' : 'border-l-2 border-l-transparent'
+              }`}>
+              <div className="flex items-start gap-2.5">
+                {c.order.product_thumbnail
+                  ? <img src={c.order.product_thumbnail} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 opacity-70" />
+                  : <div className="w-9 h-9 rounded-lg bg-dark-700 flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-slate-600" /></div>
+                }
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <span className="text-xs font-semibold text-slate-300 truncate">{c.order.buyer_nickname}</span>
+                    <span className="text-[9px] text-slate-700">{c.days_open}d</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 truncate mb-1">{c.order.product_title}</p>
+                  <div className="flex items-center flex-wrap gap-1">
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${urgencyColor(c.urgency)}`}>
+                      {c.urgency === 'urgent' ? 'Urgente' : c.urgency === 'warning' ? 'Atencao' : 'Normal'}
+                    </span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${stageColor(c.stage)}`}>{c.stage_label}</span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {!selected && summary && (
+          <div className="flex-1 overflow-y-auto p-6">
+            <h3 className="text-sm font-bold text-white mb-4">Resumo de Devolucoes</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Total abertas',   value: summary.total_opened,           color: 'text-white'       },
+                { label: 'Devolucoes',       value: summary.total_returns,          color: 'text-amber-400'   },
+                { label: 'Urgentes',         value: summary.urgent,                 color: 'text-red-400'     },
+                { label: 'Acao necessaria',  value: summary.seller_action_required, color: 'text-orange-400'  },
+              ].map(s => (
+                <div key={s.label} className="dash-card rounded-xl p-4">
+                  <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="text-xs text-slate-600 mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-700 mt-4 text-center">Selecione uma devolucao para ver detalhes</p>
+          </div>
+        )}
+        {!selected && !summary && !loading && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <RotateCcw className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">Selecione uma devolucao</p>
+            </div>
+          </div>
+        )}
+        {selected && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Devolucao #{selected.claim_id}</h3>
+                <p className="text-xs text-slate-600 mt-0.5">Pedido #{selected.order_id}</p>
+              </div>
+              <button onClick={() => setSelected(null)} className="p-1.5 rounded-lg text-slate-600 hover:text-slate-400"><X className="w-4 h-4" /></button>
+            </div>
+
+            <div className="dash-card rounded-xl p-4 flex items-center gap-3">
+              {selected.order.product_thumbnail && <img src={selected.order.product_thumbnail} alt="" className="w-12 h-12 rounded-lg object-cover opacity-80" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{selected.order.product_title}</p>
+                <p className="text-xs text-slate-600">{selected.order.buyer_nickname}</p>
+                <p className="text-xs text-slate-600">{selected.order.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              </div>
+            </div>
+
+            <div className="dash-card rounded-xl p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div><p className="text-slate-600 mb-1">Motivo</p><p className="text-slate-300 font-semibold">{selected.reason_label}</p></div>
+                <div>
+                  <p className="text-slate-600 mb-1">Estagio</p>
+                  <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${stageColor(selected.stage)}`}>{selected.stage_label}</span>
+                </div>
+                <div><p className="text-slate-600 mb-1">Aberta ha</p><p className="text-slate-300 font-semibold">{selected.days_open} dias</p></div>
+                <div>
+                  <p className="text-slate-600 mb-1">Responsavel</p>
+                  <p className={`font-semibold ${selected.action_responsible === 'seller' ? 'text-amber-400' : 'text-slate-300'}`}>
+                    {selected.action_responsible === 'seller' ? 'Voce' :
+                     selected.action_responsible === 'buyer' ? 'Comprador' :
+                     selected.action_responsible === 'mediator' ? 'Mediador ML' : '--'}
+                  </p>
+                </div>
+              </div>
+              {selected.due_date && (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <p className="text-xs text-slate-600">Prazo: <span className="text-amber-400 font-semibold">{new Date(selected.due_date).toLocaleDateString('pt-BR')}</span></p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+              <p className="text-xs text-blue-400/70 flex items-center gap-1.5">
+                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                Para responder, acesse o painel do Mercado Livre diretamente
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── ML SAC PANEL ────────────────────────────────────────────────────────────
 
 function MLSACPanel() {
@@ -887,8 +1314,6 @@ export default function SACPage() {
   const [statusFilter, setStatusFilter]   = useState<SACStatus | 'todos'>('todos')
   const [localMsgs, setLocalMsgs]         = useState<Record<number, string[]>>({})
   const [resolvedIds, setResolvedIds]     = useState<number[]>([])
-  const [avalReplying, setAvalReplying]   = useState<number | null>(null)
-  const [avalReply, setAvalReply]         = useState('')
   const [sacAiSuggesting, setSacAiSuggesting] = useState(false)
   const messagesEnd = useRef<HTMLDivElement>(null)
 
@@ -1068,134 +1493,11 @@ export default function SACPage() {
           {/* RIGHT PANEL */}
           <div className="flex-1 flex flex-col overflow-hidden">
 
-            {/* AVALIAÇÕES OVERVIEW */}
-            {activeTab === 'avaliacao' && !selectedItem && (
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="dash-card rounded-2xl p-5 mb-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h2 className="text-base font-bold text-white">Resumo de Avaliações</h2>
-                      <p className="text-xs text-slate-600">Total: 347 avaliações recebidas</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-yellow-400">4.6</div>
-                      <Stars count={5} size="md" />
-                      <p className="text-xs text-slate-600 mt-1">média geral</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {[{ stars: 5, pct: 68, count: 236 }, { stars: 4, pct: 22, count: 76 }, { stars: 3, pct: 6, count: 21 }, { stars: 2, pct: 3, count: 10 }, { stars: 1, pct: 1, count: 4 }].map(row => (
-                      <div key={row.stars} className="flex items-center gap-3">
-                        <span className="text-xs text-slate-400 w-4 text-right">{row.stars}</span>
-                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                        <div className="flex-1 h-2 bg-dark-700 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-yellow-400/60" style={{ width: `${row.pct}%` }} />
-                        </div>
-                        <span className="text-xs text-slate-600 w-8">{row.pct}%</span>
-                        <span className="text-[10px] text-slate-700 w-8">{row.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {SAC_ITEMS.filter(i => i.tipo === 'avaliacao').map(item => (
-                    <div key={item.id} className="dash-card rounded-2xl p-4">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2">
-                          <MktAvatar mkt={item.marketplace} />
-                          <div>
-                            <p className="text-sm font-semibold text-white">{item.cliente}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {item.estrelas !== undefined && <Stars count={item.estrelas} />}
-                              <MktBadge mkt={item.marketplace} />
-                              <span className="text-[10px] text-slate-600">{timeAgo(item.data)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <StatusBadge status={item.status} />
-                      </div>
-                      <p className="text-sm text-slate-300 mb-2">{item.mensagens[0]?.texto}</p>
-                      <p className="text-xs text-slate-600 mb-3">Produto: {item.produto}</p>
-                      {item.mensagens[1] ? (
-                        <div className="p-3 bg-purple-500/[0.07] border border-purple-500/10 rounded-xl mb-3">
-                          <p className="text-[10px] text-purple-400 font-bold mb-1">Resposta da loja:</p>
-                          <p className="text-xs text-slate-400">{item.mensagens[1].texto}</p>
-                        </div>
-                      ) : (
-                        avalReplying === item.id ? (
-                          <div className="space-y-2">
-                            <textarea value={avalReply} onChange={e => setAvalReply(e.target.value)}
-                              placeholder="Escreva sua resposta..." className="input-cyber w-full resize-none text-xs h-16" />
-                            <div className="flex gap-2">
-                              <button onClick={() => setAvalReplying(null)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-300">Cancelar</button>
-                              <button onClick={() => { setAvalReplying(null); setAvalReply('') }}
-                                className="flex-1 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-all">
-                                Publicar Resposta
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setAvalReplying(item.id); setSelectedItem(item) }}
-                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1">
-                            <MessageSquare className="w-3.5 h-3.5" /> Responder avaliação
-                          </button>
-                        )
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* AVALIACOES - Real ML data */}
+            {activeTab === 'avaliacao' && !selectedItem && <MLAvaliacoesTab />}
 
-            {/* DEVOLUÇÕES OVERVIEW */}
-            {activeTab === 'devolucao' && !selectedItem && (
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="dash-card rounded-2xl overflow-hidden">
-                  <div className="p-4 border-b border-white/[0.06]">
-                    <h2 className="text-sm font-bold text-white">Devoluções e Trocas</h2>
-                    <p className="text-xs text-slate-600 mt-0.5">{SAC_ITEMS.filter(i => i.tipo === 'devolucao').length} solicitações</p>
-                  </div>
-                  <div className="divide-y divide-white/[0.04]">
-                    {SAC_ITEMS.filter(i => i.tipo === 'devolucao').map(item => (
-                      <div key={item.id} className="p-4 hover:bg-white/[0.02] transition-all">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <MktAvatar mkt={item.marketplace} />
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-semibold text-white">{item.cliente}</span>
-                                <MktBadge mkt={item.marketplace} />
-                                {item.pedidoId && (
-                                  <Link href={`/dashboard/pedidos/${item.pedidoId}`}
-                                    className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-0.5 transition-colors">
-                                    #{item.pedidoId} <ExternalLink className="w-2.5 h-2.5" />
-                                  </Link>
-                                )}
-                              </div>
-                              <p className="text-xs text-slate-500 mb-2">{item.produto}</p>
-                              {item.motivoDevolucao && <MotivoBadge motivo={item.motivoDevolucao} />}
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            {item.statusDevolucao && <DevolStatusBadge status={item.statusDevolucao} />}
-                            {item.valorReembolso && (
-                              <p className="text-sm font-bold text-green-400 mt-1">
-                                {item.valorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                              </p>
-                            )}
-                            <p className="text-[10px] text-slate-600 mt-1">{timeAgo(item.data)}</p>
-                          </div>
-                        </div>
-                        <button onClick={() => setSelectedItem(item)}
-                          className="mt-3 text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
-                          Ver conversa <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* DEVOLUCOES - Real ML data */}
+            {activeTab === 'devolucao' && !selectedItem && <MLDevolucoesTab />}
 
             {/* NO ITEM SELECTED */}
             {!selectedItem && activeTab !== 'avaliacao' && activeTab !== 'devolucao' && (

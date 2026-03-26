@@ -1,68 +1,66 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Video, Rocket, Search, Ticket, X, Loader2, History, BookOpen, ExternalLink } from 'lucide-react'
+import { HelpCircle, ChevronDown, MessageCircle, Mail, Book, Rocket, Search, Ticket, X, Loader2, History, BookOpen, ExternalLink, Eye, TrendingUp } from 'lucide-react'
 
-const faqs = [
-  {
-    q: 'Como conectar minha conta do Mercado Livre?',
-    a: 'Acesse Integrações > Marketplaces e clique em "Conectar" ao lado do Mercado Livre. Você será redirecionado para autorizar o acesso. O processo leva menos de 1 minuto.',
-  },
-  {
-    q: 'Como a precificação é calculada?',
-    a: 'Acesse o módulo Precificação, informe o custo do produto e o Foguetim calcula automaticamente comissão, frete, imposto e margem desejada para cada marketplace, sugerindo o preço ideal.',
-  },
-  {
-    q: 'Posso importar meu catálogo em massa?',
-    a: 'A importação em massa via planilha CSV está em desenvolvimento (Q2 2026). Por enquanto, você pode cadastrar produtos individualmente no módulo Produtos.',
-  },
-  {
-    q: 'Qual é a diferença entre os planos?',
-    a: 'O plano Explorador é gratuito (até 100 produtos), Comandante (R$49,90/mês) suporta até 5.000 produtos e 3 canais, e Almirante (R$99,90/mês) é ilimitado com acesso à API e IA.',
-  },
-  {
-    q: 'Como funciona a geração de listagens?',
-    a: 'No módulo Listagens, informe as características do seu produto e o Foguetim gera automaticamente título otimizado, descrição, bullet points e tags para cada marketplace com base em boas práticas de SEO.',
-  },
-  {
-    q: 'Os dados são seguros?',
-    a: 'Sim. Todos os dados são criptografados em trânsito (TLS 1.3) e em repouso (AES-256). Realizamos backups automáticos diários e seguimos as diretrizes da LGPD.',
-  },
-  {
-    q: 'Como cancelar minha assinatura?',
-    a: 'Você pode cancelar a qualquer momento em Configurações > Plano > Ver histórico de faturas. O acesso continua até o fim do período pago, sem multas ou cobranças adicionais.',
-  },
-  {
-    q: 'O Foguetim emite Nota Fiscal?',
-    a: 'A integração com SEFAZ para emissão de NF-e está em desenvolvimento com previsão para Q2 2026. Por enquanto, você pode usar o Bling ou Tiny como integração externa (em breve).',
-  },
-]
+/* ── Types ─────────────────────────────────────────────────────────────── */
 
-const tutorials = [
-  { icon: Rocket,  title: 'Primeiros Passos',        dur: '3 min',  done: true  },
-  { icon: Book,    title: 'Configurando Produtos',   dur: '5 min',  done: true  },
-  { icon: Video,   title: 'Conectando Marketplaces', dur: '4 min',  done: false },
-  { icon: Video,   title: 'Usando a Precificação',   dur: '6 min',  done: false },
-  { icon: Video,   title: 'Gerando Listagens',       dur: '5 min',  done: false },
-]
+interface HelpArticle {
+  id: string
+  title: string
+  slug: string
+  summary: string | null
+  tags: string[]
+  views_count: number
+  helpful_count: number
+  updated_at: string
+  help_categories: {
+    name: string
+    slug: string
+    color: string
+    icon: string | null
+  } | null
+}
 
 type TicketCategory = 'bug' | 'feature_request' | 'billing' | 'integration' | 'account' | 'performance' | 'other'
 
 const TICKET_CATEGORIES: { value: TicketCategory; label: string }[] = [
   { value: 'bug',             label: 'Bug / Erro'          },
-  { value: 'feature_request', label: 'Sugestão'            },
-  { value: 'billing',         label: 'Cobrança / Plano'    },
-  { value: 'integration',     label: 'Integração (ML/etc)' },
+  { value: 'feature_request', label: 'Sugestao'            },
+  { value: 'billing',         label: 'Cobranca / Plano'    },
+  { value: 'integration',     label: 'Integracao (ML/etc)' },
   { value: 'account',         label: 'Minha conta'         },
   { value: 'performance',     label: 'Performance'         },
   { value: 'other',           label: 'Outro'               },
 ]
 
+/* ── Color helpers (dark theme) ────────────────────────────────────────── */
+
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  violet:  { bg: 'bg-violet-500/10',  text: 'text-violet-400'  },
+  amber:   { bg: 'bg-amber-500/10',   text: 'text-amber-400'   },
+  emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+  blue:    { bg: 'bg-blue-500/10',    text: 'text-blue-400'    },
+  green:   { bg: 'bg-green-500/10',   text: 'text-green-400'   },
+  red:     { bg: 'bg-red-500/10',     text: 'text-red-400'     },
+  purple:  { bg: 'bg-purple-500/10',  text: 'text-purple-400'  },
+  slate:   { bg: 'bg-slate-500/10',   text: 'text-slate-400'   },
+}
+
+function getCatColor(color?: string) {
+  return CATEGORY_COLORS[color ?? 'slate'] ?? CATEGORY_COLORS.slate
+}
+
 export default function AjudaPage() {
-  const [open, setOpen]     = useState<number | null>(null)
+  const [open, setOpen]     = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  // DB-driven articles
+  const [articles, setArticles]     = useState<HelpArticle[]>([])
+  const [popular, setPopular]       = useState<HelpArticle[]>([])
+  const [loading, setLoading]       = useState(true)
 
   // Ticket modal
   const [showTicket, setShowTicket]   = useState(false)
@@ -71,6 +69,32 @@ export default function AjudaPage() {
   const [ticketCat, setTicketCat]     = useState<TicketCategory>('other')
   const [sending, setSending]         = useState(false)
   const [ticketMsg, setTicketMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+
+  // Fetch articles from DB
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const [featuredRes, popularRes] = await Promise.all([
+          fetch('/api/help/articles?featured=true&limit=20'),
+          fetch('/api/help/articles?popular=true&limit=6'),
+        ])
+        if (featuredRes.ok) {
+          const data = await featuredRes.json()
+          setArticles(data)
+        }
+        if (popularRes.ok) {
+          const data = await popularRes.json()
+          setPopular(data)
+        }
+      } catch {
+        // silently fail — will show empty state
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   async function handleSendTicket() {
     if (!ticketTitle.trim() || !ticketDesc.trim()) return
@@ -87,7 +111,7 @@ export default function AjudaPage() {
         }),
       })
       if (res.ok) {
-        setTicketMsg({ ok: true, text: 'Ticket aberto! Nossa equipe entrará em contato em breve.' })
+        setTicketMsg({ ok: true, text: 'Ticket aberto! Nossa equipe entrara em contato em breve.' })
         setTicketTitle(''); setTicketDesc(''); setTicketCat('other')
         setTimeout(() => { setShowTicket(false); setTicketMsg(null) }, 2500)
       } else {
@@ -95,23 +119,27 @@ export default function AjudaPage() {
         setTicketMsg({ ok: false, text: `Erro: ${d.error ?? 'tente novamente'}` })
       }
     } catch {
-      setTicketMsg({ ok: false, text: 'Erro de conexão. Tente novamente.' })
+      setTicketMsg({ ok: false, text: 'Erro de conexao. Tente novamente.' })
     } finally {
       setSending(false)
     }
   }
 
-  const filtered = faqs.filter(f =>
-    !search || f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase())
+  // Filter articles by search
+  const filtered = articles.filter(a =>
+    !search ||
+    a.title.toLowerCase().includes(search.toLowerCase()) ||
+    (a.summary ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (a.tags ?? []).some(t => t.toLowerCase().includes(search.toLowerCase()))
   )
 
   return (
     <div>
-      <PageHeader title="Central de Ajuda" description="Tutoriais, FAQ e suporte" />
+      <PageHeader title="Central de Ajuda" description="Artigos, FAQ e suporte" />
 
       <div className="p-4 md:p-6 space-y-8">
 
-        {/* Link para a Central de Ajuda pública */}
+        {/* Link para a Central de Ajuda publica */}
         <Link
           href="/ajuda"
           target="_blank"
@@ -123,7 +151,7 @@ export default function AjudaPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Central de Ajuda</p>
-            <p className="text-xs text-slate-500 mt-0.5">Acesse guias completos, tutoriais e artigos sobre todos os módulos do Foguetim</p>
+            <p className="text-xs text-slate-500 mt-0.5">Acesse guias completos, tutoriais e artigos sobre todos os modulos do Foguetim</p>
           </div>
           <ExternalLink className="w-4 h-4 text-violet-400 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
         </Link>
@@ -134,65 +162,117 @@ export default function AjudaPage() {
             <HelpCircle className="w-6 h-6 text-purple-400" />
           </div>
           <h2 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>Como podemos ajudar?</h2>
-          <p className="text-sm text-slate-500 mb-5">Pesquise nas perguntas frequentes ou entre em contato com o suporte.</p>
+          <p className="text-sm text-slate-500 mb-5">Pesquise nos artigos ou entre em contato com o suporte.</p>
           <div className="relative max-w-sm mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar dúvidas..."
+              placeholder="Buscar artigos..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-dark-700 border border-white/[0.08] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/40" />
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* FAQ */}
+          {/* Articles (FAQ replacement) */}
           <div className="lg:col-span-2 space-y-2">
             <p className="font-bold text-white text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Perguntas Frequentes
-              {search && <span className="text-slate-600 font-normal ml-2">— {filtered.length} resultado(s)</span>}
+              {search ? 'Resultados da busca' : 'Artigos em destaque'}
+              {search && <span className="text-slate-600 font-normal ml-2">-- {filtered.length} resultado(s)</span>}
             </p>
-            {filtered.length === 0 ? (
+
+            {loading ? (
               <div className="dash-card p-8 rounded-2xl text-center">
-                <p className="text-sm text-slate-600">Nenhuma pergunta encontrada para "{search}".</p>
+                <Loader2 className="w-5 h-5 animate-spin text-purple-400 mx-auto mb-2" />
+                <p className="text-sm text-slate-600">Carregando artigos...</p>
               </div>
-            ) : filtered.map((faq, i) => (
-              <div key={i} className="dash-card rounded-xl overflow-hidden">
-                <button
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
-                  onClick={() => setOpen(open === i ? null : i)}
-                >
-                  <span className="text-sm font-semibold text-white pr-4">{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} />
-                </button>
-                {open === i && (
-                  <div className="px-5 pb-4 pt-0">
-                    <p className="text-sm text-slate-400 leading-relaxed">{faq.a}</p>
-                  </div>
-                )}
+            ) : filtered.length === 0 ? (
+              <div className="dash-card p-8 rounded-2xl text-center">
+                <p className="text-sm text-slate-600">
+                  {search ? `Nenhum artigo encontrado para "${search}".` : 'Nenhum artigo em destaque ainda.'}
+                </p>
               </div>
-            ))}
+            ) : filtered.map((article) => {
+              const catColor = getCatColor(article.help_categories?.color)
+              return (
+                <div key={article.id} className="dash-card rounded-xl overflow-hidden">
+                  <button
+                    className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
+                    onClick={() => setOpen(open === article.id ? null : article.id)}
+                  >
+                    <div className="flex items-center gap-3 pr-4 min-w-0">
+                      <span className="text-sm font-semibold text-white truncate">{article.title}</span>
+                      {article.help_categories && (
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${catColor.bg} ${catColor.text}`}>
+                          {article.help_categories.name}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${open === article.id ? 'rotate-180' : ''}`} />
+                  </button>
+                  {open === article.id && (
+                    <div className="px-5 pb-4 pt-0 space-y-2">
+                      {article.summary && (
+                        <p className="text-sm text-slate-400 leading-relaxed">{article.summary}</p>
+                      )}
+                      <div className="flex items-center gap-3 pt-1">
+                        <span className="text-[10px] text-slate-600 flex items-center gap-1">
+                          <Eye className="w-3 h-3" /> {article.views_count} views
+                        </span>
+                        {article.help_categories && (
+                          <Link
+                            href={`/ajuda/${article.help_categories.slug}/${article.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-violet-400 hover:text-violet-300 flex items-center gap-1"
+                          >
+                            Ler artigo completo <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Tutorials */}
+            {/* Artigos Populares */}
             <div className="dash-card rounded-2xl p-5">
-              <p className="font-bold text-white text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>Tutoriais</p>
-              <div className="space-y-2">
-                {tutorials.map((t, i) => (
-                  <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t.done ? 'opacity-60' : 'hover:bg-white/[0.04] cursor-pointer'}`}>
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${t.done ? 'bg-green-500/10' : 'bg-dark-700'}`}>
-                      <t.icon className={`w-3.5 h-3.5 ${t.done ? 'text-green-400' : 'text-slate-500'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">{t.title}</p>
-                      <p className="text-[10px] text-slate-600">{t.dur}</p>
-                    </div>
-                    {t.done && (
-                      <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">Feito</span>
-                    )}
-                  </div>
-                ))}
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-4 h-4 text-orange-400" />
+                <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Artigos Populares</p>
               </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                </div>
+              ) : popular.length === 0 ? (
+                <p className="text-xs text-slate-600 text-center py-2">Nenhum artigo ainda.</p>
+              ) : (
+                <div className="space-y-2">
+                  {popular.map((article, i) => {
+                    const catColor = getCatColor(article.help_categories?.color)
+                    return (
+                      <Link
+                        key={article.id}
+                        href={article.help_categories ? `/ajuda/${article.help_categories.slug}/${article.slug}` : '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.04] transition-colors group"
+                      >
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${catColor.bg}`}>
+                          <span className={`text-xs font-bold ${catColor.text}`}>{i + 1}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-white truncate group-hover:text-violet-300 transition-colors">{article.title}</p>
+                          <p className="text-[10px] text-slate-600">{article.views_count} views</p>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Contact */}
@@ -200,7 +280,7 @@ export default function AjudaPage() {
               <p className="font-bold text-white text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>Fale com o Suporte</p>
               <div className="space-y-2">
                 {[
-                  { icon: MessageCircle, label: 'Chat ao vivo', sub: 'Seg–Sex · 9h–18h', available: true,  cls: 'text-green-400' },
+                  { icon: MessageCircle, label: 'Chat ao vivo', sub: 'Seg-Sex 9h-18h', available: true,  cls: 'text-green-400' },
                   { icon: Mail,          label: 'E-mail',       sub: 'contato@foguetim.com.br', available: true,  cls: 'text-purple-400' },
                 ].map(c => (
                   <button key={c.label} className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${c.available ? 'border-white/[0.08] hover:bg-white/[0.04]' : 'border-white/[0.04] opacity-50 cursor-default'}`}>
@@ -222,7 +302,7 @@ export default function AjudaPage() {
                   </div>
                   <div className="text-left">
                     <p className="text-xs font-semibold text-white">Abrir Ticket</p>
-                    <p className="text-[10px] text-slate-500">Resposta em até 24h</p>
+                    <p className="text-[10px] text-slate-500">Resposta em ate 24h</p>
                   </div>
                 </button>
                 <Link href="/dashboard/ajuda/feedbacks"
@@ -236,15 +316,6 @@ export default function AjudaPage() {
                   </div>
                 </Link>
               </div>
-            </div>
-
-            {/* Status */}
-            <div className="dash-card rounded-xl p-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <p className="text-xs font-semibold text-white">Todos os sistemas operacionais</p>
-              </div>
-              <p className="text-[10px] text-slate-600 mt-1 ml-4">Uptime 99.98% · Última verificação: agora</p>
             </div>
           </div>
         </div>
@@ -288,12 +359,12 @@ export default function AjudaPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Descrição *</label>
+                <label className="block text-xs text-slate-500 mb-1">Descricao *</label>
                 <textarea
                   value={ticketDesc}
                   onChange={e => setTicketDesc(e.target.value)}
                   rows={4}
-                  placeholder="Descreva o problema com o máximo de detalhes possível..."
+                  placeholder="Descreva o problema com o maximo de detalhes possivel..."
                   className="w-full px-3 py-2 text-sm bg-dark-700 border border-white/[0.08] rounded-xl text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-600/40 resize-none"
                 />
               </div>
