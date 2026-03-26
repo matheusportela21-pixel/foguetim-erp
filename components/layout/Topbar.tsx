@@ -329,7 +329,7 @@ export default function Topbar() {
   return (
     <>
       {/* ─── Desktop Topbar ────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-space-900/90 backdrop-blur-xl border-b border-space-600/50">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/90 dark:bg-space-900/90 backdrop-blur-xl border-b border-gray-200 dark:border-space-600/50">
         <div className="max-w-[1440px] mx-auto h-full px-4 md:px-6 flex items-center justify-between">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0 group">
@@ -359,8 +359,8 @@ export default function Topbar() {
                     href={menu.href}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isMenuActive(menu)
-                        ? 'text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-space-700/50'
+                        ? 'text-gray-900 dark:text-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700/50'
                     }`}
                   >
                     {React.createElement(ICONS[menu.icon] ?? Home, { className: 'w-4 h-4' })}
@@ -373,8 +373,8 @@ export default function Topbar() {
                   <button
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isMenuActive(menu) || openMenu === menu.label
-                        ? 'text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-space-700/50'
+                        ? 'text-gray-900 dark:text-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700/50'
                     }`}
                   >
                     {React.createElement(ICONS[menu.icon] ?? Home, { className: 'w-4 h-4' })}
@@ -394,7 +394,7 @@ export default function Topbar() {
                       initial="hidden"
                       animate="visible"
                       exit="exit"
-                      className={`absolute top-full left-0 mt-1 bg-space-800 border border-space-600 rounded-xl shadow-card-lg overflow-hidden ${
+                      className={`absolute top-full left-0 mt-1 bg-white dark:bg-space-800 border border-gray-200 dark:border-space-600 rounded-xl shadow-card-lg overflow-hidden ${
                         menu.sections ? 'min-w-[520px]' : 'min-w-[220px]'
                       }`}
                       onMouseEnter={() => { if (closeTimeout.current) clearTimeout(closeTimeout.current) }}
@@ -410,7 +410,7 @@ export default function Topbar() {
                                 href={item.href}
                                 onClick={() => setOpenMenu(null)}
                                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
-                                  isActive(item.href) ? 'text-white bg-space-700' : 'text-gray-400 hover:text-white hover:bg-space-700'
+                                  isActive(item.href) ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-space-700' : 'text-gray-400 hover:text-white hover:bg-space-700'
                                 }`}
                               >
                                 {Icon && <Icon className="w-4 h-4" />}
@@ -455,7 +455,7 @@ export default function Topbar() {
                                       href={item.href}
                                       onClick={() => setOpenMenu(null)}
                                       className={`block px-3 py-1.5 rounded-lg text-sm transition-all duration-150 ${
-                                        isActive(item.href) ? 'text-white bg-space-700' : 'text-gray-400 hover:text-white hover:bg-space-700'
+                                        isActive(item.href) ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-space-700' : 'text-gray-400 hover:text-white hover:bg-space-700'
                                       }`}
                                     >
                                       {item.label}
@@ -479,17 +479,17 @@ export default function Topbar() {
             {/* Search input (desktop) */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-space-800 border border-space-600 text-sm text-gray-500 hover:text-gray-300 hover:border-space-500 transition-all cursor-pointer"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-space-800 border border-gray-200 dark:border-space-600 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 hover:border-space-500 transition-all duration-200 cursor-pointer w-40 lg:w-56 focus:w-64"
             >
               <Search className="w-3.5 h-3.5" />
-              <span className="w-32 lg:w-40 text-left">Buscar...</span>
-              <kbd className="hidden lg:inline text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500 border border-space-600">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+              <span className="flex-1 text-left truncate">Buscar...</span>
+              <kbd className="hidden lg:inline text-[10px] font-mono bg-gray-100 dark:bg-space-700 px-1.5 py-0.5 rounded text-gray-500 border border-space-600">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
             </button>
 
             {/* Search icon (mobile) */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+              className="md:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-colors"
               title="Buscar"
             >
               <Search className="w-5 h-5" />
@@ -498,7 +498,7 @@ export default function Topbar() {
             {/* Theme toggle */}
             <button
               onClick={handleThemeToggle}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-colors"
               title={theme === 'dark' ? 'Modo claro (em breve)' : 'Modo escuro'}
             >
               {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
@@ -507,7 +507,7 @@ export default function Topbar() {
             {/* Help */}
             <Link
               href="/dashboard/ajuda"
-              className="hidden sm:flex p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+              className="hidden sm:flex p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-colors"
               title="Central de Ajuda"
             >
               <HelpCircle className="w-4.5 h-4.5" />
@@ -517,7 +517,7 @@ export default function Topbar() {
             <div className="relative" ref={notifsRef}>
               <button
                 onClick={() => { setNotifsOpen(o => !o); if (!notifsOpen) fetchNotifs() }}
-                className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-space-700 transition-colors"
+                className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-colors"
                 aria-label="Notificações"
               >
                 <Bell className={`w-5 h-5 ${notifsOpen ? 'text-primary-400' : ''}`} />
@@ -535,13 +535,13 @@ export default function Topbar() {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="absolute right-0 mt-1 w-[380px] max-h-[480px] flex flex-col bg-space-800 border border-space-600 rounded-xl shadow-2xl z-50 overflow-hidden"
+                    className="absolute right-0 mt-1 w-[380px] max-h-[480px] flex flex-col bg-white dark:bg-space-800 border border-gray-200 dark:border-space-600 rounded-xl shadow-2xl z-50 overflow-hidden"
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-space-600 shrink-0">
                       <div className="flex items-center gap-2">
                         <Bell className="w-4 h-4 text-primary-400" />
-                        <span className="text-sm font-semibold text-white">Notificações</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">Notificações</span>
                         {unreadCount > 0 && (
                           <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                             {unreadCount}
@@ -586,8 +586,8 @@ export default function Topbar() {
                             <div
                               key={n.id}
                               onClick={() => markRead(n.id, n.action_url)}
-                              className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-space-700/50 transition-all ${
-                                !n.read ? 'bg-primary-900/10' : ''
+                              className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-space-700/50 transition-all ${
+                                !n.read ? 'bg-primary-50 dark:bg-primary-900/10' : ''
                               }`}
                             >
                               <div className={`w-7 h-7 rounded-lg ${tc.bg} flex items-center justify-center shrink-0 mt-0.5`}>
@@ -595,7 +595,7 @@ export default function Topbar() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <p className={`text-xs font-semibold truncate ${!n.read ? 'text-white' : 'text-gray-300'}`}>
+                                  <p className={`text-xs font-semibold truncate ${!n.read ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                                     {n.title}
                                   </p>
                                   {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-accent-400 shrink-0" />}
@@ -641,7 +641,7 @@ export default function Topbar() {
             >
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-space-700/50 transition-all ml-1"
+                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-space-700/50 transition-all ml-1"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs font-bold">
                   {userInitials}
@@ -658,11 +658,11 @@ export default function Topbar() {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="absolute top-full right-0 mt-1 w-64 bg-space-800 border border-space-600 rounded-xl shadow-card-lg overflow-hidden"
+                    className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-space-800 border border-gray-200 dark:border-space-600 rounded-xl shadow-card-lg overflow-hidden"
                   >
                     {/* User info */}
                     <div className="px-4 py-3 border-b border-space-600">
-                      <p className="text-sm font-semibold text-white truncate">{fullName}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{fullName}</p>
                       <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                     </div>
 
@@ -680,7 +680,7 @@ export default function Topbar() {
                             key={item.href}
                             href={item.href}
                             onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all"
                           >
                             {Icon && <Icon className="w-4 h-4" />}
                             <span>{item.label}</span>
@@ -694,7 +694,7 @@ export default function Topbar() {
                           setProfileOpen(false)
                           window.dispatchEvent(new CustomEvent('open-feedback'))
                         }}
-                        className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                        className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all"
                       >
                         <Bug className="w-4 h-4" />
                         <span>Enviar Feedback</span>
@@ -703,7 +703,7 @@ export default function Topbar() {
                       {/* Theme toggle inside menu */}
                       <button
                         onClick={handleThemeToggle}
-                        className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                        className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all"
                       >
                         <div className="flex items-center gap-2.5">
                           {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -718,7 +718,7 @@ export default function Topbar() {
                         <Link
                           href="/admin"
                           onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all"
                         >
                           <Shield className="w-4 h-4" />
                           <span>Painel Admin</span>
@@ -768,7 +768,7 @@ export default function Topbar() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.97 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-lg mx-4 bg-space-800 border border-space-600 rounded-xl shadow-2xl overflow-hidden"
+              className="w-full max-w-lg mx-4 bg-white dark:bg-space-800 border border-gray-200 dark:border-space-600 rounded-xl shadow-2xl overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 px-4 py-3 border-b border-space-600">
@@ -776,7 +776,7 @@ export default function Topbar() {
                 <input
                   type="text"
                   placeholder="Buscar pedidos, produtos, páginas..."
-                  className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none"
+                  className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none"
                   autoFocus
                   value={searchQuery}
                   onChange={e => {
@@ -798,7 +798,7 @@ export default function Topbar() {
                   }}
                 />
                 {searchLoading && <Loader2 className="w-4 h-4 text-gray-500 animate-spin shrink-0" />}
-                <kbd className="text-[10px] font-mono bg-space-700 px-1.5 py-0.5 rounded text-gray-500">ESC</kbd>
+                <kbd className="text-[10px] font-mono bg-gray-100 dark:bg-space-700 px-1.5 py-0.5 rounded text-gray-500">ESC</kbd>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {/* Pages */}
@@ -811,7 +811,7 @@ export default function Topbar() {
                         return (
                           <Link key={page.href} href={page.href}
                             onClick={() => { setSearchOpen(false); setSearchQuery('') }}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all">
                             <Icon className="w-4 h-4" />
                             <span>{page.label}</span>
                           </Link>
@@ -828,7 +828,7 @@ export default function Topbar() {
                       {searchResults.products.map((p: any) => (
                         <Link key={p.id} href={`/dashboard/armazem/produtos/${p.id}`}
                           onClick={() => { setSearchOpen(false); setSearchQuery('') }}
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all">
                           <Package className="w-4 h-4" />
                           <div className="flex-1 min-w-0">
                             <span className="truncate block">{p.name}</span>
@@ -847,7 +847,7 @@ export default function Topbar() {
                       {searchResults.orders.map((o: any) => (
                         <Link key={o.id} href={`/dashboard/pedidos/${o.order_id}`}
                           onClick={() => { setSearchOpen(false); setSearchQuery('') }}
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all">
                           <ShoppingBag className="w-4 h-4" />
                           <div className="flex-1 min-w-0">
                             <span className="truncate block">#{o.order_id}</span>
@@ -882,7 +882,7 @@ export default function Topbar() {
                         return (
                           <Link key={item.href} href={item.href}
                             onClick={() => { setSearchOpen(false); setSearchQuery('') }}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-space-700 transition-all">
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-space-700 transition-all">
                             {Icon && <Icon className="w-4 h-4" />}
                             <span>{item.label}</span>
                           </Link>
@@ -905,7 +905,7 @@ export default function Topbar() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 z-40 bg-space-900/98 backdrop-blur-xl pt-16 overflow-y-auto md:hidden"
+            className="fixed inset-0 z-40 bg-white/98 dark:bg-space-900/98 backdrop-blur-xl pt-16 overflow-y-auto md:hidden"
           >
             <div className="p-4 space-y-1">
               {TOPBAR_MENUS.map(menu => (
@@ -915,7 +915,7 @@ export default function Topbar() {
                       href={menu.href}
                       onClick={() => setMobileOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                        isMenuActive(menu) ? 'text-white bg-space-700' : 'text-gray-400'
+                        isMenuActive(menu) ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-space-700' : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       {React.createElement(ICONS[menu.icon] ?? Home, { className: 'w-5 h-5' })}
@@ -926,7 +926,7 @@ export default function Topbar() {
                       <button
                         onClick={() => setMobileExpanded(mobileExpanded === menu.label ? null : menu.label)}
                         className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                          isMenuActive(menu) ? 'text-white bg-space-800' : 'text-gray-400'
+                          isMenuActive(menu) ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-space-800' : 'text-gray-500 dark:text-gray-400'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -951,7 +951,7 @@ export default function Topbar() {
                                   href={item.href}
                                   onClick={() => setMobileOpen(false)}
                                   className={`block px-4 py-2 rounded-lg text-sm transition-all ${
-                                    isActive(item.href) ? 'text-white bg-space-700' : 'text-gray-500 hover:text-gray-300'
+                                    isActive(item.href) ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-space-700' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
                                   }`}
                                 >
                                   {item.label}
@@ -971,7 +971,7 @@ export default function Topbar() {
                                       href={item.href}
                                       onClick={() => setMobileOpen(false)}
                                       className={`block px-4 py-2 rounded-lg text-sm transition-all ${
-                                        isActive(item.href) ? 'text-white bg-space-700' : 'text-gray-500 hover:text-gray-300'
+                                        isActive(item.href) ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-space-700' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
                                       }`}
                                     >
                                       {item.label}

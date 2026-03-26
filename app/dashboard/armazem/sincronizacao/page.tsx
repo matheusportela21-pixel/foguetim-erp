@@ -5,7 +5,9 @@ import {
   RefreshCw, AlertTriangle, CheckCircle2, Link2, ExternalLink,
   Layers, Search, Info, ToggleLeft,
 } from 'lucide-react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 
@@ -32,29 +34,6 @@ interface Summary {
 }
 
 type FilterTab = 'all' | 'divergent' | 'synced' | 'unmapped'
-
-/* ── Demo data (used when no real mappings exist) ─────────────────────── */
-
-function getDemoData(): { comparisons: Comparison[]; summary: Summary } {
-  const items: Comparison[] = [
-    { mappingId: 1, productId: 101, productName: 'Fone Bluetooth TWS Pro X', sku: 'FON-BT-001', channel: 'mercado_livre', marketplaceItemId: 'MLB3847291056', autoSyncStock: false, warehouseStock: 45, mlStock: 45, magaluStock: null, hasDivergence: false, divergences: [] },
-    { mappingId: 2, productId: 102, productName: 'Carregador Turbo USB-C 65W', sku: 'CAR-TC-065', channel: 'mercado_livre', marketplaceItemId: 'MLB3921874523', autoSyncStock: false, warehouseStock: 120, mlStock: 115, magaluStock: null, hasDivergence: true, divergences: ['ML: -5 un. de diferenca'] },
-    { mappingId: 3, productId: 103, productName: 'Capa iPhone 15 Pro Max Transparente', sku: 'CAP-IP15-TR', channel: 'mercado_livre', marketplaceItemId: 'MLB4012938475', autoSyncStock: false, warehouseStock: 200, mlStock: 200, magaluStock: null, hasDivergence: false, divergences: [] },
-    { mappingId: 4, productId: 104, productName: 'Pelicula Vidro Samsung S24 Ultra', sku: 'PEL-S24U-VD', channel: 'mercado_livre', marketplaceItemId: 'MLB3756182934', autoSyncStock: false, warehouseStock: 80, mlStock: 62, magaluStock: null, hasDivergence: true, divergences: ['ML: -18 un. de diferenca'] },
-    { mappingId: 5, productId: 105, productName: 'Mouse Gamer RGB 12000 DPI', sku: 'MOU-GM-120', channel: 'mercado_livre', marketplaceItemId: 'MLB4198273645', autoSyncStock: false, warehouseStock: 30, mlStock: 30, magaluStock: null, hasDivergence: false, divergences: [] },
-    { mappingId: 6, productId: 106, productName: 'Hub USB-C 7 em 1 HDMI 4K', sku: 'HUB-7N1-4K', channel: 'mercado_livre', marketplaceItemId: 'MLB3892746153', autoSyncStock: false, warehouseStock: 15, mlStock: 22, magaluStock: null, hasDivergence: true, divergences: ['ML: +7 un. de diferenca'] },
-    { mappingId: 7, productId: 107, productName: 'Teclado Mecanico Compacto 65%', sku: 'TEC-MC-065', channel: 'mercado_livre', marketplaceItemId: 'MLB4056382917', autoSyncStock: false, warehouseStock: 55, mlStock: 55, magaluStock: null, hasDivergence: false, divergences: [] },
-    { mappingId: 8, productId: 108, productName: 'Webcam Full HD 1080p Autofoco', sku: 'WEB-FH-108', channel: 'mercado_livre', marketplaceItemId: 'MLB3714928365', autoSyncStock: false, warehouseStock: 40, mlStock: 33, magaluStock: null, hasDivergence: true, divergences: ['ML: -7 un. de diferenca'] },
-    { mappingId: 9, productId: 109, productName: 'Suporte Notebook Aluminio Ajustavel', sku: 'SUP-NB-ALU', channel: 'mercado_livre', marketplaceItemId: 'MLB4123847562', autoSyncStock: false, warehouseStock: 25, mlStock: 25, magaluStock: null, hasDivergence: false, divergences: [] },
-    { mappingId: 10, productId: 110, productName: 'Ring Light 26cm com Tripe', sku: 'RNG-26-TRP', channel: 'mercado_livre', marketplaceItemId: 'MLB3983746251', autoSyncStock: false, warehouseStock: 18, mlStock: 12, magaluStock: null, hasDivergence: true, divergences: ['ML: -6 un. de diferenca'] },
-  ]
-  const synced    = items.filter(i => !i.hasDivergence).length
-  const divergent = items.filter(i => i.hasDivergence).length
-  return {
-    comparisons: items,
-    summary: { total: items.length, synced, divergent, coverage: 100 },
-  }
-}
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -86,7 +65,7 @@ export default function SincronizacaoPage() {
   const [summary, setSummary]         = useState<Summary>({ total: 0, synced: 0, divergent: 0, coverage: 0 })
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
-  const [isDemo, setIsDemo]           = useState(false)
+  const [isEmpty, setIsEmpty]         = useState(false)
   const [filter, setFilter]           = useState<FilterTab>('all')
   const [search, setSearch]           = useState('')
   const [lastSync, setLastSync]       = useState<string | null>(null)
@@ -102,22 +81,17 @@ export default function SincronizacaoPage() {
       if (data.comparisons && data.comparisons.length > 0) {
         setComparisons(data.comparisons)
         setSummary(data.summary)
-        setIsDemo(false)
+        setIsEmpty(false)
       } else {
-        // No mappings — show demo data
-        const demo = getDemoData()
-        setComparisons(demo.comparisons)
-        setSummary(demo.summary)
-        setIsDemo(true)
+        setComparisons([])
+        setSummary({ total: 0, synced: 0, divergent: 0, coverage: 0 })
+        setIsEmpty(true)
       }
       setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
     } catch (e: unknown) {
-      // Fallback to demo on error (e.g. not authenticated)
-      const demo = getDemoData()
-      setComparisons(demo.comparisons)
-      setSummary(demo.summary)
-      setIsDemo(true)
-      setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
+      setComparisons([])
+      setSummary({ total: 0, synced: 0, divergent: 0, coverage: 0 })
+      setIsEmpty(true)
       console.error('[sincronizacao]', e)
     } finally {
       setLoading(false)
@@ -176,15 +150,14 @@ export default function SincronizacaoPage() {
       />
 
       <div className="p-4 md:p-6 space-y-4">
-        {/* Demo banner */}
-        {isDemo && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-900/20 border border-amber-700/40">
-            <Info className="w-4 h-4 text-amber-400 shrink-0" />
-            <p className="text-xs text-amber-300">
-              <span className="font-semibold">Dados de demonstracao.</span>{' '}
-              Conecte seu Mercado Livre e mapeie produtos para ver dados reais.
-            </p>
-          </div>
+        {/* Empty state — no mappings */}
+        {isEmpty && !loading && (
+          <EmptyState
+            image="connect"
+            title="Mapeie seus produtos primeiro"
+            description="Para comparar o estoque do armazém com os marketplaces, você precisa mapear seus produtos."
+            action={{ label: 'Ir para Mapeamentos', href: '/dashboard/armazem/mapeamentos' }}
+          />
         )}
 
         {/* KPI Row */}

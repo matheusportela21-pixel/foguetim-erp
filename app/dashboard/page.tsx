@@ -167,12 +167,14 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/mercadolivre/metrics')
+    const days = period === 'today' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : 30
+    setMlLoading(true)
+    fetch(`/api/mercadolivre/metrics?days=${days}`)
       .then(r => r.json())
       .then((d: MLMetrics) => { setMl(d); setQuestions(d.pendingQuestions ?? 0) })
       .catch(() => setMl({ connected: false }))
       .finally(() => setMlLoading(false))
-  }, [])
+  }, [period])
 
   useEffect(() => {
     fetch('/api/mercadolivre/reclamacoes?status=opened')
@@ -215,7 +217,7 @@ export default function DashboardPage() {
 
   // Recent orders — try fetching from ML orders API
   useEffect(() => {
-    fetch('/api/mercadolivre/pedidos?limit=10&sort=date_desc')
+    fetch('/api/mercadolivre/orders?limit=10&sort=date_desc')
       .then(r => r.json())
       .then((d: any) => {
         const items = d.results ?? d.orders ?? d.data ?? []
@@ -289,23 +291,24 @@ export default function DashboardPage() {
     { label: 'Ajuda',          icon: HelpCircle,    href: '/dashboard/ajuda',               show: true },
   ].filter(l => l.show)
 
-  // Mock revenue chart data (will be replaced by real API data)
+  // Estimated revenue chart data — ML distributes real revenue evenly; magalu/shopee show 0 until integrated
   const revenueChartData = useMemo(() => {
     const days = period === 'today' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : 30
     const data: { date: string; ml: number; magalu: number; shopee: number }[] = []
     const now = new Date()
+    const dailyML = hasML && days > 0 ? Math.round((ml?.revenue30d ?? 0) / days) : 0
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now)
       d.setDate(d.getDate() - i)
       data.push({
         date: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        ml: hasML ? Math.round((ml?.revenue30d ?? 0) / days * (0.7 + Math.random() * 0.6)) : 0,
-        magalu: hasMagalu ? Math.round(Math.random() * 300) : 0,
-        shopee: hasShopee ? Math.round(Math.random() * 200) : 0,
+        ml: dailyML,
+        magalu: 0,
+        shopee: 0,
       })
     }
     return data
-  }, [period, hasML, hasMagalu, hasShopee, ml?.revenue30d])
+  }, [period, hasML, ml?.revenue30d])
 
   // Changelog fallback
   const changelogFallback: ChangelogEntry[] = [
@@ -375,6 +378,23 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
+        </div>
+      </motion.div>
+
+      {/* Blog banner */}
+      <motion.div variants={stagger.item}>
+        <div className="glass-card p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BookOpen className="w-5 h-5 text-primary-400" />
+            <div>
+              <p className="text-white font-medium text-sm">Blog Foguetim</p>
+              <p className="text-slate-400 text-xs">Dicas para vender mais nos marketplaces</p>
+            </div>
+          </div>
+          <a href="https://www.foguetim.com.br/blog" target="_blank" rel="noopener noreferrer"
+             className="px-3 py-1.5 rounded-lg bg-primary-500/20 text-primary-400 text-xs font-medium hover:bg-primary-500/30 transition-all flex items-center gap-1">
+            Ler artigos <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
       </motion.div>
 

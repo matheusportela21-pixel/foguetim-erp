@@ -20,7 +20,7 @@ import { getMLConnection, getValidToken, ML_API_BASE } from '@/lib/mercadolivre'
 const ORDERS_LIMIT = 50   // ML max por página
 const MAX_PAGES    = 10   // segurança: máximo 500 pedidos (10 × 50)
 
-export async function GET() {
+export async function GET(req: Request) {
   const { dataOwnerId, error } = await resolveDataOwner()
   if (error) return error
 
@@ -34,7 +34,11 @@ export async function GET() {
 
   const auth  = { Authorization: `Bearer ${token}` }
   const mlId  = conn.ml_user_id
-  const dateFrom30d = new Date(Date.now() - 30 * 86400_000).toISOString()
+
+  // Accept ?days=N parameter (default 30)
+  const url = new URL(req.url)
+  const days = Math.min(Math.max(Number(url.searchParams.get('days')) || 30, 1), 90)
+  const dateFrom = new Date(Date.now() - days * 86400_000).toISOString()
 
   // ── Anúncios ativos + Perguntas pendentes — em paralelo ──────────────────
   const [activeRes, questionsRes] = await Promise.allSettled([
@@ -68,7 +72,7 @@ export async function GET() {
       const r = await fetch(
         `${ML_API_BASE}/orders/search?seller=${mlId}&sort=date_desc` +
         `&limit=${ORDERS_LIMIT}&offset=${offset}` +
-        `&order.date_created.from=${dateFrom30d}`,
+        `&order.date_created.from=${dateFrom}`,
         { headers: auth }
       )
       if (!r.ok) break
@@ -104,5 +108,6 @@ export async function GET() {
     revenue30d,
     avgTicket,
     pendingQuestions,
+    days,
   })
 }

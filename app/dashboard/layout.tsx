@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ThemeProvider>
       <PlanProvider>
-        <div className="min-h-screen bg-space-900 stars-bg">
+        <div className="min-h-screen bg-gray-50 dark:bg-space-900 dark:stars-bg">
           {/* Ambient background */}
           <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-[0.04]"

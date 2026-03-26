@@ -58,9 +58,9 @@ const CHANNELS: Omit<ChannelInfo, 'connected' | 'listingCount'>[] = [
 ]
 
 const CONNECTION_ENDPOINTS: Record<string, string> = {
-  ml:     '/api/mercadolivre/connection',
-  shopee: '/api/shopee/connection',
-  magalu: '/api/magalu/connection',
+  ml:     '/api/mercadolivre/status',
+  shopee: '/api/shopee/status',
+  magalu: '/api/magalu/status',
 }
 
 const PAGE_SIZE = 50
@@ -105,13 +105,30 @@ export default function MigradorPage() {
         CHANNELS.map(async ch => {
           try {
             const res = await fetch(CONNECTION_ENDPOINTS[ch.key])
-            const data = await res.json()
-            return {
-              ...ch,
-              connected: data.connected ?? false,
-              listingCount: data.listing_count ?? null,
+            if (!res.ok) {
+              console.warn(`[Migrador] ${ch.label} status check failed: HTTP ${res.status}`)
+              return { ...ch, connected: false, listingCount: null }
             }
-          } catch {
+            const data = await res.json()
+            const connected = !!data.connected
+
+            // Fetch listing count for connected channels
+            let listingCount: number | null = null
+            if (connected) {
+              try {
+                const countRes = await fetch(`/api/listings/migrate/products?channel=${ch.key}&limit=1&offset=0&status=active`)
+                if (countRes.ok) {
+                  const countData = await countRes.json()
+                  listingCount = countData.total ?? null
+                }
+              } catch (e) {
+                console.warn(`[Migrador] ${ch.label} listing count fetch failed:`, e)
+              }
+            }
+
+            return { ...ch, connected, listingCount }
+          } catch (e) {
+            console.warn(`[Migrador] ${ch.label} connection check failed:`, e)
             return { ...ch, connected: false, listingCount: null }
           }
         })

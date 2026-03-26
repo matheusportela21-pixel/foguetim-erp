@@ -46,11 +46,23 @@ export function detectMarketplace(url: string): string {
 
 /** Extrai item_id de URLs do ML (ex: /p/MLB12345678 ou /MLB-1234567890-...) */
 function extractMLItemId(url: string): string | null {
-  const patterns = [/\/p\/(MLB\d+)/, /(MLB[-]?\d+)/]
+  // Clean URL: remove fragment and query params
+  const cleanUrl = url.split('#')[0].split('?')[0]
+
+  const patterns = [
+    /\/p\/(MLB\d+)/i,
+    /(MLB[-]?\d+)/i,
+  ]
+
   for (const p of patterns) {
-    const m = url.match(p)
+    const m = cleanUrl.match(p)
     if (m) return m[1].replace(/-/g, '')
   }
+
+  // Try from full URL (ID might be embedded)
+  const fullMatch = url.match(/(MLB\d{8,})/i)
+  if (fullMatch) return fullMatch[1]
+
   return null
 }
 
