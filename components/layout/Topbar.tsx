@@ -14,7 +14,7 @@ import {
   Menu, X, ChevronDown, ChevronRight, Plus, ExternalLink,
   Eye, Megaphone, Scale, BarChart, Activity, Archive,
   Search, Sun, Moon, Info, AlertTriangle, XCircle, CheckCircle2, Loader2,
-  CheckCheck, Bug, Lightbulb, BookOpen,
+  CheckCheck, Bug, Lightbulb, BookOpen, Copy, FileEdit,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, isConfigured } from '@/lib/supabase'
@@ -30,7 +30,7 @@ const ICONS: Record<string, React.ElementType> = {
   Star, Send, Truck, Calculator, FileText, Receipt, Download, Bell, Cpu,
   Settings, Users, HelpCircle, LogOut, Shield, Plus, ExternalLink,
   Eye, Megaphone, Scale, BarChart, Activity, Archive, Menu, X, ChevronDown,
-  Search, Bug, Lightbulb, BookOpen,
+  Search, Bug, Lightbulb, BookOpen, Copy, FileEdit,
 }
 
 // ─── Notification types ─────────────────────────────────────────────────────
@@ -89,6 +89,8 @@ const TOPBAR_MENUS: TopMenu[] = [
       { label: 'Categorias',     href: '/dashboard/armazem/categorias',    icon: 'Tag' },
       { label: 'Armazéns',       href: '/dashboard/armazem/armazens',      icon: 'Warehouse' },
       { label: 'Localizações',   href: '/dashboard/armazem/localizacoes',  icon: 'MapPin' },
+      { label: 'Copiador',       href: '/dashboard/copiador',              icon: 'Copy' },
+      { label: 'Rascunhos',      href: '/dashboard/rascunhos',             icon: 'FileEdit' },
     ],
   },
   {
