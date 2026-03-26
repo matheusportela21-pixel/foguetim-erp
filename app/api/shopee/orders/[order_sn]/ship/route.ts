@@ -53,7 +53,6 @@ export async function POST(
       tokenData.shopId,
       shipPayload,
     )
-    console.log(`[Shopee] ship_order order_sn=${order_sn} user=${dataOwnerId}`)
     return NextResponse.json(data)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

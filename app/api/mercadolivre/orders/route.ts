@@ -3,10 +3,12 @@
  * Lista pedidos do vendedor com resposta formatada.
  *
  * Query params:
- *   offset   (default 0)
- *   limit    (default 50)
- *   status   paid | shipped | delivered | cancelled | all (default: all)
- *   days     últimos N dias (default: 30)
+ *   offset          (default 0)
+ *   limit           (default 50)
+ *   status          paid | shipped | delivered | cancelled | all (default: all)
+ *   days            últimos N dias (default: 30)
+ *   sort            date_desc | date_asc | total_amount_desc | total_amount_asc (default: date_desc)
+ *   shipping_type   filtro de tipo de envio (passthrough)
  *
  * SOMENTE LEITURA.
  */
@@ -26,12 +28,14 @@ export async function GET(req: NextRequest) {
   const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido — reconecte o ML' }, { status: 401 })
 
-  const sp       = new URL(req.url).searchParams
-  const offset   = Number(sp.get('offset') ?? 0)
-  const limit    = Math.min(Number(sp.get('limit') ?? 50), 50)
-  const status   = sp.get('status') ?? 'all'
-  const days     = Number(sp.get('days') ?? 30)
-  const buyerId  = sp.get('buyer_id') ?? null
+  const sp            = new URL(req.url).searchParams
+  const offset        = Number(sp.get('offset') ?? 0)
+  const limit         = Math.min(Number(sp.get('limit') ?? 50), 50)
+  const status        = sp.get('status') ?? 'all'
+  const days          = Number(sp.get('days') ?? 30)
+  const buyerId       = sp.get('buyer_id') ?? null
+  const sort          = sp.get('sort') ?? 'date_desc'
+  const shippingType  = sp.get('shipping_type') ?? null
 
   const auth = { Authorization: `Bearer ${token}` }
 
@@ -39,7 +43,10 @@ export async function GET(req: NextRequest) {
     const dateFrom = new Date(Date.now() - days * 86400_000).toISOString()
     const statusParam = status !== 'all' ? `&order.status=${status}` : ''
     const buyerParam  = buyerId ? `&buyer=${buyerId}` : ''
-    const url = `${ML_API_BASE}/orders/search?seller=${conn.ml_user_id}&sort=date_desc&offset=${offset}&limit=${limit}&order.date_created.from=${dateFrom}${statusParam}${buyerParam}`
+    // ML API only supports date_asc and date_desc for sort
+    const mlSort = sort === 'date_asc' ? 'date_asc' : 'date_desc'
+    const shippingParam = shippingType ? `&shipping.shipping_type=${shippingType}` : ''
+    const url = `${ML_API_BASE}/orders/search?seller=${conn.ml_user_id}&sort=${mlSort}&offset=${offset}&limit=${limit}&order.date_created.from=${dateFrom}${statusParam}${buyerParam}${shippingParam}`
 
     const res = await fetch(url, { headers: auth })
     if (!res.ok) {

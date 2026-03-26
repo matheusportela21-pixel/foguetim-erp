@@ -6,8 +6,9 @@
  *   1. GET /shipments/{id}          (x-format-new: true)
  *   2. GET /shipments/{id}/history
  *   3. GET /shipments/{id}/carrier
+ *   4. GET /shipments/{id}/costs
  *
- * Retorna objeto unificado com shipment + history + carrier.
+ * Retorna objeto unificado com shipment + history + carrier + costs.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveDataOwner } from '@/lib/auth/api-permissions'
@@ -35,7 +36,7 @@ export async function GET(
   const auth = { Authorization: `Bearer ${token}` }
 
   try {
-    const [shipmentRes, historyRes, carrierRes] = await Promise.allSettled([
+    const [shipmentRes, historyRes, carrierRes, costsRes] = await Promise.allSettled([
       fetch(
         `${ML_API_BASE}/shipments/${shipment_id}`,
         { headers: { ...auth, 'x-format-new': 'true' } },
@@ -48,12 +49,17 @@ export async function GET(
         `${ML_API_BASE}/shipments/${shipment_id}/carrier`,
         { headers: auth },
       ),
+      fetch(
+        `${ML_API_BASE}/shipments/${shipment_id}/costs`,
+        { headers: auth },
+      ),
     ])
 
-    const [shipment, historyRaw, carrier] = await Promise.all([
+    const [shipment, historyRaw, carrier, costsRaw] = await Promise.all([
       safeParse(shipmentRes),
       safeParse(historyRes),
       safeParse(carrierRes),
+      safeParse(costsRes),
     ])
 
     if (!shipment) {
@@ -65,8 +71,25 @@ export async function GET(
       ? historyRaw
       : (historyRaw?.history ?? historyRaw?.results ?? [])
 
+    // Normalizar custos do envio
+    let costs: { gross_amount: number; discount: number; seller_cost: number; buyer_cost: number } | null = null
+    if (costsRaw) {
+      const senders   = (costsRaw.senders   as Array<Record<string, unknown>>) ?? []
+      const receivers = (costsRaw.receivers  as Array<Record<string, unknown>>) ?? []
+      let grossAmount = 0, discount = 0, sellerCost = 0, buyerCost = 0
+      for (const s of senders) {
+        grossAmount += Number(s.cost ?? 0)
+        discount    += Number(s.discount ?? 0)
+        sellerCost  += Number(s.cost ?? 0) - Number(s.discount ?? 0)
+      }
+      for (const r of receivers) {
+        buyerCost += Number(r.cost ?? 0)
+      }
+      costs = { gross_amount: grossAmount, discount, seller_cost: sellerCost, buyer_cost: buyerCost }
+    }
+
     return NextResponse.json(
-      { connected: true, shipment, history, carrier },
+      { connected: true, shipment, history, carrier, costs },
       { headers: { 'Cache-Control': 'private, max-age=60' } },
     )
   } catch (err) {

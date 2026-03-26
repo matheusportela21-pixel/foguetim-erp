@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
   }
 
   const list = users ?? []
-  console.log(`[cron/weekly-summary] Found ${list.length} user(s) with weekly_summary enabled`)
 
   // ── Enviar para cada usuário ────────────────────────────────────────────
   const results = await Promise.allSettled(
@@ -41,8 +40,6 @@ export async function GET(req: NextRequest) {
 
   const sent   = results.filter(r => r.status === 'fulfilled' && r.value  === true).length
   const failed = results.filter(r => r.status === 'rejected'  || r.value === false).length
-
-  console.log(`[cron/weekly-summary] Done — sent: ${sent}, failed: ${failed}`)
 
   return NextResponse.json({ sent, failed, total: list.length })
 }

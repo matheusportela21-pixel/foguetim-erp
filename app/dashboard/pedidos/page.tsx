@@ -8,6 +8,7 @@ import {
   Search, Filter, Eye, Printer, Tag, X, CheckSquare, Square,
   AlertTriangle, Bell, ChevronDown, ChevronUp, ArrowUpDown,
   TrendingUp, Calendar, MapPin, Zap, Loader2, RefreshCw, Link2,
+  CreditCard, Copy, ExternalLink, FileDown,
 } from 'lucide-react'
 import {
   PEDIDOS, STATUS_META, MKT_META,
@@ -28,10 +29,30 @@ interface MLOrder {
   date_created: string
   date_closed: string | null
   total_amount: number
+  currency_id?: string
   buyer: { id: number; nickname: string; first_name?: string; last_name?: string }
   order_items: { title: string; quantity: number; unit_price: number; thumbnail?: string }[]
   payments: { status: string; total_paid_amount: number; payment_method_id: string }[]
   shipping: { id: number; status: string; tracking_number?: string }
+  tags?: string[]
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  credit_card: 'Cart\u00e3o de cr\u00e9dito',
+  debit_card: 'Cart\u00e3o de d\u00e9bito',
+  account_money: 'Mercado Pago',
+  ticket: 'Boleto',
+  pix: 'Pix',
+}
+
+const SHIPPING_STATUS_PT: Record<string, { label: string; cls: string }> = {
+  pending:          { label: 'Pendente',     cls: 'bg-amber-400/10 text-amber-400' },
+  handling:         { label: 'Preparando',   cls: 'bg-amber-400/10 text-amber-400' },
+  ready_to_ship:    { label: 'Pronto envio', cls: 'bg-yellow-400/10 text-yellow-400' },
+  shipped:          { label: 'Enviado',      cls: 'bg-blue-400/10 text-blue-400' },
+  delivered:        { label: 'Entregue',     cls: 'bg-green-400/10 text-green-400' },
+  not_delivered:    { label: 'N\u00e3o entregue', cls: 'bg-red-400/10 text-red-400' },
+  cancelled:        { label: 'Cancelado',    cls: 'bg-red-400/10 text-red-400' },
 }
 
 // ─── ML ORDERS TAB ───────────────────────────────────────────────────────────
@@ -48,6 +69,9 @@ function MLOrdersTab() {
   const [offset, setOffset]         = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedOrder, setSelectedOrder] = useState<MLOrder | null>(null)
+  const [mlSelected, setMlSelected] = useState<number[]>([])
+  const [sortMode, setSortMode]     = useState<'date_desc' | 'date_asc' | 'total_desc' | 'total_asc'>('date_desc')
+  const [showLabelModal, setShowLabelModal] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -81,7 +105,8 @@ function MLOrdersTab() {
       + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
   }
 
-  const filtered = search
+  // Local search filter
+  const searched = search
     ? orders.filter(o =>
         String(o.id).includes(search) ||
         o.buyer.nickname?.toLowerCase().includes(search.toLowerCase()) ||
@@ -89,15 +114,64 @@ function MLOrdersTab() {
       )
     : orders
 
+  // Local sort
+  const filtered = useMemo(() => {
+    const sorted = [...searched]
+    sorted.sort((a, b) => {
+      switch (sortMode) {
+        case 'date_asc':    return new Date(a.date_created).getTime() - new Date(b.date_created).getTime()
+        case 'total_desc':  return b.total_amount - a.total_amount
+        case 'total_asc':   return a.total_amount - b.total_amount
+        default:            return new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+      }
+    })
+    return sorted
+  }, [searched, sortMode])
+
+  // Workflow tab counts
+  const countByStatus = useMemo(() => {
+    const counts: Record<string, number> = { all: orders.length, paid: 0, shipped: 0, delivered: 0, cancelled: 0 }
+    for (const o of orders) {
+      if (counts[o.status] !== undefined) counts[o.status]++
+    }
+    return counts
+  }, [orders])
+
+  // Selection helpers
+  const mlAllSelected = mlSelected.length === filtered.length && filtered.length > 0
+  const toggleMlSelect = (id: number) =>
+    setMlSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const toggleMlSelectAll = () =>
+    setMlSelected(mlAllSelected ? [] : filtered.map(o => o.id))
+
+  // CSV export for selected
+  const exportSelectedCSV = () => {
+    const rows = orders.filter(o => mlSelected.includes(o.id))
+    const header = 'Pedido,Data,Comprador,Produto,Valor,Status,Envio\n'
+    const csv = header + rows.map(o =>
+      `${o.id},"${fmtDate(o.date_created)}","${o.buyer.nickname}","${o.order_items[0]?.title ?? ''}",${o.total_amount},${o.status},${o.shipping?.status ?? ''}`
+    ).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'pedidos-ml-selecionados.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Copy tracking number
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {})
+  }
+
   if (notConnected) return (
     <div className="flex flex-col items-center justify-center py-16 gap-4">
       <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
         <Link2 className="w-6 h-6 text-yellow-400" />
       </div>
-      <p className="text-sm font-semibold text-white">Mercado Livre não conectado</p>
-      <p className="text-xs text-slate-500">Conecte sua conta em Integrações para ver seus pedidos.</p>
+      <p className="text-sm font-semibold text-white">Mercado Livre n\u00e3o conectado</p>
+      <p className="text-xs text-slate-500">Conecte sua conta em Integra\u00e7\u00f5es para ver seus pedidos.</p>
       <a href="/dashboard/integracoes" className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-xs font-bold hover:bg-yellow-500/20 transition-colors">
-        Ir para Integrações
+        Ir para Integra\u00e7\u00f5es
       </a>
     </div>
   )
@@ -123,7 +197,7 @@ function MLOrdersTab() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Toolbar */}
+      {/* Toolbar row 1: Search + Period + Sort + Actions */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
@@ -133,29 +207,31 @@ function MLOrdersTab() {
         </div>
 
         <div className="flex items-center gap-1">
-          {[
-            { v: 'all',      l: 'Todos'     },
-            { v: 'paid',     l: 'Pagos'     },
-            { v: 'shipped',  l: 'Enviados'  },
-            { v: 'delivered',l: 'Entregues' },
-            { v: 'cancelled',l: 'Cancelados'},
-          ].map(s => (
-            <button key={s.v} onClick={() => { setStatusFilter(s.v); setOffset(0) }}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s.v ? 'bg-yellow-500/15 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}>
+          {[7, 15, 30, 90].map(d => (
+            <button key={d} onClick={() => { setDays(d); setOffset(0) }}
+              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${days === d ? 'bg-purple-500/15 text-purple-400' : 'text-slate-600 hover:text-slate-400'}`}>
+              {d}d
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {([
+            { v: 'date_desc' as const, l: 'Mais recentes' },
+            { v: 'date_asc'  as const, l: 'Mais antigos'  },
+            { v: 'total_desc' as const,l: 'Maior valor'   },
+            { v: 'total_asc' as const, l: 'Menor valor'   },
+          ]).map(s => (
+            <button key={s.v} onClick={() => setSortMode(s.v)}
+              className={`px-2 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${sortMode === s.v ? 'bg-cyan-500/15 text-cyan-400' : 'text-slate-600 hover:text-slate-400'}`}>
               {s.l}
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-1 ml-auto">
-          {[7, 30, 90].map(d => (
-            <button key={d} onClick={() => { setDays(d); setOffset(0) }}
-              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${days === d ? 'bg-purple-500/15 text-purple-400' : 'text-slate-600 hover:text-slate-400'}`}>
-              {d}d
-            </button>
-          ))}
           <button onClick={() => setRefreshKey(k => k + 1)} disabled={loading}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all ml-1 disabled:opacity-50">
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 border border-white/[0.06] hover:bg-white/[0.04] transition-all disabled:opacity-50">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <ExportPDFButton onExport={() => generatePedidosPDF({
@@ -173,7 +249,7 @@ function MLOrdersTab() {
               receita:      orders.reduce((s, o) => s + o.total_amount, 0),
               ticket_medio: orders.length ? orders.reduce((s, o) => s + o.total_amount, 0) / orders.length : 0,
             },
-            period: `Últimos ${days} dias`,
+            period: `\u00DAltimos ${days} dias`,
           })} />
           <ExportCSVButton
             data={orders.map(o => ({
@@ -187,7 +263,7 @@ function MLOrdersTab() {
             }))}
             filename="pedidos"
             columns={[
-              { key: 'id',        label: 'Nº Pedido'  },
+              { key: 'id',        label: 'N\u00BA Pedido'  },
               { key: 'data',      label: 'Data'        },
               { key: 'comprador', label: 'Comprador'   },
               { key: 'produto',   label: 'Produto'     },
@@ -197,9 +273,39 @@ function MLOrdersTab() {
             ]}
           />
         </div>
+      </div>
 
-        <span className="text-xs text-slate-600">
-          <span className="text-white font-bold">{paging.total}</span> pedidos últimos {days}d
+      {/* Workflow Tabs */}
+      <div className="flex items-center gap-1 border-b border-white/[0.06] pb-0">
+        {[
+          { v: 'all',       l: 'Todos',      icon: ShoppingCart },
+          { v: 'paid',      l: 'Pra enviar', icon: Package      },
+          { v: 'shipped',   l: 'Enviados',   icon: Truck        },
+          { v: 'delivered', l: 'Entregues',   icon: CheckCircle2 },
+          { v: 'cancelled', l: 'Cancelados',  icon: XCircle      },
+        ].map(tab => {
+          const Icon = tab.icon
+          const count = countByStatus[tab.v] ?? 0
+          const active = statusFilter === tab.v
+          return (
+            <button key={tab.v} onClick={() => { setStatusFilter(tab.v); setOffset(0); setMlSelected([]) }}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-all border-b-2 -mb-px ${
+                active
+                  ? 'border-yellow-400 text-yellow-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}>
+              <Icon className="w-3.5 h-3.5" />
+              {tab.l}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                active ? 'bg-yellow-400/15 text-yellow-400' : 'bg-white/[0.04] text-slate-600'
+              }`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
+        <span className="ml-auto text-xs text-slate-600">
+          <span className="text-white font-bold">{paging.total}</span> pedidos {days}d
         </span>
       </div>
 
@@ -209,7 +315,7 @@ function MLOrdersTab() {
           {[
             { label: 'Total de pedidos', value: String(paging.total),                                                  cls: 'text-white'    },
             { label: 'Faturamento',      value: fmtBRL(orders.reduce((s, o) => s + o.total_amount, 0)),               cls: 'text-green-400'},
-            { label: 'Ticket médio',     value: orders.length ? fmtBRL(orders.reduce((s,o)=>s+o.total_amount,0)/orders.length) : '—', cls: 'text-cyan-400' },
+            { label: 'Ticket m\u00e9dio',     value: orders.length ? fmtBRL(orders.reduce((s,o)=>s+o.total_amount,0)/orders.length) : '\u2014', cls: 'text-cyan-400' },
           ].map(k => (
             <div key={k.label} className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.06]">
               <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">{k.label}</p>
@@ -219,13 +325,33 @@ function MLOrdersTab() {
         </div>
       )}
 
+      {/* Bulk action bar */}
+      {mlSelected.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-yellow-900/20 border border-yellow-500/20 rounded-xl">
+          <CheckSquare className="w-4 h-4 text-yellow-400" />
+          <span className="text-sm text-slate-300 font-medium">{mlSelected.length} selecionado(s)</span>
+          <div className="flex-1" />
+          <button onClick={exportSelectedCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.08] rounded-lg transition-all">
+            <FileDown className="w-3.5 h-3.5" /> Exportar CSV
+          </button>
+          <button onClick={() => setShowLabelModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.08] rounded-lg transition-all">
+            <Tag className="w-3.5 h-3.5" /> Imprimir etiquetas
+          </button>
+          <button onClick={() => setMlSelected([])} className="p-1.5 text-slate-600 hover:text-slate-400 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Orders table */}
       {filtered.length === 0 ? (
         <EmptyState
           image="box"
           title="Nenhum pedido encontrado"
-          description="Os pedidos aparecerão aqui quando você vender pelo marketplace."
-          action={{ label: "Ver integrações", href: "/dashboard/integracoes" }}
+          description="Os pedidos aparecer\u00e3o aqui quando voc\u00ea vender pelo marketplace."
+          action={{ label: "Ver integra\u00e7\u00f5es", href: "/dashboard/integracoes" }}
         />
       ) : (
         <>
@@ -233,7 +359,15 @@ function MLOrdersTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  {['Nº Pedido', 'Data', 'Comprador', 'Produtos', 'Valor', 'Status', 'Envio'].map(h => (
+                  <th className="pl-3 pr-1 py-2.5">
+                    <button onClick={toggleMlSelectAll}>
+                      {mlAllSelected
+                        ? <CheckSquare className="w-3.5 h-3.5 text-yellow-400" />
+                        : <Square className="w-3.5 h-3.5 text-slate-600" />}
+                    </button>
+                  </th>
+                  <th className="py-2.5 px-2 w-9"></th>
+                  {['N\u00BA Pedido', 'Data', 'Comprador', 'Produtos', 'Valor', 'Status', 'Envio'].map(h => (
                     <th key={h} className="text-left py-2.5 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -241,10 +375,30 @@ function MLOrdersTab() {
               <tbody className="divide-y divide-white/[0.04]">
                 {filtered.map(order => {
                   const st = STATUS_PT[order.status] ?? { label: order.status, cls: 'bg-slate-700 text-slate-400' }
+                  const shipSt = SHIPPING_STATUS_PT[order.shipping?.status] ?? null
+                  const isSelected = mlSelected.includes(order.id)
+                  const thumb = order.order_items[0]?.thumbnail
                   return (
                     <tr key={order.id}
-                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      className={`hover:bg-white/[0.02] transition-colors cursor-pointer ${isSelected ? 'bg-yellow-500/[0.04]' : ''}`}
                       onClick={() => setSelectedOrder(order)}>
+                      <td className="pl-3 pr-1 py-3" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => toggleMlSelect(order.id)}>
+                          {isSelected
+                            ? <CheckSquare className="w-3.5 h-3.5 text-yellow-400" />
+                            : <Square className="w-3.5 h-3.5 text-slate-700 hover:text-slate-500" />}
+                        </button>
+                      </td>
+                      <td className="py-3 px-2">
+                        {thumb ? (
+                          <img src={thumb.replace('http://', 'https://')} alt="" className="w-8 h-8 rounded-lg object-cover bg-dark-700"
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center">
+                            <Package className="w-3.5 h-3.5 text-slate-700" />
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-3 font-mono text-slate-400 text-[10px]">#{order.id}</td>
                       <td className="py-3 px-3 text-slate-400 whitespace-nowrap">{fmtDate(order.date_created)}</td>
                       <td className="py-3 px-3">
@@ -259,14 +413,14 @@ function MLOrdersTab() {
                             title={`Pack #${order.pack_id}`}
                             onClick={e => e.stopPropagation()}
                           >
-                            🛒 Pack #{order.pack_id}
+                            Pack #{order.pack_id}
                           </a>
                         )}
                       </td>
                       <td className="py-3 px-3 max-w-[200px]">
                         {order.order_items.map((it, i) => (
                           <p key={i} className="text-slate-300 truncate text-[10px]">
-                            {it.quantity}× {it.title}
+                            {it.quantity}\u00d7 {it.title}
                           </p>
                         ))}
                       </td>
@@ -276,8 +430,12 @@ function MLOrdersTab() {
                       <td className="py-3 px-3">
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                       </td>
-                      <td className="py-3 px-3 text-[10px] text-slate-500">
-                        {order.shipping?.tracking_number ?? '—'}
+                      <td className="py-3 px-3">
+                        {shipSt ? (
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${shipSt.cls}`}>{shipSt.label}</span>
+                        ) : (
+                          <span className="text-[10px] text-slate-600">{order.shipping?.status ?? '\u2014'}</span>
+                        )}
                       </td>
                     </tr>
                   )
@@ -290,16 +448,16 @@ function MLOrdersTab() {
           {paging.total > 50 && (
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-slate-600">
-                Mostrando {offset + 1}–{Math.min(offset + 50, paging.total)} de {paging.total}
+                Mostrando {offset + 1}\u2013{Math.min(offset + 50, paging.total)} de {paging.total}
               </span>
               <div className="flex gap-2">
                 <button onClick={() => setOffset(Math.max(0, offset - 50))} disabled={offset === 0}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
-                  ← Anterior
+                  \u2190 Anterior
                 </button>
                 <button onClick={() => setOffset(offset + 50)} disabled={offset + 50 >= paging.total}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-slate-400 disabled:opacity-30 hover:bg-white/[0.06] transition-all">
-                  Próxima →
+                  Pr\u00f3xima \u2192
                 </button>
               </div>
             </div>
@@ -307,13 +465,47 @@ function MLOrdersTab() {
         </>
       )}
 
-      {/* Order detail modal */}
-      {selectedOrder && (
+      {/* Label print modal */}
+      {showLabelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setSelectedOrder(null)}>
-          <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl"
+          onClick={() => setShowLabelModal(false)}>
+          <div className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4"
             onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                <Tag className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="font-bold text-white text-sm">Imprimir etiquetas</p>
+                <p className="text-xs text-slate-500">Somente leitura \u2014 esta fun\u00e7\u00e3o redireciona ao Mercado Livre</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">
+              Para imprimir etiquetas de envio, acesse o painel de vendas do Mercado Livre diretamente.
+            </p>
+            <div className="flex items-center gap-3 pt-2">
+              <a href="https://www.mercadolivre.com.br/vendas/lista" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-500/15 text-yellow-400 text-xs font-bold hover:bg-yellow-500/25 transition-colors">
+                Ir para o ML <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <button onClick={() => setShowLabelModal(false)}
+                className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 transition-colors">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order detail drawer (slide-in from right) */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm"
+          onClick={() => setSelectedOrder(null)}>
+          <div className="bg-dark-800 border-l border-white/10 w-full max-w-lg shadow-2xl overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] sticky top-0 bg-dark-800/95 backdrop-blur-sm z-10">
               <div>
                 <p className="font-bold text-white text-sm">Pedido #{selectedOrder.id}</p>
                 <p className="text-xs text-slate-500">{fmtDate(selectedOrder.date_created)}</p>
@@ -323,36 +515,184 @@ function MLOrdersTab() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="px-6 py-4 space-y-4">
-              <div>
-                <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">Comprador</p>
-                <p className="text-sm text-white font-semibold">{selectedOrder.buyer.nickname}</p>
-                <p className="text-xs text-slate-500">{selectedOrder.buyer.first_name} {selectedOrder.buyer.last_name}</p>
+
+            <div className="px-6 py-5 space-y-5">
+
+              {/* Section 1: Resumo */}
+              <div className="space-y-3">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold">Resumo</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${(STATUS_PT[selectedOrder.status] ?? { cls: 'bg-slate-700 text-slate-400' }).cls}`}>
+                    {(STATUS_PT[selectedOrder.status] ?? { label: selectedOrder.status }).label}
+                  </span>
+                  {selectedOrder.pack_id && (
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-400/10 text-purple-400">
+                      Pack #{selectedOrder.pack_id}
+                    </span>
+                  )}
+                  {selectedOrder.tags && selectedOrder.tags.length > 0 && selectedOrder.tags.map((tag, i) => (
+                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-500">{tag}</span>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-xs text-slate-500">Total do pedido</p>
+                  <p className="text-lg font-bold text-white">{fmtBRL(selectedOrder.total_amount)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2">Itens</p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Section 2: Itens */}
+              <div className="space-y-3">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold">Itens</p>
                 <div className="space-y-2">
                   {selectedOrder.order_items.map((it, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      {it.thumbnail && <img src={it.thumbnail.replace('http://', 'https://')} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0 bg-dark-700" onError={e => { (e.currentTarget as HTMLImageElement).src = '' }} />}
+                    <div key={i} className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-2.5">
+                      {it.thumbnail ? (
+                        <img src={it.thumbnail.replace('http://', 'https://')} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 bg-dark-700"
+                          onError={e => { (e.currentTarget as HTMLImageElement).src = '' }} />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-dark-700 flex items-center justify-center shrink-0">
+                          <Package className="w-4 h-4 text-slate-700" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-white truncate">{it.title}</p>
-                        <p className="text-[10px] text-slate-500">{it.quantity}× {fmtBRL(it.unit_price)}</p>
+                        <p className="text-[10px] text-slate-500">{it.quantity}\u00d7 {fmtBRL(it.unit_price)}</p>
                       </div>
+                      <p className="text-xs font-bold text-white shrink-0">{fmtBRL(it.quantity * it.unit_price)}</p>
                     </div>
                   ))}
                 </div>
+                <a href="https://www.mercadolivre.com.br" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] text-yellow-400 hover:text-yellow-300 transition-colors">
+                  Ver no Mercado Livre <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
-                <p className="text-xs text-slate-500">Total</p>
-                <p className="text-lg font-bold text-white">{fmtBRL(selectedOrder.total_amount)}</p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Section 3: Comprador */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold">Comprador</p>
+                <p className="text-sm text-white font-semibold">{selectedOrder.buyer.nickname}</p>
+                {(selectedOrder.buyer.first_name || selectedOrder.buyer.last_name) && (
+                  <p className="text-xs text-slate-400">
+                    {[selectedOrder.buyer.first_name, selectedOrder.buyer.last_name].filter(Boolean).join(' ')}
+                  </p>
+                )}
               </div>
-              {selectedOrder.shipping?.tracking_number && (
-                <div>
-                  <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">Rastreamento</p>
-                  <p className="text-xs font-mono text-cyan-400">{selectedOrder.shipping.tracking_number}</p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Section 4: Pagamento */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold">Pagamento</p>
+                {selectedOrder.payments.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedOrder.payments.map((pm, i) => (
+                      <div key={i} className="bg-white/[0.02] rounded-xl p-3 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                            <span className="text-xs text-white font-medium">
+                              {PAYMENT_METHOD_LABELS[pm.payment_method_id] ?? pm.payment_method_id}
+                            </span>
+                          </div>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                            pm.status === 'approved' ? 'bg-green-400/10 text-green-400' :
+                            pm.status === 'pending'  ? 'bg-amber-400/10 text-amber-400' :
+                            'bg-slate-400/10 text-slate-400'
+                          }`}>
+                            {pm.status === 'approved' ? 'Aprovado' : pm.status === 'pending' ? 'Pendente' : pm.status}
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold text-white">{fmtBRL(pm.total_paid_amount)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">Sem dados de pagamento</p>
+                )}
+              </div>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Section 5: Envio */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold">Envio</p>
+                <div className="bg-white/[0.02] rounded-xl p-3 space-y-2">
+                  {selectedOrder.shipping?.status && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Status</span>
+                      {(() => {
+                        const ss = SHIPPING_STATUS_PT[selectedOrder.shipping.status]
+                        return ss ? (
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${ss.cls}`}>{ss.label}</span>
+                        ) : (
+                          <span className="text-xs text-slate-400">{selectedOrder.shipping.status}</span>
+                        )
+                      })()}
+                    </div>
+                  )}
+                  {selectedOrder.shipping?.id && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Shipping ID</span>
+                      <span className="text-xs font-mono text-slate-400">{selectedOrder.shipping.id}</span>
+                    </div>
+                  )}
+                  {selectedOrder.shipping?.tracking_number && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Rastreamento</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-mono text-cyan-400">{selectedOrder.shipping.tracking_number}</span>
+                        <button onClick={() => copyToClipboard(selectedOrder.shipping.tracking_number!)}
+                          className="p-1 rounded hover:bg-white/[0.06] text-slate-600 hover:text-slate-300 transition-all"
+                          title="Copiar">
+                          <Copy className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Section 6: Timeline */}
+              <div className="space-y-3">
+                <p className="text-[10px] text-slate-600 uppercase tracking-wider font-bold">Timeline</p>
+                <div className="space-y-0">
+                  {(() => {
+                    const steps = [
+                      { key: 'created',   label: 'Criado',   reached: true,                                                   date: selectedOrder.date_created },
+                      { key: 'paid',      label: 'Pago',     reached: ['paid', 'shipped', 'delivered'].includes(selectedOrder.status), date: selectedOrder.date_closed },
+                      { key: 'shipped',   label: 'Enviado',  reached: ['shipped', 'delivered'].includes(selectedOrder.status),  date: null },
+                      { key: 'delivered', label: 'Entregue', reached: selectedOrder.status === 'delivered',                     date: null },
+                    ]
+                    return steps.map((step, i) => (
+                      <div key={step.key} className="flex items-start gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-3 h-3 rounded-full border-2 ${
+                            step.reached
+                              ? 'bg-green-400 border-green-400'
+                              : 'bg-transparent border-slate-700'
+                          }`} />
+                          {i < steps.length - 1 && (
+                            <div className={`w-0.5 h-6 ${step.reached ? 'bg-green-400/30' : 'bg-slate-800'}`} />
+                          )}
+                        </div>
+                        <div className="-mt-0.5">
+                          <p className={`text-xs font-semibold ${step.reached ? 'text-white' : 'text-slate-600'}`}>{step.label}</p>
+                          {step.date && step.reached && (
+                            <p className="text-[10px] text-slate-500">{fmtDate(step.date)}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -389,7 +729,7 @@ function prazoStatus(prazo: string): 'urgent' | 'tomorrow' | 'ok' {
 
 function ordinalCompra(n: number) {
   if (n === 0) return null
-  return `${n + 1}ª compra`
+  return `${n + 1}\u00aa compra`
 }
 
 // ─── STATUS ICON ────────────────────────────────────────────────────────────
@@ -565,10 +905,10 @@ export default function PedidosPage() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
             <div>
               <p className="font-bold text-white text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>Pedidos do Mercado Livre</p>
-              <p className="text-xs text-slate-600 mt-0.5">Dados em tempo real da API do ML · Clique em um pedido para ver detalhes</p>
+              <p className="text-xs text-slate-600 mt-0.5">Dados em tempo real da API do ML \u00b7 Clique em um pedido para ver detalhes</p>
             </div>
             <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
-              🔒 Somente leitura
+              Somente leitura
             </span>
           </div>
           <MLOrdersTab />
@@ -582,14 +922,14 @@ export default function PedidosPage() {
           <KpiCard label="Pedidos Hoje" value={kpis.pedidosHoje} sub="+3 vs ontem"
             icon={ShoppingCart} iconCls="bg-purple-400/10 text-purple-400" />
           <KpiCard label="Aguardando Envio" value={kpis.aguardandoEnvio}
-            sub={kpis.aguardandoEnvio > 5 ? '⚠ Acima do ideal' : 'Normal'}
+            sub={kpis.aguardandoEnvio > 5 ? 'Acima do ideal' : 'Normal'}
             icon={Package} iconCls={kpis.aguardandoEnvio > 5 ? 'bg-red-400/10 text-red-400' : 'bg-blue-400/10 text-blue-400'}
             urgent={kpis.aguardandoEnvio > 5} />
           <KpiCard label="Enviados Hoje" value={kpis.enviadosHoje} sub="via Correios + Jadlog"
             icon={Send} iconCls="bg-emerald-400/10 text-emerald-400" />
           <KpiCard label="Faturamento Hoje" value={fmt(kpis.faturamentoHoje)}
             icon={TrendingUp} iconCls="bg-cyan-400/10 text-cyan-400" />
-          <KpiCard label="Ticket Médio" value={fmt(kpis.ticketMedio)}
+          <KpiCard label="Ticket M\u00e9dio" value={fmt(kpis.ticketMedio)}
             icon={CircleDollarSign} iconCls="bg-indigo-400/10 text-indigo-400" />
           <KpiCard label="Prazo Hoje" value={kpis.prazosHoje} sub="precisam ser postados"
             icon={Clock} iconCls={kpis.prazosHoje > 0 ? 'bg-red-400/10 text-red-400' : 'bg-slate-700 text-slate-500'}
@@ -600,11 +940,11 @@ export default function PedidosPage() {
         <div className="space-y-2">
           {!dismissedAlerts.includes('urgent') && urgentCount > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-              <span className="text-sm">🔴</span>
+              <AlertTriangle className="w-4 h-4 text-red-400" />
               <button
                 onClick={() => { setStatusFilter('todos'); setDismissedAlerts([]); setSortBy('prazo'); setSortDir('asc') }}
                 className="flex-1 text-left text-sm text-red-300 font-medium hover:text-red-200 transition-colors">
-                {urgentCount} pedido{urgentCount > 1 ? 's precisam' : ' precisa'} ser enviado{urgentCount > 1 ? 's' : ''} HOJE! — clique para filtrar
+                {urgentCount} pedido{urgentCount > 1 ? 's precisam' : ' precisa'} ser enviado{urgentCount > 1 ? 's' : ''} HOJE! \u2014 clique para filtrar
               </button>
               <button onClick={() => dismissAlert('urgent')} className="text-slate-600 hover:text-slate-400 transition-colors">
                 <X className="w-4 h-4" />
@@ -613,9 +953,9 @@ export default function PedidosPage() {
           )}
           {!dismissedAlerts.includes('stuck') && (
             <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <span className="text-sm">⚠️</span>
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
               <button className="flex-1 text-left text-sm text-amber-300 hover:text-amber-200 transition-colors">
-                2 pedidos parados há mais de 48h sem atualização — clique para ver
+                2 pedidos parados h\u00e1 mais de 48h sem atualiza\u00e7\u00e3o \u2014 clique para ver
               </button>
               <button onClick={() => dismissAlert('stuck')} className="text-slate-600 hover:text-slate-400 transition-colors">
                 <X className="w-4 h-4" />
@@ -624,11 +964,11 @@ export default function PedidosPage() {
           )}
           {!dismissedAlerts.includes('devol') && devolucoesCount > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
-              <span className="text-sm">📦</span>
+              <Package className="w-4 h-4 text-orange-400" />
               <button
                 onClick={() => { setStatusFilter('devolvido'); dismissAlert('devol') }}
                 className="flex-1 text-left text-sm text-orange-300 hover:text-orange-200 transition-colors">
-                {devolucoesCount} devolução pendente de aprovação — clique para ver
+                {devolucoesCount} devolu\u00e7\u00e3o pendente de aprova\u00e7\u00e3o \u2014 clique para ver
               </button>
               <button onClick={() => dismissAlert('devol')} className="text-slate-600 hover:text-slate-400 transition-colors">
                 <X className="w-4 h-4" />
@@ -644,7 +984,7 @@ export default function PedidosPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por Nº pedido, cliente ou SKU..."
+                placeholder="Buscar por N\u00ba pedido, cliente ou SKU..."
                 className="input-cyber w-full pl-10 py-2.5 text-sm"
               />
             </div>
@@ -703,9 +1043,9 @@ export default function PedidosPage() {
                   </div>
                 </div>
 
-                {/* Período */}
+                {/* Per\u00edodo */}
                 <div>
-                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">Período</p>
+                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">Per\u00edodo</p>
                   <div className="flex gap-1.5">
                     {(['hoje', '7d', '30d', 'todos'] as const).map(p => (
                       <button key={p} onClick={() => setPeriodoFilter(p)}
@@ -731,7 +1071,7 @@ export default function PedidosPage() {
             <span className="text-sm text-slate-300 font-medium">{selected.length} pedido(s) selecionado(s)</span>
             <div className="flex-1" />
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.08] rounded-lg transition-all">
-              <Printer className="w-3.5 h-3.5" /> Imprimir Separação
+              <Printer className="w-3.5 h-3.5" /> Imprimir Separa\u00e7\u00e3o
             </button>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.08] rounded-lg transition-all">
               <Tag className="w-3.5 h-3.5" /> Gerar Etiquetas
@@ -761,7 +1101,7 @@ export default function PedidosPage() {
                         : <Square className="w-4 h-4" />}
                     </button>
                   </th>
-                  <th className="px-3 py-3 text-left whitespace-nowrap">Nº Pedido</th>
+                  <th className="px-3 py-3 text-left whitespace-nowrap">N\u00ba Pedido</th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">
                     <button className="flex items-center" onClick={() => sortToggle('data')}>
                       Data <SortIcon col="data" />
@@ -787,7 +1127,7 @@ export default function PedidosPage() {
                     </button>
                   </th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">Prev. Entrega</th>
-                  <th className="px-3 py-3 text-right pr-4">Ações</th>
+                  <th className="px-3 py-3 text-right pr-4">A\u00e7\u00f5es</th>
                 </tr>
               </thead>
               <tbody>
@@ -817,7 +1157,7 @@ export default function PedidosPage() {
                         </button>
                       </td>
 
-                      {/* Nº Pedido */}
+                      {/* N\u00ba Pedido */}
                       <td className="px-3 py-3">
                         <Link href={`/dashboard/pedidos/${p.id}`}
                           className="text-purple-400 hover:text-purple-300 font-semibold text-xs transition-colors">
@@ -853,8 +1193,8 @@ export default function PedidosPage() {
                         <div>
                           <p className="text-xs text-slate-300 line-clamp-1">
                             {p.itens[0].nome}
-                            {p.itens[0].variacao && <span className="text-slate-500"> · {p.itens[0].variacao}</span>}
-                            {p.itens[0].quantidade > 1 && <span className="text-slate-500"> ×{p.itens[0].quantidade}</span>}
+                            {p.itens[0].variacao && <span className="text-slate-500"> \u00b7 {p.itens[0].variacao}</span>}
+                            {p.itens[0].quantidade > 1 && <span className="text-slate-500"> \u00d7{p.itens[0].quantidade}</span>}
                           </p>
                           {p.itens.length > 1 && (
                             <p className="text-[10px] text-slate-600">+{p.itens.length - 1} produto(s)</p>
@@ -896,7 +1236,7 @@ export default function PedidosPage() {
                       {/* Prazo Postagem */}
                       <td className="px-3 py-3 whitespace-nowrap">
                         {['entregue', 'cancelado', 'devolvido', 'enviado', 'em_transito'].includes(p.status) ? (
-                          <span className="text-[10px] text-slate-600">—</span>
+                          <span className="text-[10px] text-slate-600">\u2014</span>
                         ) : (
                           <div className="flex items-center gap-1.5">
                             <Calendar className={`w-3 h-3 ${ps === 'urgent' ? 'text-red-400' : ps === 'tomorrow' ? 'text-yellow-400' : 'text-slate-600'}`} />
@@ -904,17 +1244,17 @@ export default function PedidosPage() {
                               {fmtDate(p.prazoPostagem)}
                             </span>
                             {ps === 'urgent' && <span className="text-[9px] font-bold text-red-400 animate-pulse">HOJE</span>}
-                            {ps === 'tomorrow' && <span className="text-[9px] font-bold text-yellow-400">AMANHÃ</span>}
+                            {ps === 'tomorrow' && <span className="text-[9px] font-bold text-yellow-400">AMANH\u00c3</span>}
                           </div>
                         )}
                       </td>
 
-                      {/* Previsão Entrega */}
+                      {/* Previs\u00e3o Entrega */}
                       <td className="px-3 py-3 text-xs text-slate-400 whitespace-nowrap">
-                        {p.envio.previsaoEntrega ? fmtDate(p.envio.previsaoEntrega) : <span className="text-slate-700">—</span>}
+                        {p.envio.previsaoEntrega ? fmtDate(p.envio.previsaoEntrega) : <span className="text-slate-700">\u2014</span>}
                       </td>
 
-                      {/* Ações */}
+                      {/* A\u00e7\u00f5es */}
                       <td className="px-3 py-3 pr-4">
                         <div className="flex items-center gap-1 justify-end">
                           <Link href={`/dashboard/pedidos/${p.id}`}
@@ -953,11 +1293,11 @@ export default function PedidosPage() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
             <p className="text-xs text-slate-600">
               {filteredPedidos.length} de {PEDIDOS.length} pedidos
-              {selected.length > 0 && ` · ${selected.length} selecionado(s)`}
+              {selected.length > 0 && ` \u00b7 ${selected.length} selecionado(s)`}
             </p>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-600">
-                Total visível: {fmt(filteredPedidos.reduce((s, p) => s + p.financeiro.valorProdutos + p.financeiro.freteCliente, 0))}
+                Total vis\u00edvel: {fmt(filteredPedidos.reduce((s, p) => s + p.financeiro.valorProdutos + p.financeiro.freteCliente, 0))}
               </span>
             </div>
           </div>

@@ -54,8 +54,6 @@ export async function syncListingsFromML(
   const maxItems = options.limit ?? 2000
   const headers  = { Authorization: `Bearer ${token}` }
 
-  console.log('[Sync] Iniciando — userId:', userId, '| mlUserId:', mlUserId, '| statuses:', STATUSES.join(','), '| maxItems:', maxItems)
-
   /* ── 1. Coletar todos os item_ids por status (paginado) ──────────────── */
   const allItemIds: string[] = []
 
@@ -84,10 +82,8 @@ export async function syncListingsFromML(
       await sleep(RATE_MS)
     }
 
-    console.log(`[Sync] status=${st}: ${collected} IDs coletados`)
   }
 
-  console.log('[Sync] Total de IDs coletados:', allItemIds.length)
   if (allItemIds.length === 0) return { synced: 0, updated: 0, errors: 0 }
 
   /* ── 2. Hidratar em batches de 20 e fazer upsert ─────────────────────── */
@@ -148,9 +144,6 @@ export async function syncListingsFromML(
         errors += batch.length
       } else {
         synced += rows.length
-        if (i % (BATCH * 5) === 0) {
-          console.log(`[Sync] Progresso: ${synced} salvos até agora...`)
-        }
       }
     } catch (e) {
       console.error('[Sync] Exceção no batch i=' + i + ':', e instanceof Error ? e.message : String(e))
@@ -160,7 +153,6 @@ export async function syncListingsFromML(
     await sleep(RATE_MS)
   }
 
-  console.log('[Sync] Concluído — synced:', synced, '| errors:', errors)
   return { synced, updated: 0, errors }
 }
 

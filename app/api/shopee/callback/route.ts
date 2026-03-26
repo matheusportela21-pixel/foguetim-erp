@@ -69,12 +69,9 @@ export async function GET(req: NextRequest) {
     return redirect('/login?redirect=/dashboard/integracoes')
   }
 
-  console.log('[Shopee callback] user:', user.id, 'shop_id:', shopIdNum)
-
   try {
     // 1. Trocar code por tokens
     const tokens = await shopeeExchangeCode(code, shopIdNum)
-    console.log('[Shopee callback] token exchange OK — expire_in:', tokens.expire_in)
 
     // 2. Buscar nome da loja
     let shopName = `Loja ${shopIdNum}`
@@ -85,14 +82,12 @@ export async function GET(req: NextRequest) {
         shopIdNum,
       )
       shopName = info.response?.shop_name ?? shopName
-      console.log('[Shopee callback] shop_name:', shopName)
     } catch (infoErr) {
       console.warn('[Shopee callback] Não foi possível buscar nome da loja:', infoErr)
     }
 
     // 3. Salvar no banco
     await saveShopeeConnection(user.id, tokens, shopIdNum, shopName)
-    console.log('[Shopee callback] saveShopeeConnection OK')
 
     // 4. Notificação de sucesso
     await createNotification({

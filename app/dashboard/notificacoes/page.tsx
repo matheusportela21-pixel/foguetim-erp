@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import {
-  Bell, Info, AlertTriangle, XCircle, CheckCircle2,
+  Bell, Info, AlertTriangle, XCircle, CheckCircle2, X,
   ShoppingCart, MessageSquareWarning, Package, DollarSign,
   Plug, Settings, RefreshCw, CheckCheck,
 } from 'lucide-react'
@@ -60,7 +60,7 @@ export default function NotificacoesPage() {
   const [page, setPage]             = useState(1)
   const [total, setTotal]           = useState(0)
   const [unread, setUnread]         = useState(0)
-  const [filterRead, setFilterRead] = useState<'all' | 'unread'>('all')
+  const [filterRead, setFilterRead] = useState<'all' | 'alerts' | 'notifications' | 'read'>('all')
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true)
@@ -100,7 +100,25 @@ export default function NotificacoesPage() {
     if (actionUrl) window.location.href = actionUrl
   }
 
-  const filtered = filterRead === 'unread' ? items.filter(n => !n.read) : items
+  async function dismissNotification(e: React.MouseEvent, id: string) {
+    e.stopPropagation()
+    await fetch('/api/notifications', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setItems(prev => prev.filter(n => n.id !== id))
+    setTotal(prev => prev - 1)
+  }
+
+  const filtered = (() => {
+    switch (filterRead) {
+      case 'alerts': return items.filter(n => n.type === 'error' || n.type === 'warning')
+      case 'notifications': return items.filter(n => n.type === 'info' || n.type === 'success')
+      case 'read': return items.filter(n => n.read)
+      default: return items
+    }
+  })()
   const paginated = filtered.slice(0, page * PAGE_SIZE)
   const hasMore   = paginated.length < filtered.length
 
@@ -127,23 +145,30 @@ export default function NotificacoesPage() {
           ))}
         </div>
 
-        {/* Toolbar */}
+        {/* Tabs */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex gap-2">
-            {(['all', 'unread'] as const).map(f => (
+          <div className="flex gap-1 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
+            {([
+              { key: 'all' as const, label: 'Todas', count: total },
+              { key: 'alerts' as const, label: 'Alertas', count: items.filter(n => n.type === 'error' || n.type === 'warning').length },
+              { key: 'notifications' as const, label: 'Notificacoes', count: items.filter(n => n.type === 'info' || n.type === 'success').length },
+              { key: 'read' as const, label: 'Lidas', count: items.filter(n => n.read).length },
+            ]).map(f => (
               <button
-                key={f}
-                onClick={() => { setFilterRead(f); setPage(1) }}
+                key={f.key}
+                onClick={() => { setFilterRead(f.key); setPage(1) }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  filterRead === f
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-dark-700 text-slate-400 hover:text-slate-200 border border-white/[0.06]'
+                  filterRead === f.key
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                 }`}
               >
-                {f === 'all' ? 'Todas' : 'Não lidas'}
-                {f === 'unread' && unread > 0 && (
-                  <span className="ml-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    {unread}
+                {f.label}
+                {f.count > 0 && (
+                  <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    filterRead === f.key ? 'bg-white/20 text-white' : 'bg-white/[0.06] text-slate-500'
+                  }`}>
+                    {f.count}
                   </span>
                 )}
               </button>
@@ -173,10 +198,10 @@ export default function NotificacoesPage() {
         </div>
 
         {/* List */}
-        <div className="dash-card divide-y divide-white/[0.04] overflow-hidden">
+        <div className="space-y-2">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-start gap-3 p-4 animate-pulse">
+              <div key={i} className="glass-card flex items-start gap-3 p-4 animate-pulse rounded-xl">
                 <div className="w-8 h-8 rounded-lg bg-dark-700 shrink-0" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3.5 bg-dark-700 rounded w-48" />
@@ -186,10 +211,10 @@ export default function NotificacoesPage() {
               </div>
             ))
           ) : paginated.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="glass-card rounded-xl flex flex-col items-center justify-center py-16 gap-3">
               <Bell className="w-10 h-10 text-slate-700" />
               <p className="text-slate-500 text-sm">
-                {filterRead === 'unread' ? 'Nenhuma notificação não lida' : 'Nenhuma notificação ainda'}
+                {filterRead === 'read' ? 'Nenhuma notificacao lida' : filterRead === 'alerts' ? 'Nenhum alerta' : filterRead === 'notifications' ? 'Nenhuma notificacao' : 'Nenhuma notificacao ainda'}
               </p>
             </div>
           ) : (
@@ -198,12 +223,18 @@ export default function NotificacoesPage() {
               const cc  = CATEGORY_CONFIG[n.category] ?? CATEGORY_CONFIG.system
               const Icon     = tc.icon
               const CatIcon  = cc.icon
+              const borderColor = {
+                error: 'border-l-red-500',
+                warning: 'border-l-amber-500',
+                info: 'border-l-blue-500',
+                success: 'border-l-green-500',
+              }[n.type] ?? 'border-l-blue-500'
               return (
                 <div
                   key={n.id}
                   onClick={() => { if (!n.read) markRead(n.id, n.action_url) }}
-                  className={`flex items-start gap-3 p-4 transition-all cursor-pointer hover:bg-white/[0.02] ${
-                    !n.read ? 'bg-indigo-900/[0.12]' : ''
+                  className={`glass-card rounded-xl border-l-4 ${borderColor} flex items-start gap-3 p-4 transition-all cursor-pointer hover:bg-white/[0.03] group ${
+                    !n.read ? 'bg-indigo-900/[0.08]' : ''
                   }`}
                 >
                   {/* Type icon */}
@@ -218,7 +249,7 @@ export default function NotificacoesPage() {
                         {n.title}
                       </p>
                       {!n.read && (
-                        <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0 animate-pulse" />
                       )}
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{n.message}</p>
@@ -230,11 +261,20 @@ export default function NotificacoesPage() {
                       {n.action_url && (
                         <>
                           <span className="text-[10px] text-slate-700">·</span>
-                          <span className="text-[10px] text-purple-400">Ver detalhes →</span>
+                          <span className="text-[10px] text-purple-400">Ver detalhes</span>
                         </>
                       )}
                     </div>
                   </div>
+
+                  {/* Dismiss button */}
+                  <button
+                    onClick={(e) => dismissNotification(e, n.id)}
+                    className="p-1 rounded-lg text-slate-700 hover:text-slate-300 hover:bg-white/[0.06] opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                    title="Dispensar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )
             })

@@ -11,8 +11,6 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    console.log('[Shopee Webhook] Received:', JSON.stringify(body).slice(0, 500))
-
     const db = supabaseAdmin()
 
     // Store in webhook_queue for processing

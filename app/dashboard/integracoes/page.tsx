@@ -649,7 +649,7 @@ function IntegracoesContent() {
               if (mk.id === 'ml') {
                 // ML card with multi-account support
                 return (
-                  <div key="ml" className={`dash-card rounded-2xl border ${mk.color} overflow-hidden col-span-full md:col-span-2 xl:col-span-3`}>
+                  <div key="ml" className={`dash-card rounded-2xl border border-l-4 border-l-yellow-500 ${mk.color} overflow-hidden col-span-full md:col-span-2 xl:col-span-3`}>
                     <div className="p-4">
                       {/* Header */}
                       <div className="flex items-center justify-between mb-3">
@@ -758,7 +758,7 @@ function IntegracoesContent() {
 
           {/* Shopee — active integration */}
           <div className="mb-4">
-            <div className="dash-card rounded-2xl border border-orange-500/30 bg-orange-500/5 overflow-hidden">
+            <div className="dash-card rounded-2xl border border-l-4 border-l-orange-500 border-orange-500/30 bg-orange-500/5 overflow-hidden">
               <div className="p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
@@ -853,7 +853,7 @@ function IntegracoesContent() {
 
           {/* Magalu — active integration */}
           <div className="mb-4">
-            <div className="dash-card rounded-2xl border border-blue-500/30 bg-blue-500/5 overflow-hidden">
+            <div className="dash-card rounded-2xl border border-l-4 border-l-blue-500 border-blue-500/30 bg-blue-500/5 overflow-hidden">
               <div className="p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
@@ -952,23 +952,29 @@ function IntegracoesContent() {
               <span>Em breve</span>
               <span className="flex-1 h-px bg-white/[0.04]" />
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { id: 'tiktok', name: 'TikTok Shop', color: 'border-slate-500/20 bg-slate-500/5',  dot: 'bg-slate-400',  desc: 'Social commerce TikTok'             },
-                { id: 'ame',    name: 'Americanas',  color: 'border-red-500/20 bg-red-500/5',      dot: 'bg-red-400',    desc: 'Marketplace Americanas/B2W'         },
-                { id: 'cb',     name: 'Casas Bahia', color: 'border-green-500/20 bg-green-500/5',  dot: 'bg-green-400',  desc: 'Via Varejo e Casas Bahia'           },
-                { id: 'ns',     name: 'Nuvemshop',   color: 'border-indigo-500/20 bg-indigo-500/5',dot: 'bg-indigo-400', desc: 'Loja virtual e multicanal'          },
-                { id: 'ali',    name: 'AliExpress',  color: 'border-rose-500/20 bg-rose-500/5',    dot: 'bg-rose-400',   desc: 'Cross-border AliExpress'            },
+                { id: 'amazon',  name: 'Amazon',      color: 'border-amber-500/15 bg-amber-500/5',   logo: '📦', desc: 'Amazon Brasil e FBA'              },
+                { id: 'shopify', name: 'Shopify',      color: 'border-green-500/15 bg-green-500/5',   logo: '🟢', desc: 'Loja virtual Shopify'             },
+                { id: 'tiktok',  name: 'TikTok Shop',  color: 'border-slate-500/15 bg-slate-500/5',   logo: '🎵', desc: 'Social commerce TikTok'           },
+                { id: 'ame',     name: 'Americanas',   color: 'border-red-500/15 bg-red-500/5',       logo: '🔴', desc: 'Marketplace Americanas/B2W'       },
+                { id: 'cb',      name: 'Casas Bahia',  color: 'border-blue-700/15 bg-blue-700/5',     logo: '🏠', desc: 'Via Varejo e Casas Bahia'         },
+                { id: 'ns',      name: 'Nuvemshop',    color: 'border-indigo-500/15 bg-indigo-500/5', logo: '☁',  desc: 'Loja virtual e multicanal'        },
               ].map(m => (
-                <div key={m.id} className={`rounded-xl border ${m.color} p-3.5 opacity-70 flex items-center justify-between group`}>
+                <div key={m.id} className={`glass-card rounded-xl border ${m.color} p-4 opacity-50 flex items-center justify-between group hover:opacity-60 transition-opacity`}>
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${m.dot} shrink-0`} />
+                    <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-lg shrink-0">
+                      {m.logo}
+                    </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-300">{m.name}</p>
-                      <p className="text-[10px] text-slate-600 mt-0.5">{m.desc}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                        <p className="text-[10px] text-slate-600">{m.desc}</p>
+                      </div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-500 ring-1 ring-white/[0.06] shrink-0">
+                  <span className="text-[9px] font-bold px-2 py-1 rounded-full bg-slate-800/60 text-slate-500 ring-1 ring-white/[0.06] shrink-0">
                     Em breve
                   </span>
                 </div>

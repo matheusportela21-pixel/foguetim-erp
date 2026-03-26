@@ -40,13 +40,6 @@ export function shopeeSign(
     .update(base)
     .digest('hex')
 
-  // Log de diagnóstico em dev — confirma que base string e sign estão corretos
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Shopee sign] base string:', base)
-    console.log('[Shopee sign] sign:', sign)
-    console.log('[Shopee sign] key length:', partnerKey.length)
-  }
-
   return sign
 }
 

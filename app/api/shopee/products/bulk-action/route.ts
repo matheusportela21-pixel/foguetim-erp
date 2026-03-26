@@ -62,6 +62,5 @@ export async function POST(req: NextRequest) {
     if (chunks.length > 1) await sleep(1100) // rate limit: 1 call/s
   }
 
-  console.log(`[Shopee] bulk-action action=${action} count=${item_ids.length} user=${dataOwnerId}`)
   return NextResponse.json({ results, action, count: item_ids.length })
 }

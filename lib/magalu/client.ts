@@ -44,8 +44,6 @@ export async function magaluGet<T = unknown>(
     headers: magaluHeaders(accessToken, sellerId, channelId),
   })
 
-  console.log(`[Magalu] GET ${path} → ${res.status} (${Date.now() - start}ms)`)
-
   if (res.status === 429) {
     // Rate limit — wait and retry once
     const retryAfter = Number(res.headers.get('Retry-After') ?? '5')
@@ -85,8 +83,6 @@ export async function magaluPost<T = unknown>(
     body:    JSON.stringify(body),
   })
 
-  console.log(`[Magalu] POST ${path} → ${res.status} (${Date.now() - start}ms)`)
-
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`[Magalu] POST ${path} falhou (${res.status}): ${text}`)
@@ -111,8 +107,6 @@ export async function magaluPut<T = unknown>(
     headers: magaluHeaders(accessToken, sellerId, channelId),
     body:    JSON.stringify(body),
   })
-
-  console.log(`[Magalu] PUT ${path} → ${res.status} (${Date.now() - start}ms)`)
 
   if (!res.ok) {
     const text = await res.text()

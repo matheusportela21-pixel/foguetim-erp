@@ -56,10 +56,6 @@ export async function GET(req: NextRequest) {
     statusList.push('NORMAL')
   }
 
-  console.log('[Shopee /products] params:', {
-    statusList, offset, page_size, shopId: tokenData.shopId,
-  })
-
   try {
     if (statusList.length === 1) {
       // ── Single status: forward directly ──────────────────────────────────
@@ -69,11 +65,6 @@ export async function GET(req: NextRequest) {
         tokenData.shopId,
         { offset, page_size, item_status: statusList[0] },
       )
-      console.log('[Shopee /products] single-status response:', {
-        error:       data.error,
-        total_count: data.response?.total_count,
-        item_count:  data.response?.item?.length,
-      })
       return NextResponse.json(data)
     }
 
@@ -91,13 +82,6 @@ export async function GET(req: NextRequest) {
         )
       )
     )
-
-    console.log('[Shopee /products] multi-status results:', results.map((r, i) => ({
-      status: statusList[i],
-      ok:     r.status === 'fulfilled',
-      error:  r.status === 'fulfilled' ? r.value.error : (r as PromiseRejectedResult).reason,
-      count:  r.status === 'fulfilled' ? r.value.response?.total_count : 0,
-    })))
 
     const allItems: unknown[] = []
     let totalCount = 0

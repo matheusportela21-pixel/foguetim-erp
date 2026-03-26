@@ -28,17 +28,19 @@ export async function GET(req: NextRequest) {
   const token = await getValidToken(dataOwnerId)
   if (!token) return NextResponse.json({ error: 'Token inválido — reconecte o ML' }, { status: 401 })
 
-  const sp     = new URL(req.url).searchParams
-  const offset = Number(sp.get('offset') ?? 0)
-  const limit  = Math.min(Number(sp.get('limit') ?? 50), 50)
-  const status = sp.get('status') ?? 'active'
+  const sp         = new URL(req.url).searchParams
+  const offset     = Number(sp.get('offset') ?? 0)
+  const limit      = Math.min(Number(sp.get('limit') ?? 50), 50)
+  const status     = sp.get('status') ?? 'active'
+  const sellerSku  = sp.get('seller_sku') ?? ''
 
   const auth = { Authorization: `Bearer ${token}` }
 
   try {
     // 1. Search item IDs
     const statusParam = status === 'all' ? '' : `&status=${status}`
-    const searchUrl = `${ML_API_BASE}/users/${conn.ml_user_id}/items/search?offset=${offset}&limit=${limit}${statusParam}`
+    const skuParam    = sellerSku ? `&seller_sku=${encodeURIComponent(sellerSku)}` : ''
+    const searchUrl = `${ML_API_BASE}/users/${conn.ml_user_id}/items/search?offset=${offset}&limit=${limit}${statusParam}${skuParam}`
     const searchRes = await fetch(searchUrl, { headers: auth })
     if (!searchRes.ok) {
       const txt = await searchRes.text()

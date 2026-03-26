@@ -167,8 +167,6 @@ export async function GET(req: NextRequest) {
     // Ordenar por create_time desc (mais recente primeiro)
     allOrders.sort((a, b) => b.create_time - a.create_time)
 
-    console.log('[Shopee /orders] total encontrado:', allOrders.length, '| includeDetails:', includeDetails)
-
     if (!includeDetails || allOrders.length === 0) {
       return NextResponse.json({
         response: {

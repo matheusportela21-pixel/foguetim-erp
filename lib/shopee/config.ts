@@ -89,16 +89,6 @@ export function getShopeeEnv(): {
     throw new Error(`[Shopee] SHOPEE_PARTNER_ID inválido (não é número): "${rawPartnerId}"`)
   }
 
-  // Log de diagnóstico (apenas em dev — nunca logar a key completa em prod)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Shopee] env carregado —', {
-      partnerId,
-      keyLength:   rawPartnerKey.length,
-      keyPreview:  `${rawPartnerKey.slice(0, 6)}…${rawPartnerKey.slice(-4)}`,
-      redirectUri,
-      env:         process.env.SHOPEE_ENV ?? 'test (padrão)',
-    })
-  }
 
   return { partnerId, partnerKey: rawPartnerKey, redirectUri }
 }

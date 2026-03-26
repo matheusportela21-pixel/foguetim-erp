@@ -232,10 +232,7 @@ export async function POST(req: NextRequest) {
             throw new Error(`ML API ${mlRes.status}: ${errBody}`)
           }
         } else {
-          console.log('[sync-to-marketplace DRY RUN]', {
-            item_id: m.marketplace_item_id,
-            payload,
-          })
+          // DRY RUN — no-op
         }
 
         synced++

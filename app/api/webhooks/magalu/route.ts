@@ -71,7 +71,6 @@ async function persistWebhookEvent(payload: MagaluWebhookPayload): Promise<void>
 /** Processa eventos relevantes do Magalu */
 async function processMagaluEvent(payload: MagaluWebhookPayload): Promise<void> {
   const eventType = payload.event_type ?? payload.event ?? payload.type ?? ''
-  console.log('[Webhook Magalu] Processando evento:', eventType, payload.resource_id ?? payload.resource)
 
   switch (eventType) {
     case 'order.created':
@@ -79,27 +78,23 @@ async function processMagaluEvent(payload: MagaluWebhookPayload): Promise<void> 
     case 'order.status_changed':
     case 'order_created':
     case 'order_updated':
-      console.log('[Webhook Magalu] Pedido atualizado:', payload.resource_id)
       break
 
     case 'ticket.created':
     case 'ticket.updated':
-      console.log('[Webhook Magalu] SAC ticket:', payload.resource_id)
       break
 
     case 'conversation.message':
     case 'chat.message':
-      console.log('[Webhook Magalu] Nova mensagem chat:', payload.resource_id)
       break
 
     case 'product.stock_low':
     case 'product.stock_zero':
     case 'product_updated':
-      console.log('[Webhook Magalu] Produto atualizado:', payload.resource_id)
       break
 
     default:
-      console.log('[Webhook Magalu] Evento não tratado:', eventType)
+      break
   }
 }
 

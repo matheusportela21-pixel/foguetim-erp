@@ -51,6 +51,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  console.log(`[cron/alerts] Checked ${checked} users, ${errors} errors`)
   return NextResponse.json({ checked, errors, total: userIds.length })
 }

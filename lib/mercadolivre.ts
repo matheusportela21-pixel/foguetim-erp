@@ -73,7 +73,6 @@ export function getAuthorizationUrl(state?: string): string {
   })
   if (state) params.set('state', state)
   const url = `${ML_AUTH_URL}?${params.toString()}`
-  console.log('[ML] Auth URL gerada:', url.replace(appId, `${appId.slice(0,4)}…`))
   return url
 }
 
@@ -81,8 +80,6 @@ export function getAuthorizationUrl(state?: string): string {
 
 export async function exchangeCode(code: string): Promise<MLTokenResponse> {
   const { appId, secret, redirectUri } = getEnv()
-
-  console.log('[ML] exchangeCode — client_id:', `${appId.slice(0,4)}…`, 'redirect_uri:', redirectUri)
 
   const body = new URLSearchParams({
     grant_type:    'authorization_code',
@@ -99,7 +96,6 @@ export async function exchangeCode(code: string): Promise<MLTokenResponse> {
   })
 
   const text = await res.text()
-  console.log('[ML] exchangeCode response status:', res.status)
 
   if (!res.ok) {
     console.error('[ML] exchangeCode error body:', text)
@@ -289,7 +285,6 @@ export async function saveConnection(
     if (error) throw new Error(`saveConnection (insert) falhou: ${error.message}`)
   }
 
-  console.log('[ML] saveConnection OK — user_id:', userId, 'ml_nickname:', mlNickname)
 }
 
 /** Desconecta todas as contas ML — mantém registros mas marca connected = false */

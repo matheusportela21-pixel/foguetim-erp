@@ -27,7 +27,6 @@ export async function POST() {
       tokenData.sellerId,
     )
 
-    console.log('[Magalu sandbox] onboarding OK:', result)
     return NextResponse.json({ success: true, data: result })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)

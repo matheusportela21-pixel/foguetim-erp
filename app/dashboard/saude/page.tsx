@@ -5,7 +5,8 @@ import Link from 'next/link'
 import {
   Activity, RefreshCw, AlertTriangle, CheckCircle, XCircle,
   ShieldCheck, Star, BarChart2, ExternalLink, Loader2,
-  TrendingUp, Clock, Award, Link2,
+  TrendingUp, Clock, Award, Link2, ChevronDown, ChevronUp,
+  Package, Barcode,
 } from 'lucide-react'
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -54,6 +55,27 @@ interface SaudeData {
   sales_period?:    string
   sales_completed?: number
   error?:           string
+}
+
+interface HealthItem {
+  id: string
+  title: string
+  price: number
+  thumbnail: string
+  permalink: string
+  health: string
+}
+
+interface ItemsHealthData {
+  healthy: number
+  warning: number
+  unhealthy: number
+  total: number
+  unhealthyItems: HealthItem[]
+  warningItems: HealthItem[]
+  missingIdentifiers: number
+  error?: string
+  notConnected?: boolean
 }
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
@@ -261,6 +283,252 @@ function Skeleton() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {[0,1,2,3].map(i => <div key={i} className="dash-card rounded-2xl h-40 bg-slate-900" />)}
       </div>
+    </div>
+  )
+}
+
+/* ── Items Health Section ────────────────────────────────────────────────── */
+
+function ItemsHealthSection() {
+  const [healthData, setHealthData] = useState<ItemsHealthData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showUnhealthy, setShowUnhealthy] = useState(false)
+  const [showWarning, setShowWarning] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/mercadolivre/items/health')
+      .then(r => r.json())
+      .then((d: ItemsHealthData) => {
+        if (!d.notConnected && !d.error) setHealthData(d)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="dash-card rounded-2xl p-6 animate-pulse">
+        <div className="h-6 w-48 bg-slate-800 rounded-lg mb-4" />
+        <div className="h-20 bg-slate-800 rounded-lg" />
+      </div>
+    )
+  }
+
+  if (!healthData) return null
+
+  const { healthy, warning, unhealthy, total, unhealthyItems, warningItems, missingIdentifiers } = healthData
+  const healthyPct  = total > 0 ? (healthy / total * 100).toFixed(1) : '0'
+  const warningPct  = total > 0 ? (warning / total * 100).toFixed(1) : '0'
+  const unhealthyPct = total > 0 ? (unhealthy / total * 100).toFixed(1) : '0'
+
+  const problemItems = [...unhealthyItems, ...warningItems]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Package className="w-4 h-4 text-blue-400" />
+        <p className="text-sm font-bold text-white">Saude dos Anuncios</p>
+      </div>
+
+      <div className="dash-card rounded-2xl p-6 space-y-5">
+        {/* Counts */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-green-400">
+                {healthy.toLocaleString('pt-BR')}
+                <span className="text-xs text-slate-500 ml-1.5">({healthyPct}%)</span>
+              </p>
+              <p className="text-[10px] text-slate-600">Saudaveis</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-yellow-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-yellow-400">
+                {warning.toLocaleString('pt-BR')}
+                <span className="text-xs text-slate-500 ml-1.5">({warningPct}%)</span>
+              </p>
+              <p className="text-[10px] text-slate-600">Atencao</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-400">
+                {unhealthy.toLocaleString('pt-BR')}
+                <span className="text-xs text-slate-500 ml-1.5">({unhealthyPct}%)</span>
+              </p>
+              <p className="text-[10px] text-slate-600">Perdendo exposicao</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-3 bg-white/[0.06] rounded-full overflow-hidden flex">
+          {total > 0 && (
+            <>
+              <div
+                className="h-full bg-green-500 transition-all duration-700"
+                style={{ width: `${healthy / total * 100}%` }}
+              />
+              <div
+                className="h-full bg-yellow-500 transition-all duration-700"
+                style={{ width: `${warning / total * 100}%` }}
+              />
+              <div
+                className="h-full bg-red-500 transition-all duration-700"
+                style={{ width: `${unhealthy / total * 100}%` }}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Unhealthy alert */}
+        {unhealthy > 0 && (
+          <div className="flex items-center justify-between p-3 bg-red-950/30 border border-red-800/40 rounded-xl">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <p className="text-sm text-red-300">
+                <span className="font-semibold">{unhealthy}</span> anuncio{unhealthy !== 1 ? 's' : ''} perdendo exposicao
+              </p>
+            </div>
+            <button
+              onClick={() => setShowUnhealthy(!showUnhealthy)}
+              className="flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
+            >
+              {showUnhealthy ? 'Ocultar' : 'Ver anuncios'}
+              {showUnhealthy ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
+
+        {/* Warning alert */}
+        {warning > 0 && (
+          <div className="flex items-center justify-between p-3 bg-yellow-950/20 border border-yellow-800/40 rounded-xl">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+              <p className="text-sm text-yellow-300">
+                <span className="font-semibold">{warning}</span> anuncio{warning !== 1 ? 's' : ''} precisam de atencao
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWarning(!showWarning)}
+              className="flex items-center gap-1 text-xs font-semibold text-yellow-400 hover:text-yellow-300 transition-colors"
+            >
+              {showWarning ? 'Ocultar' : 'Ver anuncios'}
+              {showWarning ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
+
+        {/* Unhealthy items table */}
+        {showUnhealthy && unhealthyItems.length > 0 && (
+          <HealthItemsTable items={unhealthyItems} />
+        )}
+
+        {/* Warning items table */}
+        {showWarning && warningItems.length > 0 && (
+          <HealthItemsTable items={warningItems} />
+        )}
+
+        {/* Missing identifiers alert */}
+        {missingIdentifiers > 0 && (
+          <div className="flex items-center justify-between p-3 bg-orange-950/20 border border-orange-800/40 rounded-xl">
+            <div className="flex items-center gap-2">
+              <Barcode className="w-4 h-4 text-orange-400 shrink-0" />
+              <p className="text-sm text-orange-300">
+                <span className="font-semibold">{missingIdentifiers}</span> produto{missingIdentifiers !== 1 ? 's' : ''} sem codigo de barras (GTIN/EAN)
+              </p>
+            </div>
+            <a
+              href="https://www.mercadolivre.com.br/anuncios/publicacoes"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors shrink-0"
+            >
+              Corrigir no ML
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
+
+        {/* All healthy message */}
+        {unhealthy === 0 && warning === 0 && total > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-green-950/20 border border-green-800/30 rounded-xl">
+            <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+            <p className="text-sm text-green-300">
+              Todos os {total.toLocaleString('pt-BR')} anuncios estao saudaveis.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── Health Items Table ─────────────────────────────────────────────────── */
+
+function HealthItemsTable({ items }: { items: HealthItem[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-white/[0.06]">
+            <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider p-3">Imagem</th>
+            <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider p-3">Titulo</th>
+            <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider p-3">Preco</th>
+            <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider p-3">Saude</th>
+            <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider p-3">Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr key={item.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+              <td className="p-3">
+                {item.thumbnail ? (
+                  <img
+                    src={item.thumbnail}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover bg-slate-800"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center">
+                    <Package className="w-4 h-4 text-slate-600" />
+                  </div>
+                )}
+              </td>
+              <td className="p-3">
+                <p className="text-xs text-slate-300 line-clamp-2 max-w-[280px]">{item.title}</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">{item.id}</p>
+              </td>
+              <td className="p-3 text-xs text-slate-300 whitespace-nowrap">
+                {item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </td>
+              <td className="p-3">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${
+                  item.health === 'unhealthy'
+                    ? 'bg-red-500/10 text-red-400 ring-red-500/30'
+                    : 'bg-yellow-500/10 text-yellow-400 ring-yellow-500/30'
+                }`}>
+                  {item.health === 'unhealthy' ? 'Perdendo exposicao' : 'Atencao'}
+                </span>
+              </td>
+              <td className="p-3">
+                <a
+                  href={item.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -534,6 +802,9 @@ export default function SaudePage() {
           </div>
         </div>
       )}
+
+      {/* ── Items Health ── */}
+      <ItemsHealthSection />
 
       {/* ── Quick links ── */}
       <div>

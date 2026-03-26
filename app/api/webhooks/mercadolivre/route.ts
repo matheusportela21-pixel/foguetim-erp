@@ -88,7 +88,6 @@ async function enqueueAndProcess(body: MLWebhookPayload & Record<string, unknown
   // Idempotência: evitar processar o mesmo evento duplicado em < 3 min
   const duplicate = await isDuplicate(body.topic, body.resource)
   if (duplicate) {
-    console.log('[Webhook] Evento duplicado ignorado:', body.topic, body.resource)
     return
   }
 

@@ -44,7 +44,6 @@ export async function PATCH(
         ],
       },
     )
-    console.log(`[Shopee] update_stock item_id=${itemId} stock=${body.stock} user=${dataOwnerId}`)
     return NextResponse.json(data)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -57,7 +57,6 @@ export async function POST(
       tokenData.shopId,
       payload,
     )
-    console.log(`[Shopee] cancel_order order_sn=${order_sn} reason=${cancel_reason} user=${dataOwnerId}`)
     return NextResponse.json(data)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

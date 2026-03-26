@@ -32,7 +32,6 @@ export async function sendEmail(params: {
 }): Promise<boolean> {
   // Em dev sem credenciais, apenas logar
   if (!process.env.SMTP_PASS || process.env.SMTP_PASS === 'CONFIGURE_NO_VERCEL') {
-    console.log('[Email] DEV mode — email não enviado:', params.subject, '→', params.to)
     return true
   }
 
@@ -44,7 +43,6 @@ export async function sendEmail(params: {
       subject: params.subject,
       html:    params.html,
     })
-    console.log('[Email] Enviado:', params.subject, '→', params.to)
     return true
   } catch (err) {
     console.error('[Email] Falha ao enviar:', err)

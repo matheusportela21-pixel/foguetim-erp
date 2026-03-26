@@ -64,13 +64,11 @@ export async function GET(req: NextRequest) {
     if (!advertiserId) return NextResponse.json(EMPTY(limit, offset))
 
     const url = `${ML_ADS}/advertisers/${advertiserId}/product_ads/campaigns?date_from=${dateFrom}&date_to=${dateTo}&limit=${limit}&offset=${offset}`
-    console.log('[ads/campaigns GET] url:', url)
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}`, 'api-version': '2' },
     })
     const rawText = await res.text()
-    console.log('[ads/campaigns GET] status:', res.status, '| body:', rawText.slice(0, 500))
 
     let data: CampaignsResponse = {}
     try { data = JSON.parse(rawText) as CampaignsResponse } catch { /* non-JSON */ }

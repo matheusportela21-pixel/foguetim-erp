@@ -229,7 +229,6 @@ export async function getProduct(id: number, userId: string): Promise<Produto | 
 
 export async function createProduct(p: Produto, userId: string): Promise<Produto | null> {
   if (!isConfigured()) {
-    console.log('[dev] createProduct (mock):', p.nome)
     return { ...p, id: Date.now() }
   }
 
@@ -244,7 +243,7 @@ export async function createProduct(p: Produto, userId: string): Promise<Produto
 }
 
 export async function updateProduct(p: Produto, userId: string): Promise<boolean> {
-  if (!isConfigured()) { console.log('[dev] updateProduct (mock):', p.id); return true }
+  if (!isConfigured()) { return true }
 
   const { error } = await supabase
     .from('products')
@@ -257,7 +256,7 @@ export async function updateProduct(p: Produto, userId: string): Promise<boolean
 }
 
 export async function deleteProduct(id: number, userId: string): Promise<boolean> {
-  if (!isConfigured()) { console.log('[dev] deleteProduct (mock):', id); return true }
+  if (!isConfigured()) { return true }
 
   const { error } = await supabase
     .from('products')
@@ -274,7 +273,7 @@ export async function saveProductMarketplaces(
   mkt: Partial<Record<MKT, MktListing>>,
   userId: string,
 ): Promise<boolean> {
-  if (!isConfigured()) { console.log('[dev] saveProductMarketplaces (mock):', productId); return true }
+  if (!isConfigured()) { return true }
 
   // Verify ownership
   const { count } = await supabase
@@ -341,7 +340,6 @@ export async function saveStockMovement(
   userName: string,
 ): Promise<boolean> {
   if (!isConfigured()) {
-    console.log('[dev] saveStockMovement (mock):', { productId, type, quantity })
     return true
   }
 

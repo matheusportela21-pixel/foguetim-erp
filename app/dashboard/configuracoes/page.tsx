@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History, FileText, Mail,
+  Building2, User, Printer, Bell, ShieldCheck, CreditCard, AlertTriangle, History, FileText, Mail, Palette,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import EmpresaSection     from './components/EmpresaSection'
@@ -15,6 +15,7 @@ import SegurancaSection   from './components/SegurancaSection'
 import PlanoSection       from './components/PlanoSection'
 import DangerSection      from './components/DangerSection'
 import HistoricoSection   from './components/HistoricoSection'
+import TemaSection        from './components/TemaSection'
 
 /* ── Sidebar menu definition ────────────────────────────────────────────────── */
 type SectionId =
@@ -27,6 +28,7 @@ type SectionId =
   | 'seguranca'
   | 'plano'
   | 'historico'
+  | 'tema'
   | 'perigo'
 
 interface MenuItem {
@@ -47,6 +49,7 @@ const MENU: MenuItem[] = [
   { id: 'seguranca',     icon: ShieldCheck,  label: 'Segurança'           },
   { id: 'plano',         icon: CreditCard,   label: 'Plano e Assinatura'  },
   { id: 'historico',     icon: History,      label: 'Histórico'           },
+  { id: 'tema',          icon: Palette,      label: 'Tema'                },
   { id: 'perigo',        icon: AlertTriangle, label: 'Zona de Perigo', danger: true },
 ]
 
@@ -62,6 +65,7 @@ function SectionContent({ id }: { id: SectionId }) {
     case 'seguranca':    return <SegurancaSection />
     case 'plano':        return <PlanoSection />
     case 'historico':    return <HistoricoSection />
+    case 'tema':         return <TemaSection />
     case 'perigo':       return <DangerSection />
   }
 }

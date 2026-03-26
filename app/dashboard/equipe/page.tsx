@@ -155,16 +155,21 @@ export default function EquipePage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Membros', value: members.length, icon: Users, color: 'text-purple-400' },
-          { label: 'Ativos',        value: activeMembers,  icon: UserCheck, color: 'text-green-400' },
-          { label: 'Pendentes',     value: pendingMembers, icon: Clock, color: 'text-amber-400' },
-          { label: 'Convites',      value: invites.length, icon: Mail, color: 'text-blue-400' },
+          { label: 'Membros', value: `${members.length}/5`, sub: 'do plano', icon: Users, color: 'text-purple-400', iconBg: 'bg-purple-500/10' },
+          { label: 'Ativos',        value: String(activeMembers),  icon: UserCheck, color: 'text-green-400', iconBg: 'bg-green-500/10' },
+          { label: 'Pendentes',     value: String(pendingMembers), icon: Clock, color: 'text-amber-400', iconBg: 'bg-amber-500/10' },
+          { label: 'Convites',      value: String(invites.length), icon: Mail, color: 'text-blue-400', iconBg: 'bg-blue-500/10' },
         ].map(k => (
-          <div key={k.label} className="glass-card px-4 py-3 flex items-center gap-3">
-            <k.icon className={`w-5 h-5 ${k.color}`} />
+          <div key={k.label} className="glass-card px-4 py-3.5 flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl ${k.iconBg} flex items-center justify-center shrink-0`}>
+              <k.icon className={`w-4.5 h-4.5 ${k.color}`} />
+            </div>
             <div>
               <p className="text-[11px] text-slate-500">{k.label}</p>
-              <p className="text-lg font-bold text-white">{k.value}</p>
+              <div className="flex items-baseline gap-1.5">
+                <p className="text-lg font-bold text-white">{k.value}</p>
+                {'sub' in k && k.sub && <span className="text-[10px] text-slate-600">{k.sub}</span>}
+              </div>
             </div>
           </div>
         ))}
@@ -268,34 +273,39 @@ export default function EquipePage() {
 
       {/* Invite Modal */}
       {showInvite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) setShowInvite(false) }}>
-          <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-6 w-96 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowInvite(false) }}>
+          <div className="glass-card border border-white/[0.08] rounded-2xl p-6 w-96 space-y-4 shadow-2xl shadow-purple-900/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">Convidar novo membro</h3>
-              <button onClick={() => setShowInvite(false)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4 text-purple-400" />
+                </div>
+                <h3 className="text-sm font-bold text-white">Convidar novo membro</h3>
+              </div>
+              <button onClick={() => setShowInvite(false)} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors"><X className="w-4 h-4" /></button>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Email *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Email *</label>
               <input value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))} placeholder="fulano@email.com"
-                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none" />
+                className="w-full px-3 py-2.5 text-sm bg-white/[0.03] border border-white/[0.06] rounded-xl text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/40 transition-all" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Nome</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nome</label>
               <input value={inviteForm.name} onChange={e => setInviteForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo"
-                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none" />
+                className="w-full px-3 py-2.5 text-sm bg-white/[0.03] border border-white/[0.06] rounded-xl text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-600/40 transition-all" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Cargo *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cargo *</label>
               <select value={inviteForm.role} onChange={e => setInviteForm(p => ({ ...p, role: e.target.value }))}
-                className="w-full px-3 py-2 text-sm bg-slate-900 border border-white/[0.08] rounded-lg text-slate-200 focus:outline-none">
+                className="w-full px-3 py-2.5 text-sm bg-white/[0.03] border border-white/[0.06] rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-600/40 transition-all">
                 {TEAM_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
             </div>
-            <p className="text-[11px] text-slate-600">O convidado receberá um email com link para criar conta e acessar o sistema.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setShowInvite(false)} className="flex-1 px-3 py-2 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg">Cancelar</button>
+            <p className="text-[11px] text-slate-600">O convidado recebera um email com link para criar conta e acessar o sistema.</p>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowInvite(false)} className="flex-1 px-3 py-2.5 text-xs font-bold text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.06] transition-all">Cancelar</button>
               <button onClick={sendInvite} disabled={!inviteForm.email || sending}
-                className="flex-1 px-3 py-2 text-xs text-white bg-purple-600 hover:bg-purple-700 rounded-lg disabled:opacity-50 flex items-center justify-center gap-1.5">
+                className="flex-1 px-3 py-2.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all">
                 {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
                 {sending ? 'Enviando...' : 'Enviar convite'}
               </button>
@@ -336,34 +346,45 @@ function PermissionsModal({ member, onClose, onSave }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#111318] border border-white/[0.1] rounded-xl p-6 w-full md:w-[440px] max-h-[80vh] overflow-y-auto space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="glass-card border border-white/[0.08] rounded-2xl p-6 w-full md:w-[440px] max-h-[80vh] overflow-y-auto space-y-4 shadow-2xl shadow-purple-900/10">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white">Permissões de {member.name}</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Cargo: {ROLE_LABELS[member.role] ?? member.role}</p>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Permissoes de {member.name}</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Cargo: {ROLE_LABELS[member.role] ?? member.role}</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-0.5 bg-white/[0.02] rounded-xl p-1">
           {ALL_PERMISSIONS.map(p => {
             const roleHas = hasPermission(member.role, null, p.key)
             const effective = hasPermission(member.role, overrides, p.key)
             const isOverridden = overrides[p.key] !== undefined
 
             return (
-              <label key={p.key} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.02] cursor-pointer group">
-                <input type="checkbox" checked={effective} onChange={() => toggle(p.key)}
-                  className="w-3.5 h-3.5 accent-purple-500 cursor-pointer" />
+              <label key={p.key} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.03] cursor-pointer group transition-colors">
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                  effective
+                    ? 'bg-purple-600 border-purple-500'
+                    : 'border-white/[0.12] bg-white/[0.03]'
+                }`}>
+                  {effective && <Check className="w-2.5 h-2.5 text-white" />}
+                </div>
                 <span className={`text-xs ${effective ? 'text-slate-200' : 'text-slate-600'}`}>
                   {p.label}
                 </span>
+                <input type="checkbox" checked={effective} onChange={() => toggle(p.key)} className="sr-only" />
                 {roleHas && !isOverridden && (
                   <span className="text-[9px] text-slate-700 ml-auto">(cargo)</span>
                 )}
                 {isOverridden && (
-                  <span className={`text-[9px] ml-auto ${overrides[p.key] ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className={`text-[9px] ml-auto font-medium ${overrides[p.key] ? 'text-green-500' : 'text-red-500'}`}>
                     {overrides[p.key] ? '(adicionado)' : '(removido)'}
                   </span>
                 )}
@@ -372,10 +393,10 @@ function PermissionsModal({ member, onClose, onSave }: {
           })}
         </div>
 
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 px-3 py-2 text-xs text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-lg">Cancelar</button>
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 px-3 py-2.5 text-xs font-bold text-slate-400 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.06] transition-all">Cancelar</button>
           <button onClick={() => onSave(member, overrides)}
-            className="flex-1 px-3 py-2 text-xs text-white bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center justify-center gap-1.5">
+            className="flex-1 px-3 py-2.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl flex items-center justify-center gap-1.5 transition-all">
             <Check className="w-3 h-3" /> Salvar
           </button>
         </div>

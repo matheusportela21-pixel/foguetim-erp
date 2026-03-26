@@ -59,12 +59,8 @@ export async function GET(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  console.log('[cron/sentinela-ia] Iniciando execução do agente Sentinela com IA')
-
   // ── Executar agente ───────────────────────────────────────────────────────────
   const result = await executeAgent('sentinela')
-
-  console.log(`[cron/sentinela-ia] Concluído — severidade: ${result.severidadeMax}, achados: ${result.achados.length}`)
 
   // ── Criar thread se incidente crítico ────────────────────────────────────────
   if (result.severidadeMax === 'critica' && result.achados.length > 0) {
@@ -81,7 +77,6 @@ export async function GET(req: NextRequest) {
     })
 
     if (thread) {
-      console.log(`[cron/sentinela-ia] Thread criada: ${thread.id}`)
       tryExecuteThread(thread.id).catch(console.error)
     }
   }

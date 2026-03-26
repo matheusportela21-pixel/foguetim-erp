@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
       { headers: { Authorization: `Bearer ${token}`, 'api-version': '2' } },
     )
     const rawText = await res.text()
-    console.log('[ads/items GET] status:', res.status, '| body:', rawText.slice(0, 300))
 
     let data: AdsItemsResponse = {}
     try { data = JSON.parse(rawText) as AdsItemsResponse } catch { /* non-JSON */ }

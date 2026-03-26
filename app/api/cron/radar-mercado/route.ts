@@ -68,15 +68,12 @@ export async function GET(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  console.log('[cron/radar-mercado] Iniciando radar de mercado')
-
   const agentSlugs = ['ml_novidades', 'concorrencia'] as const
   const results: AgentResult[] = []
 
   // ── Executar agentes sequencialmente (evitar rate limits) ───────────────────
   for (const slug of agentSlugs) {
     try {
-      console.log(`[cron/radar-mercado] Executando agente: ${slug}`)
       const result = await executeAgent(slug)
 
       results.push({
@@ -108,7 +105,6 @@ export async function GET(req: NextRequest) {
         })
 
         if (thread) {
-          console.log(`[cron/radar-mercado] Thread criada para ${slug}: ${thread.id}`)
           tryExecuteThread(thread.id).catch(console.error)
         }
       }
@@ -121,8 +117,6 @@ export async function GET(req: NextRequest) {
     // Delay entre agentes para evitar rate limits da API
     await new Promise<void>(r => setTimeout(r, 3000))
   }
-
-  console.log('[cron/radar-mercado] Concluído —', JSON.stringify(results))
 
   return NextResponse.json({ ok: true, results })
 }

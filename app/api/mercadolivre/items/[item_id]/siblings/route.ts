@@ -121,16 +121,6 @@ export async function GET(req: NextRequest, { params }: Params) {
     // GET /items/{id} includes the complete attributes array with value_name and value_struct
     const attributes = Array.isArray(rootItem.attributes) ? rootItem.attributes : []
 
-    console.log('[siblings GET] item_id:', item_id)
-    console.log('[siblings GET] attributes total:', attributes.length)
-    console.log('[siblings GET] EAN/GTIN attrs:', JSON.stringify(
-      attributes.filter(a => ['GTIN', 'EAN', 'UPC', 'ISBN', 'MPN', 'SELLER_SKU'].includes(a.id))
-    ))
-    console.log('[siblings GET] seller_custom_field:', rootItem.seller_custom_field)
-    console.log('[siblings GET] gtin:', rootItem.gtin)
-    console.log('[siblings GET] sold_quantity:', rootItem.sold_quantity)
-    console.log('[siblings GET] domain_id:', rootItem.domain_id)
-
     return NextResponse.json({
       user_product_id: rootItem.user_product_id,
       category_id:     rootItem.category_id,

@@ -107,7 +107,6 @@ export async function shopeeExchangeCode(
   })
 
   const text = await res.text()
-  console.log('[Shopee] exchangeCode status:', res.status)
 
   if (!res.ok) {
     console.error('[Shopee] exchangeCode error:', text)
@@ -211,7 +210,6 @@ export async function getValidShopeeToken(userId: string): Promise<{
         })
         .eq('id', c.id)
 
-      console.log('[Shopee] token renovado para shop_id:', shopId)
       return { accessToken: tokens.access_token, shopId }
     } catch (err) {
       console.error('[Shopee] refresh falhou:', err)
@@ -296,7 +294,6 @@ export async function saveShopeeConnection(
     if (error) throw new Error(`saveShopeeConnection (insert) falhou: ${error.message}`)
   }
 
-  console.log('[Shopee] saveShopeeConnection OK — shop_id:', shopId, 'shop:', shopName)
 }
 
 // ─── getShopeeConnections ─────────────────────────────────────────────────────

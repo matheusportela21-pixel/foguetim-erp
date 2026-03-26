@@ -54,7 +54,6 @@ export async function GET(req: NextRequest) {
   })
 
   const authUrl = `${MAGALU_LOGIN_URL}?${params.toString()}`
-  console.log('[Magalu auth] Redirecionando para ID Magalu:', authUrl.substring(0, 120) + '...')
 
   const response = NextResponse.redirect(authUrl)
 

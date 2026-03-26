@@ -43,7 +43,6 @@ export async function PATCH(
       tokenData.shopId,
       payload,
     )
-    console.log(`[Shopee] update_item item_id=${itemId} fields=${Object.keys(payload).filter(k => k !== 'item_id').join(',')} user=${dataOwnerId}`)
     return NextResponse.json(data)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -49,12 +49,9 @@ export async function GET(req: NextRequest) {
     return redirect('/dashboard/integracoes?magalu_error=csrf_mismatch')
   }
 
-  console.log('[Magalu callback] user:', user.id, 'state:', state?.substring(0, 8) + '...')
-
   try {
     // 1. Trocar code por tokens (expira em 10 min!)
     const tokens = await magaluExchangeCode(code)
-    console.log('[Magalu callback] token exchange OK — expires_in:', tokens.expires_in)
 
     // 2. Extrair seller_id do scope ou usar um placeholder
     // O ID Magalu retorna o tenant/seller info nos tokens
@@ -63,7 +60,6 @@ export async function GET(req: NextRequest) {
     const alias    = `Seller Magalu`
 
     await saveMagaluConnection(user.id, tokens, sellerId, alias)
-    console.log('[Magalu callback] saveMagaluConnection OK')
 
     // 3. Notificação de sucesso
     await createNotification({

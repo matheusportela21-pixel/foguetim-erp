@@ -73,12 +73,9 @@ export async function GET(req: NextRequest) {
     return redirect('/login?redirect=/dashboard/integracoes')
   }
 
-  console.log('[ML callback] user:', user.id, '— exchanging code...')
-
   try {
     // 1. Exchange code → tokens
     const tokens = await exchangeCode(code)
-    console.log('[ML callback] token exchange OK — ml_user_id:', tokens.user_id)
 
     // 2. Fetch ML user info (nickname)
     const meRes = await fetch(`https://api.mercadolibre.com/users/${tokens.user_id}`, {
@@ -86,7 +83,6 @@ export async function GET(req: NextRequest) {
     })
     const me = await meRes.json()
     const nickname = me.nickname ?? String(tokens.user_id)
-    console.log('[ML callback] ML user nickname:', nickname)
 
     // 3. Verificar limite do plano (quando billing ativo)
     if (BILLING_ACTIVE) {
@@ -108,7 +104,6 @@ export async function GET(req: NextRequest) {
 
     // 4. Save to DB using admin client (bypasses RLS)
     await saveConnection(user.id, tokens, nickname)
-    console.log('[ML callback] saveConnection OK')
 
     // 5. Notificação de conexão bem-sucedida
     await createNotification({

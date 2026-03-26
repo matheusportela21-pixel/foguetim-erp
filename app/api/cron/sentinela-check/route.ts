@@ -145,7 +145,5 @@ export async function GET(req: NextRequest) {
     await db.from('sentinela_checks').delete().lt('created_at', cutoff)
   } catch { /* non-critical */ }
 
-  console.log(`[cron/sentinela-check] Done — alerts: ${alertsSent.length}, authFail: ${authFailureCount}, dbHealthy: ${dbHealthy}`)
-
   return NextResponse.json({ ok: true, resultado })
 }

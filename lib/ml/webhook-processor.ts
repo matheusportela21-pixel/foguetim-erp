@@ -87,7 +87,7 @@ async function dispatchTopic(payload: MLWebhookPayload, foguetimUserId: string):
       await handlePaymentWebhook(payload, foguetimUserId)
       break
     default:
-      console.log('[Webhook] Tópico não tratado:', payload.topic)
+      break
   }
 }
 
@@ -153,7 +153,6 @@ async function handleOrderWebhook(payload: MLWebhookPayload, userId: string): Pr
     // Falha no email não deve quebrar o webhook
   }
 
-  console.log('[Webhook] Pedido processado:', orderId)
 }
 
 async function handleQuestionWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
@@ -199,7 +198,6 @@ async function handleQuestionWebhook(payload: MLWebhookPayload, userId: string):
     // Falha no email não deve quebrar o webhook
   }
 
-  console.log('[Webhook] Pergunta processada:', questionId)
 }
 
 async function handleClaimWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
@@ -242,7 +240,6 @@ async function handleClaimWebhook(payload: MLWebhookPayload, userId: string): Pr
     // Falha no email não deve quebrar o webhook
   }
 
-  console.log('[Webhook] Reclamação processada:', claimId)
 }
 
 async function handleMessageWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
@@ -258,7 +255,6 @@ async function handleMessageWebhook(payload: MLWebhookPayload, userId: string): 
     read:       false,
   })
 
-  console.log('[Webhook] Mensagem processada:', payload.resource)
 }
 
 async function handleShipmentWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
@@ -319,7 +315,6 @@ async function handleShipmentWebhook(payload: MLWebhookPayload, userId: string):
     }),
   ])
 
-  console.log('[Webhook] Envio processado:', shipmentId, statusLabel)
 }
 
 async function handleItemWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
@@ -335,7 +330,6 @@ async function handleItemWebhook(payload: MLWebhookPayload, userId: string): Pro
     visibility:  'user',
   })
 
-  console.log('[Webhook] Item processado:', itemId)
 }
 
 async function handlePaymentWebhook(payload: MLWebhookPayload, userId: string): Promise<void> {
@@ -352,5 +346,4 @@ async function handlePaymentWebhook(payload: MLWebhookPayload, userId: string): 
     read:       false,
   })
 
-  console.log('[Webhook] Pagamento processado:', paymentId)
 }

@@ -63,7 +63,6 @@ export async function magaluExchangeCode(code: string): Promise<MagaluTokenRespo
   })
 
   const text = await res.text()
-  console.log('[Magalu] exchangeCode status:', res.status)
 
   if (!res.ok) {
     console.error('[Magalu] exchangeCode error:', text)
@@ -155,7 +154,6 @@ export async function getValidMagaluToken(userId: string): Promise<{
         })
         .eq('id', c.id)
 
-      console.log('[Magalu] token renovado para seller_id:', sellerId)
       return { accessToken: tokens.access_token, sellerId }
     } catch (err) {
       console.error('[Magalu] refresh falhou:', err)
@@ -240,7 +238,6 @@ export async function saveMagaluConnection(
     if (error) throw new Error(`saveMagaluConnection (insert) falhou: ${error.message}`)
   }
 
-  console.log('[Magalu] saveMagaluConnection OK — seller_id:', sellerId, 'alias:', sellerAlias)
 }
 
 // ─── getMagaluConnections ─────────────────────────────────────────────────────
