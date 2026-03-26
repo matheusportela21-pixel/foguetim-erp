@@ -8,7 +8,7 @@ import {
   Rocket, Package, BarChart2, Users, ShoppingCart,
   Check, ArrowRight, Shield, Menu, X, CheckCircle2,
   Zap, MessageCircle, ChevronDown, Star,
-  Instagram, Linkedin, Bot, Bell,
+  Instagram, Linkedin, Bot, Bell, Chrome,
 } from 'lucide-react'
 
 /* ─── JSON-LD schemas ────────────────────────────────────────────────────── */
@@ -61,10 +61,10 @@ const softwareJsonLd = {
   url: 'https://www.foguetim.com.br',
   inLanguage: 'pt-BR',
   offers: [
-    { '@type': 'Offer', price: '0', priceCurrency: 'BRL', name: 'Explorador (Grátis)', description: 'Até 100 produtos, 1 canal' },
-    { '@type': 'Offer', price: '19.90', priceCurrency: 'BRL', name: 'Desbravador', description: 'Até 1.000 produtos, 2 canais' },
-    { '@type': 'Offer', price: '49.90', priceCurrency: 'BRL', name: 'Comandante', description: 'Até 5.000 produtos, 3 canais' },
-    { '@type': 'Offer', price: '99.90', priceCurrency: 'BRL', name: 'Almirante', description: 'Produtos ilimitados, todos os canais, API + IA' },
+    { '@type': 'Offer', price: '19.90', priceCurrency: 'BRL', name: 'Explorador', description: 'Até 100 produtos, 1 canal' },
+    { '@type': 'Offer', price: '49.90', priceCurrency: 'BRL', name: 'Comandante', description: 'Até 500 produtos, 2 canais' },
+    { '@type': 'Offer', price: '89.90', priceCurrency: 'BRL', name: 'Almirante', description: 'Até 2.000 produtos, 5 canais' },
+    { '@type': 'Offer', price: '119.90', priceCurrency: 'BRL', name: 'Missão Espacial', description: 'Até 10.000 produtos, todos os canais, API + IA' },
   ],
   provider: { '@type': 'Organization', name: 'Foguetim ERP', url: 'https://www.foguetim.com.br' },
   /* aggregateRating removed: add back only when real user reviews exist. Fake ratings risk Google penalty. */
@@ -465,6 +465,7 @@ export default function LandingPage() {
               { icon: BarChart2,     title: 'Dashboard analítico',     desc: 'KPIs em tempo real com dados de todas as lojas. Faturamento, ticket médio e performance.',           color: 'text-blue-400 bg-blue-500/10' },
               { icon: Bell,          title: 'Alertas inteligentes',    desc: '19 tipos de alerta automáticos: estoque baixo, margem negativa, token expirando e mais.',            color: 'text-amber-400 bg-amber-500/10' },
               { icon: Users,         title: 'Multi-usuário',           desc: 'Convide sua equipe com permissões granulares. Cada membro vê só o que precisa ver.',                 color: 'text-pink-400 bg-pink-500/10' },
+              { icon: Chrome,        title: 'Extensão Chrome',          desc: 'Copie anúncios de qualquer marketplace com um clique direto do navegador.',                            color: 'text-orange-400 bg-orange-500/10' },
             ].map((feat, i) => {
               const Icon = feat.icon
               return (
