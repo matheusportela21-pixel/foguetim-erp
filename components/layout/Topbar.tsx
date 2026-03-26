@@ -145,6 +145,7 @@ const TOPBAR_MENUS: TopMenu[] = [
       { label: 'Relatórios', href: '/dashboard/relatorios',        icon: 'Download' },
     ],
   },
+  { label: 'Mensagens', icon: 'MessageSquare', href: '/dashboard/mensagens' },
   {
     label: 'IA', icon: 'Bot',
     items: [

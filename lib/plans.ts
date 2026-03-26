@@ -24,6 +24,17 @@ export interface PlanDefinition {
     dre: boolean
     alerts: number
     apiCalls: number
+    csvImport: boolean
+    conciliation: boolean
+    ranking: boolean
+    healthScore: boolean
+    competitors: boolean
+    priceHistory: boolean
+    stockSync: boolean
+    supportPriority: boolean
+    supportWhatsapp: boolean
+    dedicatedManager: boolean
+    multiChannelPricing: boolean
   }
   features: string[]
   featuresDisabled: string[]
@@ -44,11 +55,22 @@ export const PLANS = {
       orders: 200,
       teamMembers: 1,
       warehouses: 1,
-      aiAgents: 5,
+      aiAgents: 0,
       reports: false,
       dre: false,
       alerts: 5,
       apiCalls: 1000,
+      csvImport: false,
+      conciliation: false,
+      ranking: false,
+      healthScore: false,
+      competitors: false,
+      priceHistory: false,
+      stockSync: false,
+      supportPriority: false,
+      supportWhatsapp: false,
+      dedicatedManager: false,
+      multiChannelPricing: false,
     },
     features: [
       '1 marketplace conectado',
@@ -81,11 +103,22 @@ export const PLANS = {
       orders: 1000,
       teamMembers: 3,
       warehouses: 2,
-      aiAgents: 15,
+      aiAgents: 0,
       reports: true,
       dre: true,
       alerts: 15,
       apiCalls: 5000,
+      csvImport: true,
+      conciliation: true,
+      ranking: true,
+      healthScore: true,
+      competitors: false,
+      priceHistory: false,
+      stockSync: true,
+      supportPriority: true,
+      supportWhatsapp: false,
+      dedicatedManager: false,
+      multiChannelPricing: true,
     },
     features: [
       'Até 2 marketplaces',
@@ -118,11 +151,22 @@ export const PLANS = {
       orders: 5000,
       teamMembers: 5,
       warehouses: 3,
-      aiAgents: 30,
+      aiAgents: 0,
       reports: true,
       dre: true,
       alerts: 30,
       apiCalls: 20000,
+      csvImport: true,
+      conciliation: true,
+      ranking: true,
+      healthScore: true,
+      competitors: true,
+      priceHistory: true,
+      stockSync: true,
+      supportPriority: true,
+      supportWhatsapp: false,
+      dedicatedManager: false,
+      multiChannelPricing: true,
     },
     features: [
       'Até 5 marketplaces',
@@ -156,11 +200,22 @@ export const PLANS = {
       orders: 20000,
       teamMembers: 10,
       warehouses: 5,
-      aiAgents: 50,
+      aiAgents: 0,
       reports: true,
       dre: true,
       alerts: 50,
       apiCalls: 50000,
+      csvImport: true,
+      conciliation: true,
+      ranking: true,
+      healthScore: true,
+      competitors: true,
+      priceHistory: true,
+      stockSync: true,
+      supportPriority: true,
+      supportWhatsapp: true,
+      dedicatedManager: true,
+      multiChannelPricing: true,
     },
     features: [
       'Até 10 marketplaces',
@@ -179,6 +234,21 @@ export const PLANS = {
 } as const satisfies Record<string, PlanDefinition>
 
 export type PlanId = keyof typeof PLANS
+
+export interface AIPlanDefinition {
+  id: string
+  name: string
+  price: number
+  agents: number
+  executions: number | null // null = unlimited
+  description: string
+}
+
+export const AI_PLANS: Record<string, AIPlanDefinition> = {
+  starter: { id: 'starter', name: 'IA Starter', price: 29.90, agents: 5, executions: 100, description: 'Para comecar a automatizar' },
+  pro: { id: 'pro', name: 'IA Pro', price: 59.90, agents: 20, executions: 500, description: 'Para sellers avancados' },
+  enterprise: { id: 'enterprise', name: 'IA Enterprise', price: 99.90, agents: 50, executions: null, description: 'Sem limites' },
+}
 
 export const PLAN_IDS = Object.keys(PLANS) as PlanId[]
 
@@ -202,6 +272,14 @@ const FEATURE_PLAN_MAP: Record<string, PlanId> = {
   multiWarehouse: 'almirante',
   apiDedicated: 'missao',
   vipSupport: 'missao',
+  csvImport: 'comandante',
+  conciliation: 'comandante',
+  ranking: 'comandante',
+  healthScore: 'comandante',
+  competitors: 'almirante',
+  priceHistory: 'almirante',
+  stockSync: 'comandante',
+  multiChannelPricing: 'comandante',
 }
 
 const PLAN_ORDER: PlanId[] = ['explorador', 'comandante', 'almirante', 'missao']

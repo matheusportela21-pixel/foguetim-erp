@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState } from 'react'
-import { Check, X, ChevronDown, ChevronUp, ArrowRight, Zap, Menu } from 'lucide-react'
+import { Fragment, useState } from 'react'
+import { Check, X, ChevronDown, ChevronUp, ArrowRight, Zap, Menu, Bot } from 'lucide-react'
 
 /* ── Types ──────────────────────────────────────────────────────────────────── */
 type BillingPeriod = 'monthly' | 'annual'
@@ -21,10 +21,9 @@ interface PlanCard {
   features:     { label: string; included: boolean }[]
 }
 
-interface CompRow {
-  label:   string
-  values:  (string | boolean)[]
-  section?: string
+interface CompSection {
+  section: string
+  rows: { label: string; values: (string | boolean)[] }[]
 }
 
 interface FaqItem { q: string; a: string }
@@ -90,24 +89,89 @@ const PLANS: PlanCard[] = [
 ]
 
 /* ── Comparison table ────────────────────────────────────────────────────────── */
-const COMPARISON: CompRow[] = [
-  { label: 'Produtos', values: ['100', '500', '2.000', 'Ilimitado'], section: 'LIMITES' },
-  { label: 'Marketplaces', values: ['1', '2', '5', '10+'] },
-  { label: 'Usuários', values: ['1', '5', '10', 'Ilimitado'] },
-  { label: 'Agentes IA', values: ['5', '15', '30', '40'] },
-  { label: 'Gestão de anúncios', values: [true, true, true, true], section: 'MARKETPLACE' },
-  { label: 'Pedidos', values: [true, true, true, true] },
-  { label: 'SAC / Perguntas', values: [false, true, true, true] },
-  { label: 'Reclamações', values: [false, true, true, true] },
-  { label: 'Reputação', values: [false, true, true, true] },
-  { label: 'Precificação', values: [false, true, true, true], section: 'FERRAMENTAS' },
-  { label: 'Alertas inteligentes', values: [false, false, true, true] },
-  { label: 'DRE / Financeiro', values: [false, true, true, true], section: 'FINANCEIRO' },
-  { label: 'Relatórios avançados', values: [false, false, true, true] },
-  { label: 'Suporte por e-mail', values: [true, true, true, true], section: 'SUPORTE' },
-  { label: 'Suporte prioritário', values: [false, false, true, true] },
-  { label: 'Suporte 24/7', values: [false, false, false, true] },
-  { label: '7 dias grátis', values: [true, true, true, true], section: 'TRIAL' },
+const COMPARISON: CompSection[] = [
+  {
+    section: 'MARKETPLACES',
+    rows: [
+      { label: 'Canais conectados', values: ['1', '2', '5', '10'] },
+      { label: 'Mercado Livre', values: [true, true, true, true] },
+      { label: 'Shopee', values: [false, true, true, true] },
+      { label: 'Magalu', values: [false, true, true, true] },
+    ],
+  },
+  {
+    section: 'PRODUTOS',
+    rows: [
+      { label: 'Limite', values: ['100', '500', '2.000', '10.000'] },
+      { label: 'Mapeamento', values: [true, true, true, true] },
+      { label: 'Importacao CSV', values: [false, true, true, true] },
+    ],
+  },
+  {
+    section: 'PEDIDOS',
+    rows: [
+      { label: 'Limite/mes', values: ['200', '1.000', '5.000', '20.000'] },
+      { label: 'Workflow', values: [true, true, true, true] },
+      { label: 'Expedicao', values: [true, true, true, true] },
+    ],
+  },
+  {
+    section: 'FINANCEIRO',
+    rows: [
+      { label: 'Dashboard', values: ['Basico', 'Completo', 'Completo', 'Completo'] },
+      { label: 'DRE', values: [false, true, true, true] },
+      { label: 'Conciliacao', values: [false, true, true, true] },
+      { label: 'Relatorios PDF', values: [false, true, true, true] },
+    ],
+  },
+  {
+    section: 'ESTOQUE',
+    rows: [
+      { label: 'Armazens', values: ['1', '2', '3', '5'] },
+      { label: 'Sincronizacao', values: [false, true, true, true] },
+      { label: 'Alertas estoque', values: ['Basico', true, true, true] },
+    ],
+  },
+  {
+    section: 'EQUIPE',
+    rows: [
+      { label: 'Membros', values: ['1', '3', '5', '10'] },
+      { label: 'Permissoes', values: [false, true, true, true] },
+    ],
+  },
+  {
+    section: 'FERRAMENTAS',
+    rows: [
+      { label: 'Precificacao', values: ['Basica', 'Multi-canal', 'Multi-canal', 'Multi-canal'] },
+      { label: 'Ranking', values: [false, true, true, true] },
+      { label: 'Saude anuncios', values: [false, true, true, true] },
+      { label: 'Concorrentes', values: [false, false, true, true] },
+      { label: 'Historico precos', values: [false, false, true, true] },
+    ],
+  },
+  {
+    section: 'SUPORTE',
+    rows: [
+      { label: 'Email', values: [true, true, true, true] },
+      { label: 'Prioritario', values: [false, true, true, true] },
+      { label: 'WhatsApp VIP', values: [false, false, false, true] },
+      { label: 'Gerente dedicado', values: [false, false, false, true] },
+    ],
+  },
+  {
+    section: 'IA (ADICIONAL)',
+    rows: [
+      { label: 'Timm AI (chat)', values: [true, true, true, true] },
+      { label: 'Agentes IA', values: ['Pago*', 'Pago*', 'Pago*', 'Pago*'] },
+    ],
+  },
+]
+
+/* ── AI Plans ────────────────────────────────────────────────────────────────── */
+const AI_PLANS_DATA = [
+  { name: 'IA Starter', price: 29.90, agents: 5, executions: '100 exec/mes' },
+  { name: 'IA Pro', price: 59.90, agents: 20, executions: '500 exec/mes' },
+  { name: 'IA Enterprise', price: 99.90, agents: 50, executions: 'Ilimitado' },
 ]
 
 const FAQS: FaqItem[] = [
@@ -142,7 +206,7 @@ function PlanPrice({ plan, period }: { plan: PlanCard; period: BillingPeriod }) 
 function CellValue({ value }: { value: string | boolean }) {
   if (value === true) return <Check className="w-4 h-4 text-green-400 mx-auto" />
   if (value === false) return <X className="w-4 h-4 text-slate-700 mx-auto" />
-  return <span className="text-xs text-slate-300 font-medium">{value}</span>
+  return <span className="text-xs text-white font-bold">{value}</span>
 }
 
 /* ── Page ───────────────────────────────────────────────────────────────────── */
@@ -273,51 +337,126 @@ export default function PlanosPage() {
       {/* ── Comparison Table ────────────────────────────────────────────────── */}
       <section className="relative z-10 py-20 px-6 border-y border-white/5">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <p className="text-sm font-semibold text-violet-400 mb-3 uppercase tracking-wider">Comparativo</p>
             <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Compare todos os planos</h2>
-            <p className="text-slate-500 text-sm">Veja em detalhe o que cada plano oferece</p>
+            <p className="text-slate-500 text-sm mb-6">Veja em detalhe o que cada plano oferece</p>
+            <div className="inline-flex items-center gap-1 glass-card rounded-xl p-1">
+              <button onClick={() => setPeriod('monthly')}
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${period === 'monthly' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+              >
+                Mensal
+              </button>
+              <button onClick={() => setPeriod('annual')}
+                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all ${period === 'annual' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+              >
+                Anual
+                <span className="bg-green-500/20 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">-20%</span>
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto rounded-2xl border border-white/10 glass-card">
             <table className="w-full min-w-[700px] text-sm">
-              <thead>
-                <tr className="border-b border-white/5">
-                  <th className="text-left p-4 pl-6 text-xs font-bold text-slate-500 uppercase tracking-wider w-52 sticky left-0 bg-[#1A1530]/90 backdrop-blur-sm z-10">
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b border-white/5 bg-[#1A1530]">
+                  <th className="text-left p-4 pl-6 text-xs font-bold text-slate-500 uppercase tracking-wider w-52 sticky left-0 bg-[#1A1530] z-30">
                     Funcionalidade
                   </th>
                   {PLANS.map(plan => (
-                    <th key={plan.id} className={`p-4 text-center text-sm font-bold ${plan.popular ? 'text-violet-300 bg-violet-500/5' : 'text-white'}`}>
-                      {plan.name}
-                      {plan.popular && <span className="block text-[10px] font-semibold text-violet-400 mt-0.5">MAIS POPULAR</span>}
+                    <th key={plan.id} className={`p-4 text-center ${plan.popular ? 'bg-violet-500/10 border-t-2 border-violet-500' : ''}`}>
+                      <span className={`text-sm font-bold block ${plan.popular ? 'text-violet-300' : 'text-white'}`}>
+                        {plan.name}
+                      </span>
+                      {plan.popular && (
+                        <span className="inline-block bg-gradient-to-r from-violet-600 to-violet-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full mt-1">POPULAR</span>
+                      )}
+                      <span className="block text-xs text-slate-400 mt-1">
+                        R${(period === 'annual' ? plan.annualPrice : plan.monthlyPrice).toFixed(2).replace('.', ',')}/mes
+                      </span>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map((row, i) => (
-                  <tbody key={`group-${i}`}>
-                    {row.section && (
-                      <tr className="bg-white/[0.02]">
-                        <td colSpan={5} className="px-6 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-t border-white/5">
-                          {row.section}
-                        </td>
-                      </tr>
-                    )}
-                    <tr className={`border-b border-white/[0.03] ${i % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
-                      <td className="p-4 pl-6 text-sm text-slate-300 font-medium sticky left-0 bg-[#1A1530]/90 backdrop-blur-sm z-10">
-                        {row.label}
+                {COMPARISON.map((group) => (
+                  <Fragment key={`section-${group.section}`}>
+                    <tr className="bg-white/[0.02]">
+                      <td colSpan={5} className="px-6 py-2.5 text-[10px] font-bold text-violet-400 uppercase tracking-widest border-t border-white/5">
+                        {group.section}
                       </td>
-                      {row.values.map((val, vi) => (
-                        <td key={vi} className={`p-4 text-center ${PLANS[vi]?.popular ? 'bg-violet-500/5' : ''}`}>
-                          <CellValue value={val} />
-                        </td>
-                      ))}
                     </tr>
-                  </tbody>
+                    {group.rows.map((row, ri) => (
+                      <tr key={`${group.section}-${ri}`} className={`border-b border-white/[0.03] ${ri % 2 !== 0 ? 'bg-white/[0.01]' : ''}`}>
+                        <td className="p-4 pl-6 text-sm text-slate-300 font-medium sticky left-0 bg-[#1A1530]/90 backdrop-blur-sm z-10">
+                          {row.label}
+                        </td>
+                        {row.values.map((val, vi) => (
+                          <td key={vi} className={`p-4 text-center ${PLANS[vi]?.popular ? 'bg-violet-500/5' : ''}`}>
+                            <CellValue value={val} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
+                {/* Subscribe buttons row */}
+                <tr className="border-t border-white/5">
+                  <td className="p-4 sticky left-0 bg-[#1A1530]/90 backdrop-blur-sm z-10" />
+                  {PLANS.map(plan => (
+                    <td key={plan.id} className={`p-4 text-center ${plan.popular ? 'bg-violet-500/5' : ''}`}>
+                      <Link
+                        href={period === 'annual' ? plan.ctaHref + '&billing=annual' : plan.ctaHref}
+                        className={`inline-block px-5 py-2 rounded-lg text-xs font-bold transition-all ${
+                          plan.popular
+                            ? 'bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white shadow-lg shadow-violet-500/20'
+                            : 'border border-white/10 text-slate-300 hover:bg-white/5'
+                        }`}
+                      >
+                        Assinar
+                      </Link>
+                    </td>
+                  ))}
+                </tr>
               </tbody>
             </table>
           </div>
+          <p className="text-center text-xs text-slate-500 mt-4">
+            * Agentes IA cobrados separadamente. Planos a partir de R$ 29,90/mes.
+          </p>
+        </div>
+      </section>
+
+      {/* ── AI Plans ───────────────────────────────────────────────────────── */}
+      <section className="relative z-10 py-16 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card text-violet-300 text-xs font-semibold mb-4">
+              <Bot className="w-3.5 h-3.5" />
+              Complemento
+            </div>
+            <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Planos de IA — Automatize sua operacao
+            </h2>
+            <p className="text-slate-500 text-sm">Adicione agentes IA ao seu plano para automatizar tarefas repetitivas</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {AI_PLANS_DATA.map(ai => (
+              <div key={ai.name} className="glass-card rounded-xl p-6 text-center">
+                <h3 className="text-lg font-bold text-white mb-1">{ai.name}</h3>
+                <div className="flex items-end justify-center gap-1 mb-4">
+                  <span className="text-2xl font-bold text-white">R${ai.price.toFixed(2).replace('.', ',')}</span>
+                  <span className="text-slate-500 text-xs mb-1">/mes</span>
+                </div>
+                <div className="space-y-2 text-sm text-slate-400">
+                  <p><span className="text-white font-semibold">{ai.agents}</span> agentes</p>
+                  <p><span className="text-white font-semibold">{ai.executions}</span></p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-slate-500 mt-6">
+            * O Timm AI (chat) e gratuito em todos os planos.
+          </p>
         </div>
       </section>
 

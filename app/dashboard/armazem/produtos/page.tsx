@@ -4,10 +4,11 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Package, Package2, Layers, Plus, Search, ChevronLeft, ChevronRight,
-  Pencil, Trash2, CheckCircle2, XCircle, X, Info,
+  Pencil, Trash2, CheckCircle2, XCircle, X, Info, FileSpreadsheet,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import OtpConfirmation from '@/components/security/OtpConfirmation'
+import CSVImporter from '@/components/import/CSVImporter'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -485,6 +486,7 @@ export default function ArmazemProdutosPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [showModal,  setShowModal]  = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [toast,      setToast]      = useState<ToastState | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [otpDeleteId,   setOtpDeleteId]   = useState<string | null>(null)
@@ -657,8 +659,15 @@ export default function ArmazemProdutosPage() {
           </select>
 
           <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-purple-500/30 hover:bg-white/[0.03] transition-all ml-auto"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Importar CSV
+          </button>
+          <button
             onClick={() => setShowModal(true)}
-            className="btn-primary flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ml-auto"
+            className="btn-primary flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
           >
             <Plus className="w-4 h-4" />
             Novo Produto
@@ -851,6 +860,36 @@ export default function ArmazemProdutosPage() {
           categories={categories}
           onClose={() => setShowModal(false)}
           onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {/* CSV Import modal */}
+      {showImport && (
+        <CSVImporter
+          templateColumns={[
+            { key: 'name',     label: 'Nome',      required: true  },
+            { key: 'sku',      label: 'SKU',       required: true  },
+            { key: 'ean',      label: 'EAN',       required: false },
+            { key: 'cost',     label: 'Custo',     required: false },
+            { key: 'price',    label: 'Preco',     required: false },
+            { key: 'stock',    label: 'Estoque',   required: false },
+            { key: 'category', label: 'Categoria', required: false },
+          ]}
+          templateFilename="foguetim-produtos-template.csv"
+          onImport={async (rows) => {
+            const res = await fetch('/api/armazem/produtos/import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            const data = await res.json()
+            if (data.success > 0) {
+              fetchProducts(filters, pagination.page, pagination.limit)
+              setToast({ message: `${data.success} produto(s) importado(s) com sucesso`, type: 'success' })
+            }
+            return { success: data.success ?? 0, errors: data.errors ?? [] }
+          }}
+          onClose={() => setShowImport(false)}
         />
       )}
 
